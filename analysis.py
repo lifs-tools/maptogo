@@ -17,6 +17,7 @@ import logging
 import pathlib
 
 current_path = pathlib.Path(__file__).parent.resolve()
+LINK_COLOR = "#2980B9"
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -24,9 +25,16 @@ logging.basicConfig(
     format = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
 )
 
+CC_LINK = html.A(
+    "CC BY 4.0",
+    href = "https://creativecommons.org/licenses/by/4.0/legalcode#s3a1",
+    target = "_blank",
+    style = {"color": LINK_COLOR},
+)
+
 species = {
     'Homo sapiens': '9606',
-    'Mus musculus': '10090',
+    # 'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
@@ -84,7 +92,7 @@ example_options = html.Div(
                                     example["desc"],
                                     href = f"https://doi.org/{example['doi']}",
                                     target = "_blank",
-                                    style = {"color": "#2980B9"},
+                                    style = {"color": LINK_COLOR},
                                 )
                             ) if "doi" in example and len(example["doi"]) > 0 else dmc.Text(example["desc"])
                         ),
@@ -127,10 +135,27 @@ app.layout = html.Div([
             "z-index": "100",
         },
     ),
-    html.Div(
-        html.H1("Gene Ontology (GO) lipidomics enrichment analysis"),
-        className = "mantine-InputWrapper-label mantine-MultiSelect-label mantine-ittua2",
-    ),
+    dmc.SimpleGrid([
+        dmc.Group([
+            dmc.Image(
+                src = f"/assets/golipids.png",
+                style = {"width": "48px"},
+            ),
+            html.Div(
+                dmc.Title("Gene Ontology (GO) lipidomics enrichment analysis"),
+            ),
+        ]),
+        html.Div(
+            html.A(
+                dmc.Text(
+                    "Description & disclaimer",
+                ),
+                id = "disclaimer",
+                style = {"color": "#2980B9", "cursor": "pointer"},
+            ),
+            style = {"height": "100%", "display": "flex", "alignItems": "flex-start", "justifyContent": "right"},
+        ),
+    ], cols = 2),
     html.Div(
         id = "background_lipids",
         style = {"display": "none"},
@@ -165,46 +190,198 @@ app.layout = html.Div([
         ],
         size = "60%",
     ),
+    dmc.Modal(
+        #title = "Description & disclaimer",
+        id = "disclaimer_modal",
+        zIndex = 10000,
+        children = dmc.ScrollArea([
+            html.P([
+                dmc.Title("About GO lipids", order = 4),
+                dmc.Text(
+                    "Go lipids is the first implementation that enables GO term enrichment analysis on lipids. Starting with a list of identified lipids (at least on the species level) as background and a list with only the (differentially) regulated lipids, each lipid is mapped to proteins involved in metabolic reactions. On this base, GO term analysis will then be performed with a statistical test. Depending on the selected domain (biological process, molecular function, cellular compartment, physical or chemical properties, or metabolic and signaling pathways), the analysis provides a sorted list of GO terms with a p-value for each term.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+            dmc.Text("Responsible people for this database are:"),
+            dmc.Text("Dominik Kopczynski: Implementation of both front- and backend"),
+            dmc.Text("Cristina Coman: Method validation"),
+            dmc.Text("Robert Ahrends: Project leader"),
+
+            html.P([
+                dmc.Title("Disclaimer", order = 4),
+                dmc.Title("1. Liability limitation", order = 5),
+                dmc.Text(
+                    "Although we acquired our data with highest accurateness, we take no responsibility for the correctness, completeness or up-to-dateness of this data. The usage of the downloadable data available on this web page takes place at the users own risk.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Title("2. External links", order = 5),
+                dmc.Text(
+                    "This web page contains links forwarding to external web pages. For all external web pages we disclaim liability. During the linking no statutory violation was evident. As soon as a violation emerges, we delete these links.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Title("3. Copyright", order = 5),
+                dmc.Text(
+                    "The content of this web page is subject to the Austrian copyright law and ancillary copyright. Every inadmissible utilization defined by the Austrian copyright law and ancillary copyright is forbidden. This includes the disposal of the downloadable data. Download and utilization of the available data for researching purposes is explicitly allowed.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Title("4. Privacy", order = 5),
+                dmc.Text(
+                    "For statistical purposes, we record the number of visits to this web page as well as the number of downloads. To ensure an unbiased record, we store a hash value of your IP address for several minutes. Since this method is not reversible, restoring your IP address is not possible, hence this value does not belong to personal-related data. We do not sell or hand out our collected statistical data to third parties.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Text("GO lipids is using data from third-party databases. All databases are listed with their according licenses or permission:"),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "ChEBI",
+                        href = "https://www.ebi.ac.uk/chebi/aboutChebiForward.do",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Gene Ontology (GO)",
+                        href = "https://www.geneontology.org/docs/go-citation-policy/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "LION",
+                        href = "https://martijnmolenaar.github.io/lipidontology.com/faq.html",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    " via ",
+                    html.A(
+                        "BioPortal",
+                        href = "https://www.bioontology.org/terms/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": freely available for public use",
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "LIPID MAPS",
+                        href = "https://www.lipidmaps.org/databases/lmsd/download",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Pathbank",
+                        href = "https://pathbank.org/about",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    html.A(
+                        "Open database license",
+                        href = "https://opendatacommons.org/licenses/odbl/1-0/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Rhea",
+                        href = "https://www.rhea-db.org/help/license-disclaimer",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "SwissLipids",
+                        href = "https://www.swisslipids.org/#/downloads",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "UniProt",
+                        href = "https://www.uniprot.org/help/license",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC_LINK
+                ]),
+            ]),
+        ], h = 450, offsetScrollbars = True, scrollHideDelay = 0),
+        size = "50%",
+    ),
     dmc.SimpleGrid(
         cols = 2,
         children = [
-            html.Div(
-                dmc.SimpleGrid(
-                    cols = 2,
-                    children = [
-                        html.Div(
-                            [
-                                html.H4("All lipid names in experiment (background)", style = {"marginBottom": "2px"}),
-                            ],
-                            className = "mantine-InputWrapper-label mantine-MultiSelect-label mantine-ittua2",
-                        ),
-                        html.Div(
-                            [
-                                html.H4("All regulated lipid names in experiment", style = {"marginBottom": "2px"}),
-                            ],
-                            className = "mantine-InputWrapper-label mantine-MultiSelect-label mantine-ittua2",
-                        ),
-                    ],
-                ),
-            ),
-            html.Div(
-                dmc.SimpleGrid([
-                    html.H3("Results", style = {"marginBottom": "2px"}),
-                    html.Div(
-                        html.Span(
-                            dmc.ActionIcon(
-                                DashIconify(icon="material-symbols:download-rounded", width = 20),
-                                id = "icon_download_results",
-                                title = "Download table",
-                            ),
-                        ),
-                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "justifyContent": "right"},
+            dmc.SimpleGrid(
+                cols = 2,
+                children = [
+                    dmc.Title(
+                        "All lipid names in experiment (background)",
+                        order = 5,
+                        style = {"marginTop": "10px"},
                     ),
-                ], cols = 2),
+                    dmc.Title(
+                        "All regulated lipid names in experiment",
+                        order = 5,
+                        style = {"marginTop": "10px"},
+                    ),
+                ],
             ),
+            dmc.SimpleGrid([
+                dmc.Title(
+                    "Results",
+                    order = 5,
+                    style = {"marginTop": "10px"},
+                ),
+                html.Div(
+                    html.Span(
+                        dmc.ActionIcon(
+                            DashIconify(icon="material-symbols:download-rounded", width = 20),
+                            id = "icon_download_results",
+                            title = "Download table",
+                        ),
+                    ),
+                    style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "justifyContent": "right"},
+                ),
+            ], cols = 2),
         ],
     ),
-
     dmc.SimpleGrid(
         cols = 2,
         children = [
@@ -213,19 +390,22 @@ app.layout = html.Div([
                     dmc.Textarea(
                         id = "textarea_all_lipids",
                         style = {"height": "100%", "display": "inline"},
-                        minRows = 20,
+                        minRows = 15,
                     ),
                     dmc.Textarea(
                         id = "textarea_regulated_lipids",
-                        minRows = 20,
+                        minRows = 15,
                     ),
                     dmc.Button(
                         "Load example datasets",
                         id = "load_examples_button",
                     ),
                 ], cols = 2),
-                html.Div(style = {"height": "20px"}),
-                html.H3("Analysis parameters", style = {"marginBottom": "2px"}),
+                dmc.Title(
+                    "Analysis parameters",
+                    order = 5,
+                    style = {"marginTop": "20px"},
+                ),
                 html.Div(
                     [
                         dmc.Alert(
@@ -304,11 +484,13 @@ app.layout = html.Div([
                         {
                             'field': "domain",
                             "headerName": "Domain",
+                            "maxWidth": 220,
                         },
                         {
                             'field': "termid",
                             "headerName": "Term ID",
                             "cellRenderer": "TermIDRenderer",
+                            "maxWidth": 150,
                         },
                         {
                             'field': "term",
@@ -317,6 +499,7 @@ app.layout = html.Div([
                         {
                             'field': "pvalue",
                             "headerName": "pValue",
+                            "maxWidth": 150,
                         },
                     ],
                     rowData = [],
@@ -518,6 +701,7 @@ def close_load_examples_modal(n_clicks):
     return False
 
 
+
 @callback(
     Output({"type": "checkbox_type", "index": ALL}, "checked"),
     Input({"type": "checkbox_type", "index": ALL}, "checked"),
@@ -527,3 +711,23 @@ def close_load_examples_modal(n_clicks):
 def checkbox_checks(_, checkbox_ids):
     index = json.loads(callback_context.triggered[0]["prop_id"].split(".")[0])["index"]
     return [checkbox_id["index"] == index for checkbox_id in checkbox_ids]
+
+
+
+@callback(
+    Output("disclaimer_modal", "opened"),
+    Input("disclaimer", "n_clicks"),
+    prevent_initial_call = True,
+)
+def disclaimer_clicked(n_clicks):
+    return True
+
+
+
+
+
+
+
+
+
+
