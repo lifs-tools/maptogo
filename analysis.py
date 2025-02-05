@@ -7,11 +7,22 @@ import json
 import numpy as np
 import pandas as pd
 import io
+import os
 from statsmodels.stats.multitest import multipletests
 from EnrichmentDataStructure import EnrichmentOntology
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
+import logging
+import pathlib
+
+current_path = pathlib.Path(__file__).parent.resolve()
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level = os.environ.get("LOGLEVEL", "INFO"),
+    format = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+)
 
 species = {
     'Homo sapiens': '9606',
@@ -27,7 +38,7 @@ species = {
 }
 
 examples = {}
-xl = pd.ExcelFile("Data/examples.xlsx")
+xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
 first_example = ""
 for i, worksheet_name in enumerate(xl.sheet_names):
     if i == 0: first_example = worksheet_name
@@ -71,7 +82,7 @@ example_options = html.Div(
                             (
                                 html.A(
                                     example["desc"],
-                                    href = f"https://doi.org/{example["doi"]}",
+                                    href = f"https://doi.org/{example['doi']}",
                                     target = "_blank",
                                     style = {"color": "#2980B9"},
                                 )
@@ -92,19 +103,15 @@ example_options = html.Div(
 )
 
 # Create the Dash app
-app = Dash(__name__, update_title = None)
+app = Dash("app", update_title = None)
+app.title = "GO lipids"
 
 lipid_parser = LipidParser()
 enrichment_ontologies = {}
 for tax_name, tax_id in species.items():
-    print(f"loading {tax_name}")
-    enrichment_ontologies[tax_id] = EnrichmentOntology(f"Data/ontology_{tax_id}.gz", lipid_parser = lipid_parser)
-print("loaded")
-
-
-
-
-
+    logger.info(f"loading {tax_name}")
+    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", lipid_parser = lipid_parser)
+logger.info("loaded")
 
 
 
