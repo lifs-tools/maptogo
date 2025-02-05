@@ -34,7 +34,7 @@ CC_LINK = html.A(
 
 species = {
     'Homo sapiens': '9606',
-    # 'Mus musculus': '10090',
+    'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
@@ -211,7 +211,7 @@ app.layout = html.Div([
                 dmc.Title("Disclaimer", order = 4),
                 dmc.Title("1. Liability limitation", order = 5),
                 dmc.Text(
-                    "Although we acquired our data with highest accurateness, we take no responsibility for the correctness, completeness or up-to-dateness of this data. The usage of the downloadable data available on this web page takes place at the users own risk.",
+                    "The usage of the downloadable data available on this web page takes place at the users own risk.",
                     style = {"textAlign": "justify"},
                 ),
             ]),
