@@ -32,12 +32,12 @@ def extract_significant(df, start_data, variable, condition_1, condition_2, pval
 # df = pd.read_excel("AOValves.xlsx")
 # extract_significant(df, 2, "Condition", "Healthy", "Calcified")
 
-#df = pd.read_excel("Mouse.xlsx")
-#extract_significant(df, 4, "Treatment", "Unst", "1CRP")
+df = pd.read_excel("Mouse.xlsx")
+extract_significant(df, 4, "Treatment", "Unst", "5CRP")
 
 #df = pd.read_excel("Contraceptives.xlsx")
 #extract_significant(df, 3, "Condition", "Female no CC", "Female CC")
 
-df = pd.read_excel("MK.xlsx")
-df.columns = [col.strip() for col in df.columns]
-extract_significant(df, 6, "Day", 1, 3)
+# df = pd.read_excel("MK.xlsx")
+# df.columns = [col.strip() for col in df.columns]
+# extract_significant(df, 6, "Day", 1, 3)

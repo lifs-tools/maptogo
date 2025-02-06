@@ -4,6 +4,7 @@ from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 import scipy.stats as stats
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,6 @@ class OntologyResult:
         self.number_background_events = _number_background_events
         self.targets = _targets
         self.pvalue = _pvalue
-
 
 class EnrichmentOntology:
     def __init__(self, file_name, lipid_parser):
