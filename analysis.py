@@ -49,6 +49,7 @@ species = {
     # 'Pseudomonas aeruginosa': '287',
     # 'Arabidopsis thaliana': '3702',
 }
+INIT_ORGANISM = "9606"
 
 sessions, examples = {}, {}
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
@@ -124,6 +125,11 @@ enrichment_ontologies = {}
 for tax_name, tax_id in species.items():
     logger.info(f"loading {tax_name}")
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", lipid_parser = lipid_parser)
+
+
+#enrichment_ontologies[INIT_ORGANISM].set_background_lipids(["LPA 18:0", "LPA 20:0"])
+#enrichment_ontologies[INIT_ORGANISM].enrichment_analysis(["LPA 18:0"], ["Biological process"])
+
 
 
 
@@ -217,6 +223,36 @@ def layout():
                 ),
             ],
             size = "60%",
+        ),
+        dmc.Modal(
+            title = "Load",
+            id = "term_lipids_modal",
+            zIndex = 10000,
+            children = [
+                dag.AgGrid(
+                    id = "term_lipids_modal_grid",
+                    columnDefs = [
+                        {
+                            'field': "lipid",
+                            "headerName": "Lipid",
+                        },
+                    ],
+                    rowData = [],
+                    columnSize = "responsiveSizeToFit",
+                    defaultColDef={
+                        "suppressMovable": True,
+                        "sortable": True,
+                        "filter": True,
+                    },
+                    dashGridOptions={
+                        "rowSelection": "multiple",
+                        "suppressMoveWhenRowDragging": True,
+                        "suppressRowClickSelection": True,
+                        "alwaysShowVerticalScroll": True,
+                    },
+                ),
+            ],
+            size = "40%",
         ),
         dmc.Modal(
             #title = "Description & disclaimer",
@@ -459,10 +495,8 @@ def layout():
                                         id = "select_organism",
                                         data = [
                                             {"value": species[key], "label": key} for key in sorted(species.keys())
-                                            #{"value": "9606", "label": "Homo Sapiens (hsa)"},
-                                            #{"value": "10090", "label": "Mus Musculus (mmu)"},
                                         ],
-                                        value = "9606",
+                                        value = INIT_ORGANISM,
                                         label = "Select organism:",
                                     ),
                                     html.Div(
@@ -476,7 +510,7 @@ def layout():
                                     ),
                                     dmc.MultiSelect(
                                         id = "select_domains",
-                                        data = sorted(list(enrichment_ontologies["9606"].domains)),
+                                        data = sorted(list(enrichment_ontologies[INIT_ORGANISM].domains)),
                                         value = ["Biological process"],
                                         label = "Select domain(s):",
                                     ),
@@ -725,7 +759,7 @@ def download_table(
 
     for term_id, term in zip(term_ids, terms):
         if term_id not in data: continue
-        lipids = sorted(list(data[term_id].term.lipid_paths.keys()))
+        lipids = sorted(list(data[term_id].term.term_paths.keys()))
         associated_lipids[term] = lipids
         associated_lipids[f"{term}, regulated"] = ["X" if lipid in regulated_lipid_set else "" for lipid in lipids]
 
@@ -808,7 +842,9 @@ def disclaimer_clicked(n_clicks):
 
 
 @callback(
-    Output("graph_enrichment_results", "id", allow_duplicate = True),
+    Output("term_lipids_modal", "opened", allow_duplicate = True),
+    Output("term_lipids_modal", "title", allow_duplicate = True),
+    Output("term_lipids_modal_grid", "rowData", allow_duplicate = True),
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
     prevent_initial_call = True,
@@ -822,12 +858,13 @@ def open_term_window(row_data, session_id):
         raise exceptions.PreventUpdate
 
     result = sessions[session_id]["data"][term_id]
-    lipids = sorted(list(result.term.lipid_paths.keys()))
+    lipids = sorted(list(result.term.term_paths.keys()))
 
-    raise exceptions.PreventUpdate
-
-
-
+    return (
+        True,
+        f"Lipids for '{result.term.name}'",
+        [{"lipid": lipid} for lipid in lipids],
+    )
 
 
 
