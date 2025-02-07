@@ -445,6 +445,7 @@ def layout():
                                     DashIconify(icon="tdesign:chart-column-filled", width = 20),
                                     id = "chart_results",
                                     title = "Show chart",
+                                    disabled = True,
                                 ),
                                 dmc.ActionIcon(
                                     DashIconify(icon="material-symbols:download-rounded", width = 20),
@@ -876,8 +877,6 @@ def open_term_window(row_data, session_id, regulated_lipids):
         raise exceptions.PreventUpdate
 
     result = sessions[session_id]["data"][term_id]
-    for k, v in result.term.term_paths.items():
-        print(k, v)
     lipids = sorted(list(result.term.term_paths.keys()))
     regulated_lipids = set(regulated_lipids.split("|"))
 
