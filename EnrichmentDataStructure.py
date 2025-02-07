@@ -179,11 +179,11 @@ class EnrichmentOntology:
 
 
 
-    def set_background_lipids(self, lipid_list):
+    def set_background(self, lipid_list, protein_list = [], metabolite_list = []):
         for term_id in self.search_terms:
             self.ontology_terms[term_id].term_paths.clear()
 
-        self.compute_event_occurrance(lipid_list)
+        self.compute_event_occurrance(lipid_list, protein_list, metabolite_list)
 
         for term_id, lipid_set in self.search_terms.items():
             lipid_set.clear()
@@ -191,7 +191,7 @@ class EnrichmentOntology:
                 path_lipid for path_lipid in self.ontology_terms[term_id].term_paths
             )
 
-        self.num_background = len(lipid_list)
+        self.num_background = len(lipid_list) + len(protein_list) + len(metabolite_list)
 
 
 
@@ -320,27 +320,27 @@ class EnrichmentOntology:
         for target in target_list:
             target_set.add(target)
 
-        for term_id, lipid_set in self.search_terms.items():
+        for term_id, terms in self.search_terms.items():
             if (
-                len(lipid_set) == 0
+                len(terms) == 0
                 or term_id not in self.ontology_terms
                 or self.ontology_terms[term_id].domain not in enrichment_domains
             ): continue
 
-            target_number = len(lipid_set & target_set)
+            target_number = len(terms & target_set)
 
             a, b, c, d = (
                 target_number,
-                len(lipid_set) - target_number,
+                len(terms) - target_number,
                 len(target_list) - target_number,
-                self.num_background - len(lipid_set) - len(target_list) + target_number,
+                self.num_background - len(terms) - len(target_list) + target_number,
             )
             p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
             result_list.append(
                 OntologyResult(
                     self.ontology_terms[term_id],
                     self.num_background,
-                    len(lipid_set),
+                    len(terms),
                     len(target_list),
                     p_hyp,
                 )

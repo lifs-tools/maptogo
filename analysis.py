@@ -39,7 +39,7 @@ CC_LINK = html.A(
 
 species = {
     'Homo sapiens': '9606',
-    'Mus musculus': '10090',
+    #'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
@@ -57,17 +57,28 @@ first_example = ""
 for i, worksheet_name in enumerate(xl.sheet_names):
     if i == 0: first_example = worksheet_name
     df = xl.parse(worksheet_name)
-    worksheet = {"bg": [], "reg": [], "title": "", "desc": "", "comp": "", "doi": ""}
-    if "Background" in df: worksheet["bg"] = list(df["Background"].dropna())
-    if "Regulated" in df: worksheet["reg"] = list(df["Regulated"].dropna())
+    worksheet = {
+        "bgl": [], "regl": [],
+        "bgp": [], "regp": [],
+        "bgm": [], "regm": [],
+        "title": "", "desc": "", "comp": "", "doi": "", "org": INIT_ORGANISM
+    }
+    if "BackgroundLipids" in df: worksheet["bgl"] = list(df["BackgroundLipids"].dropna())
+    if "RegulatedLipids" in df: worksheet["regl"] = list(df["RegulatedLipids"].dropna())
+    if "BackgroundProteins" in df: worksheet["bgp"] = list(df["BackgroundProteins"].dropna())
+    if "RegulatedProteins" in df: worksheet["regp"] = list(df["RegulatedProteins"].dropna())
+    if "BackgroundMetabolites" in df: worksheet["bgm"] = list(df["BackgroundMetabolites"].dropna())
+    if "RegulatedMetabolites" in df: worksheet["regm"] = list(df["RegulatedMetabolites"].dropna())
     if "Title" in df: worksheet["title"] = df.loc[0, "Title"]
     if "Description" in df: worksheet["desc"] = df.loc[0, "Description"]
     if "Comparison" in df: worksheet["comp"] = df.loc[0, "Comparison"]
     if "DOI" in df: worksheet["doi"] = df.loc[0, "DOI"]
+    if "Organism" in df: worksheet["org"] = df.loc[0, "Organism"]
     if type(worksheet["title"]) in {float, np.float64} and np.isnan(worksheet["title"]): worksheet["title"] = ""
     if type(worksheet["desc"]) in {float, np.float64} and np.isnan(worksheet["desc"]): worksheet["desc"] = ""
     if type(worksheet["comp"]) in {float, np.float64} and np.isnan(worksheet["comp"]): worksheet["comp"] = ""
     if type(worksheet["doi"]) in {float, np.float64} and np.isnan(worksheet["doi"]): worksheet["doi"] = ""
+    if type(worksheet["org"]) in {float, np.float64} and np.isnan(worksheet["org"]): worksheet["org"] = INIT_ORGANISM
     examples[worksheet_name] = worksheet
 
 
@@ -179,14 +190,22 @@ def layout():
                     dmc.Title("Gene Ontology (GO) lipidomics enrichment analysis"),
                 ),
             ]),
-            html.Div(
+            html.Div([
+                html.A(
+                    dmc.Text(
+                        "Load example datasets",
+                    ),
+                    id = "load_examples_link",
+                    style = {"color": "#2980B9", "cursor": "pointer"},
+                ),
+                dmc.Text("|", style = {"marginLeft": "20px", "marginRight": "20px"}),
                 html.A(
                     dmc.Text(
                         "Description & disclaimer",
                     ),
-                    id = "disclaimer",
+                    id = "disclaimer_link",
                     style = {"color": "#2980B9", "cursor": "pointer"},
-                ),
+                )],
                 style = {"height": "100%", "display": "flex", "alignItems": "flex-start", "justifyContent": "right"},
             ),
         ], cols = 2),
@@ -417,67 +436,100 @@ def layout():
         dmc.SimpleGrid(
             cols = 2,
             children = [
-                dmc.SimpleGrid(
-                    cols = 2,
-                    children = [
-                        dmc.Title(
-                            "All lipid names in experiment (background)",
-                            order = 5,
-                            style = {"marginTop": "10px"},
-                        ),
-                        dmc.Title(
-                            "All regulated lipid names in experiment",
-                            order = 5,
-                            style = {"marginTop": "10px"},
-                        ),
-                    ],
-                ),
-                dmc.SimpleGrid([
-                    dmc.Title(
-                        "Results",
-                        order = 5,
-                        style = {"marginTop": "10px"},
-                    ),
-                    html.Div(
-                        html.Span(
-                            dmc.Group([
-                                dmc.ActionIcon(
-                                    DashIconify(icon="tdesign:chart-column-filled", width = 20),
-                                    id = "chart_results",
-                                    title = "Show chart",
-                                    disabled = True,
-                                ),
-                                dmc.ActionIcon(
-                                    DashIconify(icon="material-symbols:download-rounded", width = 20),
-                                    id = "icon_download_results",
-                                    title = "Download table",
-                                ),
-                            ], spacing = 0),
-                        ),
-                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "justifyContent": "right"},
-                    ),
-                ], cols = 2),
-            ],
-        ),
-        dmc.SimpleGrid(
-            cols = 2,
-            children = [
                 html.Div([
-                    dmc.SimpleGrid([
-                        dmc.Textarea(
-                            id = "textarea_all_lipids",
-                            style = {"height": "100%", "display": "inline"},
-                            minRows = 15,
-                        ),
-                        dmc.Textarea(
-                            id = "textarea_regulated_lipids",
-                            minRows = 15,
-                        ),
-                        dmc.Button(
-                            "Load example datasets",
-                            id = "load_examples_button",
-                        ),
-                    ], cols = 2),
+                    dmc.Tabs(
+                        [
+                            dmc.TabsList(
+                                [
+                                    dmc.Tab("Lipids", value="lipid_tab"),
+                                    dmc.Tab("Proteins", value="protein_tab"),
+                                    dmc.Tab("Metablites", value="metabolites_tab"),
+                                ]
+                            ),
+                            dmc.TabsPanel([
+                                dmc.SimpleGrid([
+                                    dmc.Title(
+                                        "All lipid names in experiment (background)",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                    dmc.Title(
+                                        "All regulated lipid names in experiment",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Textarea(
+                                        id = "textarea_all_lipids",
+                                        style = {"height": "100%", "display": "inline"},
+                                        minRows = 15,
+                                    ),
+                                    dmc.Textarea(
+                                        id = "textarea_regulated_lipids",
+                                        minRows = 15,
+                                    ),
+                                ], cols = 2)],
+                                value="lipid_tab",
+                            ),
+                            dmc.TabsPanel([
+                                dmc.SimpleGrid([
+                                    dmc.Title(
+                                        "All protein accessions in experiment (background)",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                    dmc.Title(
+                                        "All regulated protein accession in experiment",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Textarea(
+                                        id = "textarea_all_proteins",
+                                        style = {"height": "100%", "display": "inline"},
+                                        minRows = 15,
+                                    ),
+                                    dmc.Textarea(
+                                        id = "textarea_regulated_proteins",
+                                        minRows = 15,
+                                    ),
+                                ], cols = 2)],
+                                value="protein_tab",
+                            ),
+                            dmc.TabsPanel([
+                                dmc.SimpleGrid([
+                                    dmc.Title(
+                                        "All metabolite ChEBI Ids in experiment (background)",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                    dmc.Title(
+                                        "All regulated metabolite ChEBI Ids in experiment",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Textarea(
+                                        id = "textarea_all_metabolites",
+                                        style = {"height": "100%", "display": "inline"},
+                                        minRows = 15,
+                                    ),
+                                    dmc.Textarea(
+                                        id = "textarea_regulated_metabolites",
+                                        minRows = 15,
+                                    ),
+                                ], cols = 2)],
+                                value="metabolites_tab",
+                            ),
+                        ],
+                        color = "blue", # default is blue
+                        orientation = "horizontal", # or "vertical"
+                        variant = "default", # or "outline" or "pills"
+                        value = "lipid_tab"
+                    ),
                     dmc.Title(
                         "Analysis parameters",
                         order = 5,
@@ -563,6 +615,31 @@ def layout():
                     ),
                 ]),
                 html.Div([
+                    dmc.SimpleGrid([
+                        dmc.Title(
+                            "Results",
+                            order = 5,
+                            style = {"marginTop": "10px"},
+                        ),
+                        html.Div(
+                            html.Span(
+                                dmc.Group([
+                                    dmc.ActionIcon(
+                                        DashIconify(icon="tdesign:chart-column-filled", width = 20),
+                                        id = "chart_results",
+                                        title = "Show chart",
+                                        disabled = True,
+                                    ),
+                                    dmc.ActionIcon(
+                                        DashIconify(icon="material-symbols:download-rounded", width = 20),
+                                        id = "icon_download_results",
+                                        title = "Download table",
+                                    ),
+                                ], spacing = 0),
+                            ),
+                            style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "justifyContent": "right"},
+                        ),
+                    ], cols = 2),
                     dag.AgGrid(
                         id = "graph_enrichment_results",
                         columnDefs = [
@@ -696,7 +773,7 @@ def run_enrichment(
             return "", [], False, "The lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated lipids that aren't in background' option.", "", ""
 
     ontology = enrichment_ontologies[organism]
-    ontology.set_background_lipids(lipidome)
+    ontology.set_background(lipid_list = lipidome)
 
     results = ontology.enrichment_analysis(regulated_lipids, domains, term_regulation)
     if correction_method != "no" and len(results) > 0:
@@ -795,7 +872,7 @@ def download_table(
 
 @callback(
     Output("load_examples_modal", "opened", allow_duplicate = True),
-    Input("load_examples_button", "n_clicks"),
+    Input("load_examples_link", "n_clicks"),
     prevent_initial_call = True,
 )
 def open_load_examples_modal(n_clicks):
@@ -807,6 +884,11 @@ def open_load_examples_modal(n_clicks):
     Output("load_examples_modal", "opened", allow_duplicate = True),
     Output("textarea_all_lipids", "value", allow_duplicate = True),
     Output("textarea_regulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_all_proteins", "value", allow_duplicate = True),
+    Output("textarea_regulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_all_metabolites", "value", allow_duplicate = True),
+    Output("textarea_regulated_metabolites", "value", allow_duplicate = True),
+    Output("select_organism", "value", allow_duplicate = True),
     Input("load_examples_modal_submit_button", "n_clicks"),
     State({"type": "checkbox_type", "index": ALL}, "checked"),
     State({"type": "checkbox_type", "index": ALL}, "id"),
@@ -821,8 +903,13 @@ def submit_load_examples_modal(n_clicks, checked, checkbox_ids):
 
     return (
         False,
-        "\n".join(examples[index]["bg"]),
-        "\n".join(examples[index]["reg"]),
+        "\n".join(examples[index]["bgl"]),
+        "\n".join(examples[index]["regl"]),
+        "\n".join(examples[index]["bgp"]),
+        "\n".join(examples[index]["regp"]),
+        "\n".join(examples[index]["bgm"]),
+        "\n".join(examples[index]["regm"]),
+        examples[index]["org"],
     )
 
 
@@ -851,7 +938,7 @@ def checkbox_checks(_, checkbox_ids):
 
 @callback(
     Output("disclaimer_modal", "opened", allow_duplicate = True),
-    Input("disclaimer", "n_clicks"),
+    Input("disclaimer_link", "n_clicks"),
     prevent_initial_call = True,
 )
 def disclaimer_clicked(n_clicks):
