@@ -312,7 +312,7 @@ class EnrichmentOntology:
 
 
 
-    def enrichment_analysis(self, target_list, enrichment_domains):
+    def enrichment_analysis(self, target_list, enrichment_domains, term_regulation = "two-sided"):
         if self.num_background == 0 or len(enrichment_domains) == 0:
             return
 
@@ -335,7 +335,7 @@ class EnrichmentOntology:
                 len(target_list) - target_number,
                 self.num_background - len(lipid_set) - len(target_list) + target_number,
             )
-            p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = "two-sided")[1]
+            p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
             result_list.append(
                 OntologyResult(
                     self.ontology_terms[term_id],

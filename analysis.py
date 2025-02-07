@@ -236,6 +236,11 @@ def layout():
                             'field': "lipid",
                             "headerName": "Lipid",
                         },
+                        {
+                            'field': "regulated",
+                            "headerName": "Regulated",
+                            "maxWidth": 150,
+                        },
                     ],
                     rowData = [],
                     columnSize = "responsiveSizeToFit",
@@ -533,6 +538,16 @@ def layout():
                                         ],
                                         value = "fdr_bh",
                                     ),
+                                    dmc.Select(
+                                        id = "select_term_regulation",
+                                        data = [
+                                            {"value": "two-sided", "label": "Term regulated"},
+                                            {"value": "less", "label": "Term down-regulated"},
+                                            {"value": "greater", "label": "Term up-regulated"},
+                                        ],
+                                        value = "two-sided",
+                                        label = "Term regulation:",
+                                    ),
                                     html.Div(
                                         dmc.Button(
                                             "Run enrichment analysis",
@@ -621,6 +636,7 @@ app.layout = layout
     State("switch_ignore_unparsable_lipids", "checked"),
     State("select_test_method", "value"),
     State("switch_ignore_unknown_regulated_lipids", "checked"),
+    State("select_term_regulation", "value"),
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
@@ -633,6 +649,7 @@ def run_enrichment(
     ignore_unrecognizable_lipids,
     correction_method,
     ignore_unknown,
+    term_regulation,
     session_id,
 ):
     if len(all_lipids_list) == 0:
@@ -680,7 +697,7 @@ def run_enrichment(
     ontology = enrichment_ontologies[organism]
     ontology.set_background_lipids(lipidome)
 
-    results = ontology.enrichment_analysis(regulated_lipids, domains)
+    results = ontology.enrichment_analysis(regulated_lipids, domains, term_regulation)
     if correction_method != "no" and len(results) > 0:
         pvalues = [r.pvalue for r in results]
         pvalues = multipletests(pvalues, method = correction_method)[1]
@@ -847,9 +864,10 @@ def disclaimer_clicked(n_clicks):
     Output("term_lipids_modal_grid", "rowData", allow_duplicate = True),
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
+    State("regulated_lipids", "children"),
     prevent_initial_call = True,
 )
-def open_term_window(row_data, session_id):
+def open_term_window(row_data, session_id, regulated_lipids):
     if session_id not in sessions or "rowId" not in row_data:
         raise exceptions.PreventUpdate
 
@@ -858,12 +876,15 @@ def open_term_window(row_data, session_id):
         raise exceptions.PreventUpdate
 
     result = sessions[session_id]["data"][term_id]
+    for k, v in result.term.term_paths.items():
+        print(k, v)
     lipids = sorted(list(result.term.term_paths.keys()))
+    regulated_lipids = set(regulated_lipids.split("|"))
 
     return (
         True,
         f"Lipids for '{result.term.name}'",
-        [{"lipid": lipid} for lipid in lipids],
+        [{"lipid": lipid, "regulated": ("X" if lipid in regulated_lipids else "")} for lipid in lipids],
     )
 
 
