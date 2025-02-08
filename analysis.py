@@ -39,7 +39,7 @@ CC_LINK = html.A(
 
 species = {
     'Homo sapiens': '9606',
-    #'Mus musculus': '10090',
+    'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
@@ -78,7 +78,9 @@ for i, worksheet_name in enumerate(xl.sheet_names):
     if type(worksheet["desc"]) in {float, np.float64} and np.isnan(worksheet["desc"]): worksheet["desc"] = ""
     if type(worksheet["comp"]) in {float, np.float64} and np.isnan(worksheet["comp"]): worksheet["comp"] = ""
     if type(worksheet["doi"]) in {float, np.float64} and np.isnan(worksheet["doi"]): worksheet["doi"] = ""
-    if type(worksheet["org"]) in {float, np.float64} and np.isnan(worksheet["org"]): worksheet["org"] = INIT_ORGANISM
+    if type(worksheet["org"]) in {float, np.float64}:
+        if np.isnan(worksheet["org"]): worksheet["org"] = INIT_ORGANISM
+        else: worksheet["org"] = str(int(worksheet["org"]))
     examples[worksheet_name] = worksheet
 
 
@@ -138,8 +140,8 @@ for tax_name, tax_id in species.items():
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", lipid_parser = lipid_parser)
 
 
-#enrichment_ontologies[INIT_ORGANISM].set_background_lipids(["LPA 18:0", "LPA 20:0"])
-#enrichment_ontologies[INIT_ORGANISM].enrichment_analysis(["LPA 18:0"], ["Biological process"])
+#enrichment_ontologies["10090"].set_background(protein_list = ["Q921I1"])
+#enrichment_ontologies["10090"].enrichment_analysis(["LPA 18:0"], ["Biological process"])
 
 
 
@@ -209,14 +211,12 @@ def layout():
                 style = {"height": "100%", "display": "flex", "alignItems": "flex-start", "justifyContent": "right"},
             ),
         ], cols = 2),
-        html.Div(
-            id = "background_lipids",
-            style = {"display": "none"},
-        ),
-        html.Div(
-            id = "regulated_lipids",
-            style = {"display": "none"},
-        ),
+        html.Div(id = "background_lipids", style = {"display": "none"}),
+        html.Div(id = "regulated_lipids", style = {"display": "none"}),
+        html.Div(id = "background_proteins", style = {"display": "none"}),
+        html.Div(id = "regulated_proteins", style = {"display": "none"}),
+        html.Div(id = "background_metabolites", style = {"display": "none"}),
+        html.Div(id = "regulated_metabolites", style = {"display": "none"}),
         dmc.Modal(
             title = "Load example datasets",
             id = "load_examples_modal",
@@ -561,7 +561,7 @@ def layout():
                                         dmc.Switch(
                                             id = "switch_ignore_unparsable_lipids",
                                             checked = False,
-                                            label = "Ignore unrecognizable lipid names",
+                                            label = "Ignore unrecognizable molecules",
                                             style = {"paddingBottom": "8px"},
                                         ),
                                         style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
@@ -576,7 +576,7 @@ def layout():
                                         dmc.Switch(
                                             id = "switch_ignore_unknown_regulated_lipids",
                                             checked = False,
-                                            label = "Ignore regulated lipids that aren't in background",
+                                            label = "Ignore regulated molecules that aren't in background",
                                             style = {"paddingBottom": "8px"},
                                         ),
                                         style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
@@ -701,14 +701,21 @@ app.layout = layout
 @callback(
     Output("loading_output", "children", allow_duplicate = True),
     Output("graph_enrichment_results", "rowData", allow_duplicate = True),
-    Output("graph_enrichment_results", "selectedRows", allow_duplicate = True),
     Output("alert_enrichment", "hide", allow_duplicate = True),
     Output("alert_enrichment", "children", allow_duplicate = True),
     Output("background_lipids", "children", allow_duplicate = True),
     Output("regulated_lipids", "children", allow_duplicate = True),
+    Output("background_proteins", "children", allow_duplicate = True),
+    Output("regulated_proteins", "children", allow_duplicate = True),
+    Output("background_metabolites", "children", allow_duplicate = True),
+    Output("regulated_metabolites", "children", allow_duplicate = True),
     Input("button_run_enrichment", "n_clicks"),
     State("textarea_all_lipids", "value"),
     State("textarea_regulated_lipids", "value"),
+    State("textarea_all_proteins", "value"),
+    State("textarea_regulated_proteins", "value"),
+    State("textarea_all_metabolites", "value"),
+    State("textarea_regulated_metabolites", "value"),
     State("select_organism", "value"),
     State("select_domains", "value"),
     State("switch_ignore_unparsable_lipids", "checked"),
@@ -722,60 +729,165 @@ def run_enrichment(
     n_clicks,
     all_lipids_list,
     regulated_lipids_list,
+    all_proteins_list,
+    regulated_proteins_list,
+    all_metabolites_list,
+    regulated_metabolites_list,
     organism,
     domains,
-    ignore_unrecognizable_lipids,
+    ignore_unrecognizable_molecules,
     correction_method,
     ignore_unknown,
     term_regulation,
     session_id,
 ):
-    if len(all_lipids_list) == 0:
-        return "", [], False, "Please paste lipid names into the first text area.", "", ""
+    with_lipids = len(all_lipids_list) != 0 or len(regulated_lipids_list) != 0
+    with_proteins = len(all_proteins_list) != 0 or len(regulated_proteins_list) != 0
+    with_metabolites = len(all_metabolites_list) != 0 or len(regulated_metabolites_list) != 0
 
-    if len(regulated_lipids_list) == 0:
-        return "", [], False, "Please paste lipid names into the second text area."
-
-    if len(domains) == 0:
-        return "", [], False, "No domain(s) selected.", "", ""
-
-    lipidome, regulated_lipids = set(), set()
-    for lipid_name in all_lipids_list.split("\n"):
-        if len(lipid_name) == 0: continue
-        try:
-            lipidome.add(lipid_parser.parse(lipid_name).get_lipid_string())
-        except Exception as e:
-            if not ignore_unrecognizable_lipids:
-                return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable lipid names' option.", "", ""
-
-    for lipid_name in regulated_lipids_list.split("\n"):
-        if len(lipid_name) == 0: continue
-        try:
-            regulated_lipids.add(lipid_parser.parse(lipid_name).get_lipid_string())
-        except Exception as e:
-            if not ignore_unrecognizable_lipids:
-                return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable lipid names' option.", "", ""
-
-    if len(lipidome) == 0:
-        return "", [], False, "No background lipid left after lipid recognition.", "", ""
-
-    if len(regulated_lipids) == 0:
-        return "", [], False, "No regulated lipid left after lipid recognition.", "", ""
-
-    if len(regulated_lipids) > len(lipidome):
-        return "", [], False, "Length of regulated lipid list must be smaller than background list.", "", ""
-
-    left_lipids = regulated_lipids - lipidome
-    if len(left_lipids) > 0:
-        if ignore_unknown:
-            lipidome -= left_lipids
-        else:
-            return "", [], False, "The lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated lipids that aren't in background' option.", "", ""
+    if not with_lipids and not with_proteins and not with_metabolites:
+        if len(all_lipids_list) == 0:
+            return "", [], False, "No omics field is filled.", "", "", "", "", "", ""
 
     ontology = enrichment_ontologies[organism]
-    ontology.set_background(lipid_list = lipidome)
 
-    results = ontology.enrichment_analysis(regulated_lipids, domains, term_regulation)
+    target_set = set()
+    lipidome, regulated_lipids = set(), set()
+    proteome, regulated_proteins = set(), set()
+    metabolome, regulated_metabolites = set(), set()
+    if with_lipids:
+        if len(all_lipids_list) == 0:
+            return "", [], False, "Please paste lipid names into the first text area.", "", "", "", "", "", ""
+
+        if len(regulated_lipids_list) == 0:
+            return "", [], False, "Please paste lipid names into the second text area.", "", "", "", "", "", ""
+
+        for lipid_name in all_lipids_list.split("\n"):
+            if len(lipid_name) == 0: continue
+            try:
+                lipidome.add(lipid_parser.parse(lipid_name).get_lipid_string())
+            except Exception as e:
+                if not ignore_unrecognizable_molecules:
+                    return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable molecules' option.", "", ""
+
+        for lipid_name in regulated_lipids_list.split("\n"):
+            if len(lipid_name) == 0: continue
+            try:
+                regulated_lipids.add(lipid_parser.parse(lipid_name).get_lipid_string())
+            except Exception as e:
+                if not ignore_unrecognizable_molecules:
+                    return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable molecules' option.", "", ""
+
+        if len(lipidome) == 0:
+            return "", [], False, "No background lipid left after lipid recognition.", "", "", "", "", "", ""
+
+        if len(regulated_lipids) == 0:
+            return "", [], False, "No regulated lipid left after lipid recognition.", "", "", "", "", "", ""
+
+        if len(regulated_lipids) > len(lipidome):
+            return "", [], False, "Length of regulated lipid list must be smaller than background list.", "", "", "", "", "", ""
+
+        left_lipids = regulated_lipids - lipidome
+        if len(left_lipids) > 0:
+            if ignore_unknown:
+                lipidome -= left_lipids
+            else:
+                return "", [], False, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", ""
+
+        target_set |= regulated_lipids
+
+    if with_proteins:
+        if len(all_proteins_list) == 0:
+            return "", [], False, "Please paste protein accession into the first text area.", "", "", "", "", "", ""
+
+        if len(regulated_proteins_list) == 0:
+            return "", [], False, "Please paste protein accessions into the second text area.", "", "", "", "", "", ""
+
+        proteome, regulated_proteins = set(all_proteins_list.split("\n")), set(regulated_proteins_list.split("\n"))
+
+        left_proteins = proteome - ontology.clean_protein_ids
+        if len(left_proteins) > 0:
+            if ignore_unrecognizable_molecules:
+                proteome -= left_proteins
+            else:
+                return "", [], False, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
+
+        left_proteins = regulated_proteins - ontology.clean_protein_ids
+        if len(left_proteins) > 0:
+            if ignore_unrecognizable_molecules:
+                regulated_proteins -= left_proteins
+            else:
+                return "", [], False, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
+
+        left_proteins = regulated_proteins - proteome
+        if len(left_proteins) > 0:
+            if ignore_unknown:
+                proteome -= left_proteins
+            else:
+                return "", [], False, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", ""
+
+        if len(proteome) == 0:
+            return "", [], False, "No background protein left after protein recognition.", "", "", "", "", "", ""
+
+        if len(regulated_proteins) == 0:
+            return "", [], False, "No regulated protein left after protein recognition.", "", "", "", "", "", ""
+
+        if len(regulated_proteins) > len(proteome):
+            return "", [], False, "Length of regulated protein list must be smaller than background list.", "", ""
+
+        proteome = set([f"UNIPROT:{protein}" for protein in proteome])
+        regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
+        target_set |= regulated_proteins
+
+    if with_metabolites:
+        if len(all_metabolites_list) == 0:
+            return "", [], False, "Please paste metabolite ChEBI Ids into the first text area.", "", "", "", "", "", ""
+
+        if len(regulated_metabolites_list) == 0:
+            return "", [], False, "Please paste metabolite ChEBI Ids into the second text area.", "", "", "", "", "", ""
+
+        metabolome, regulated_metabolites = set(all_metabolites_list.split("\n")), set(regulated_metabolites_list.split("\n"))
+
+        left_metabolites = metabolome - ontology.clean_metabolite_ids
+        if len(left_metabolites) > 0:
+            if ignore_unrecognizable_molecules:
+                metabolome -= left_metabolites
+            else:
+                return "", [], False, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
+
+        left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids
+        if len(left_metabolites) > 0:
+            if ignore_unrecognizable_molecules:
+                regulated_metabolites -= left_metabolites
+            else:
+                return "", [], False, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
+
+        left_metabolites = regulated_metabolites - metabolome
+        if len(left_metabolites) > 0:
+            if ignore_unknown:
+                metabolome -= left_metabolites
+            else:
+                return "", [], False, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", ""
+
+        if len(metabolome) == 0:
+            return "", [], False, "No background metabolite left after metabolite recognition.", "", "", "", "", "", ""
+
+        if len(regulated_metabolites) == 0:
+            return "", [], False, "No regulated metabolite left after metabolite recognition.", "", "", "", "", "", ""
+
+        if len(regulated_metabolites) > len(metabolome):
+            return "", [], False, "Length of regulated metabolite list must be smaller than background list.", "", "", "", "", "", ""
+
+        metabolome = set([f"CHEBI:{metabolite}" for metabolite in metabolome])
+        regulated_metabolites = set([f"CHEBI:{metabolite}" for metabolite in regulated_metabolites])
+        target_set |= regulated_metabolites
+
+    if len(domains) == 0:
+        return "", [], False, "No domain(s) selected.", "", "", "", "", "", ""
+
+    ontology.set_background(lipid_list = lipidome, protein_list = proteome, metabolite_list = metabolome)
+
+    results = ontology.enrichment_analysis(target_set, domains, term_regulation)
     if correction_method != "no" and len(results) > 0:
         pvalues = [r.pvalue for r in results]
         pvalues = multipletests(pvalues, method = correction_method)[1]
@@ -796,11 +908,14 @@ def run_enrichment(
     return (
         "",
         data,
-        data,
         True,
         "",
         "|".join(lipidome),
         "|".join(regulated_lipids),
+        "|".join(proteome),
+        "|".join(regulated_proteins),
+        "|".join(metabolome),
+        "|".join(regulated_metabolites),
     )
 
 
@@ -901,11 +1016,14 @@ def submit_load_examples_modal(n_clicks, checked, checkbox_ids):
             index = checkbox_id["index"]
             break
 
+    #ontology = enrichment_ontologies[examples[index]["org"]]
+
     return (
         False,
         "\n".join(examples[index]["bgl"]),
         "\n".join(examples[index]["regl"]),
         "\n".join(examples[index]["bgp"]),
+        #"\n".join([key.replace("UNIPROT:", "") for key in ontology.proteins.keys()]),
         "\n".join(examples[index]["regp"]),
         "\n".join(examples[index]["bgm"]),
         "\n".join(examples[index]["regm"]),
@@ -953,9 +1071,17 @@ def disclaimer_clicked(n_clicks):
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
     State("regulated_lipids", "children"),
+    State("regulated_proteins", "children"),
+    State("regulated_metabolites", "children"),
     prevent_initial_call = True,
 )
-def open_term_window(row_data, session_id, regulated_lipids):
+def open_term_window(
+    row_data,
+    session_id,
+    regulated_lipids,
+    regulated_proteins,
+    regulated_metabolites,
+):
     if session_id not in sessions or "rowId" not in row_data:
         raise exceptions.PreventUpdate
 
@@ -964,13 +1090,16 @@ def open_term_window(row_data, session_id, regulated_lipids):
         raise exceptions.PreventUpdate
 
     result = sessions[session_id]["data"][term_id]
-    lipids = sorted(list(result.term.term_paths.keys()))
-    regulated_lipids = set(regulated_lipids.split("|"))
+    molecules = sorted(list(result.term.term_paths.keys()))
+    regulated_molecules = set(regulated_lipids.split("|")) | set(regulated_proteins.split("|")) | set(regulated_metabolites.split("|"))
+
+    # for term_id, term_path in result.term.term_paths.items():
+    #     print(term_id, term_path)
 
     return (
         True,
         f"Lipids for '{result.term.name}'",
-        [{"lipid": lipid, "regulated": ("X" if lipid in regulated_lipids else "")} for lipid in lipids],
+        [{"lipid": molecule, "regulated": ("X" if molecule in regulated_molecules else "")} for molecule in molecules],
     )
 
 

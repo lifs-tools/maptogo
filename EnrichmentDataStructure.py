@@ -38,7 +38,9 @@ class EnrichmentOntology:
         self.lipid_classes = {}
         self.carbon_chains = {}
         self.proteins = {}
+        self.clean_protein_ids = set()
         self.metabolites = {}
+        self.clean_metabolite_ids = set()
         self.domains = set()
         self.search_terms = {}
         self.lipid_parser = lipid_parser
@@ -59,7 +61,7 @@ class EnrichmentOntology:
                     line = line.decode("utf8").strip().strip(" ")
 
                     if line == "[Term]":
-                        if term_id != "" and name != "" and name.find("inding") == -1:
+                        if term_id != "" and name != "": # and name.find("inding") == -1:
                             if term_id in self.ontology_terms:
                                 raise Exception(
                                     "Term id '%s' in lipid ontology already defined."
@@ -84,10 +86,10 @@ class EnrichmentOntology:
                                     self.carbon_chains[synonym] = term
 
                             elif is_protein:
-                                if name not in self.proteins: self.proteins[name] = term
+                                if name not in self.proteins: self.proteins[term_id] = term
 
                             elif is_metabolite:
-                                if name not in self.metabolites: self.metabolites[name] = term
+                                if name not in self.metabolites: self.metabolites[term_id] = term
 
                             if len(domain) > 0:
                                 self.search_terms[term_id] = set()
@@ -177,9 +179,10 @@ class EnrichmentOntology:
         except Exception as e:
             logger.info("ERROR: %s" % e)
 
+        self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
+        self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
 
-
-    def set_background(self, lipid_list, protein_list = [], metabolite_list = []):
+    def set_background(self, lipid_list = [], protein_list = [], metabolite_list = []):
         for term_id in self.search_terms:
             self.ontology_terms[term_id].term_paths.clear()
 
@@ -196,23 +199,19 @@ class EnrichmentOntology:
 
 
     def recursive_event_adding(
-        self, lipid_input_name, term_id, visited_terms, recursion = 0, path = None
+        self, molecule_input_name, term_id, visited_terms, recursion = 0, path = None
     ):
         if recursion > 0: return
 
         if path == None: path = []
-
         if term_id in self.ontology_terms:
             term = self.ontology_terms[term_id]
             path.append(term_id)
 
-            if lipid_input_name not in term.term_paths: term.term_paths[lipid_input_name] = {}
-            term_paths = term.term_paths[lipid_input_name]
+            if molecule_input_name not in term.term_paths: term.term_paths[molecule_input_name] = {}
+            term_paths = term.term_paths[molecule_input_name]
             if path[0] not in term_paths:
-                term_paths[path[0]] = []
-                lipid_path = term_paths[path[0]]
-                for path_id in path:
-                    lipid_path.append(path_id)
+                term_paths[path[0]] = list(path)
 
             next_recursion = recursion + (1 if term.domain in self.domains else 0)
             for parent_term_id in term.relations:
@@ -220,7 +219,7 @@ class EnrichmentOntology:
                     visited_terms.add(parent_term_id)
 
                     self.recursive_event_adding(
-                        lipid_input_name,
+                        molecule_input_name,
                         parent_term_id,
                         visited_terms,
                         next_recursion,
@@ -231,7 +230,7 @@ class EnrichmentOntology:
 
 
 
-    def compute_event_occurrance(self, lipid_list, protein_list = [], metabolite_list = []):
+    def compute_event_occurrance(self, lipid_list = [], protein_list = [], metabolite_list = []):
         for lipid_input_name in lipid_list:
             try:
                 lipid = self.lipid_parser.parse(lipid_input_name)
@@ -316,32 +315,30 @@ class EnrichmentOntology:
         if self.num_background == 0 or len(enrichment_domains) == 0:
             return
 
-        result_list, target_set = [], set()
-        for target in target_list:
-            target_set.add(target)
+        result_list, target_set = [], set(target_list)
 
-        for term_id, terms in self.search_terms.items():
+        for term_id, term_metabolites in self.search_terms.items():
             if (
-                len(terms) == 0
+                len(term_metabolites) == 0
                 or term_id not in self.ontology_terms
                 or self.ontology_terms[term_id].domain not in enrichment_domains
             ): continue
 
-            target_number = len(terms & target_set)
+            target_number = len(term_metabolites & target_set)
 
             a, b, c, d = (
                 target_number,
-                len(terms) - target_number,
-                len(target_list) - target_number,
-                self.num_background - len(terms) - len(target_list) + target_number,
+                len(term_metabolites) - target_number,
+                len(target_set) - target_number,
+                self.num_background - len(term_metabolites) - len(target_set) + target_number,
             )
             p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
             result_list.append(
                 OntologyResult(
                     self.ontology_terms[term_id],
                     self.num_background,
-                    len(terms),
-                    len(target_list),
+                    len(term_metabolites),
+                    len(target_set),
                     p_hyp,
                 )
             )
