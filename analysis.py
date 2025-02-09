@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context
+from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
@@ -84,6 +84,21 @@ for i, worksheet_name in enumerate(xl.sheet_names):
         else: worksheet["org"] = str(int(worksheet["org"]))
     examples[worksheet_name] = worksheet
 
+plotly_config = {
+    "scrollZoom": True,
+    "modeBarButtonsToRemove": [
+        "resetScale",
+        "toImage",
+        "zoom2d",
+        "pan2d",
+        "select2d",
+        "lasso2d",
+        "zoomIn2d",
+        "zoomOut2d",
+        "autoScale2d",
+    ],
+    "modeBarButtonsToAdd": [],
+}
 
 
 example_options = html.Div(
@@ -199,7 +214,7 @@ def layout():
                         "Load example datasets",
                     ),
                     id = "load_examples_link",
-                    style = {"color": "#2980B9", "cursor": "pointer"},
+                    style = {"color": LINK_COLOR, "cursor": "pointer"},
                 ),
                 dmc.Text("|", style = {"marginLeft": "20px", "marginRight": "20px"}),
                 html.A(
@@ -207,7 +222,7 @@ def layout():
                         "Description & disclaimer",
                     ),
                     id = "disclaimer_link",
-                    style = {"color": "#2980B9", "cursor": "pointer"},
+                    style = {"color": LINK_COLOR, "cursor": "pointer"},
                 )],
                 style = {"height": "100%", "display": "flex", "alignItems": "flex-start", "justifyContent": "right"},
             ),
@@ -278,6 +293,18 @@ def layout():
                 ),
             ],
             size = "40%",
+        ),
+        dmc.Modal(
+            #title = "Load",
+            id = "barplot_terms_modal",
+            zIndex = 10000,
+            children = [
+                dcc.Graph(
+                    id = "barplot_terms",
+                    config = plotly_config,
+                ),
+            ],
+            size = "90%",
         ),
         dmc.Modal(
             #title = "Description & disclaimer",
@@ -1193,6 +1220,86 @@ def open_term_window(
         f"Lipids for '{result.term.name}'",
         [{"lipid": molecule, "regulated": ("X" if molecule in regulated_molecules else "")} for molecule in molecules],
     )
+
+
+
+@callback(
+    Output("barplot_terms_modal", "opened", allow_duplicate = True),
+    Output("barplot_terms", "figure", allow_duplicate = True),
+    Input("chart_results", "n_clicks"),
+    State("graph_enrichment_results", "virtualRowData"),
+    State("graph_enrichment_results", "selectedRows"),
+    prevent_initial_call = True,
+)
+def open_barplot(n_clicks, row_data, selected_rows):
+    fig = go.Figure()
+    selected_term_ids = set([row["termid"] for row in selected_rows])
+    pvalues = -np.log10([row["pvalue"] for row in row_data if row["termid"] in selected_term_ids])
+    categories = [row["term"] for row in row_data if row["termid"] in selected_term_ids]
+    # Add bar trace with red color
+    fig.add_trace(go.Bar(
+        x = pvalues,
+        y = categories,
+        orientation = "h",  # Horizontal bars
+        marker = dict(color = "#1f77b4")  # Set bars to red
+    ))
+
+    # Layout customization
+    fig.update_layout(
+        xaxis = dict(title = "-log<sub>10</sub>(p-value)", fixedrange = True),
+        yaxis = dict(title = "Term", categoryarray = categories[::-1]),
+        template = "plotly_white",
+        dragmode = "pan",
+        margin = dict(l = 20, r = 20, t = 20, b = 20),
+    )
+    return True, fig
+
+
+
+clientside_callback(
+    """
+    function (graph_config) {
+        graph_config.modeBarButtonsToAdd.push({
+            name: 'download_png',
+            title: 'Download as png',
+            icon: {
+                width: 24,
+                height: 24,
+                path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
+            },
+            click: function(gd) {
+                Plotly.downloadImage(gd, {format: "png", filename: "barplot"});
+            }
+        });
+
+        graph_config.modeBarButtonsToAdd.push({
+            name: 'download_svg',
+            title: 'Download as svg',
+            icon: {
+                width: 24,
+                height: 24,
+                path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
+            },
+            click: function(gd) {
+                Plotly.downloadImage(gd, {format: "svg", filename: "barplot"});
+            }
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("barplot_terms", "config"),
+    Input("barplot_terms", "config"),
+)
+
+
+
+
+
+
+
+
+
+
 
 
 
