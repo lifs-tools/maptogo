@@ -311,13 +311,14 @@ class EnrichmentOntology:
 
 
 
+
     def enrichment_analysis(self, target_list, enrichment_domains, term_regulation = "two-sided"):
         if self.num_background == 0 or len(enrichment_domains) == 0:
             return
 
-        result_list, target_set = [], set(target_list)
+        result_list, target_set = [None] * len(self.search_terms), set(target_list)
 
-        for term_id, term_metabolites in self.search_terms.items():
+        for i, (term_id, term_metabolites) in enumerate(self.search_terms.items()):
             if (
                 len(term_metabolites) == 0
                 or term_id not in self.ontology_terms
@@ -333,14 +334,12 @@ class EnrichmentOntology:
                 self.num_background - len(term_metabolites) - len(target_set) + target_number,
             )
             p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
-            result_list.append(
-                OntologyResult(
-                    self.ontology_terms[term_id],
-                    self.num_background,
-                    len(term_metabolites),
-                    len(target_set),
-                    p_hyp,
-                )
+            result_list[i] = OntologyResult(
+                self.ontology_terms[term_id],
+                self.num_background,
+                len(term_metabolites),
+                len(target_set),
+                p_hyp,
             )
 
-        return result_list
+        return [result for result in result_list if result != None]

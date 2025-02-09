@@ -1,5 +1,6 @@
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context
 import dash_mantine_components as dmc
+import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 import dash_ag_grid as dag
 from dash_iconify import DashIconify
@@ -435,6 +436,7 @@ def layout():
         ),
         dmc.SimpleGrid(
             cols = 2,
+            style = {"marginTop": "5px"},
             children = [
                 html.Div([
                     dmc.Tabs(
@@ -444,7 +446,8 @@ def layout():
                                     dmc.Tab("Lipids", value="lipid_tab"),
                                     dmc.Tab("Proteins", value="protein_tab"),
                                     dmc.Tab("Metablites", value="metabolites_tab"),
-                                ]
+                                ],
+                                grow = True,
                             ),
                             dmc.TabsPanel([
                                 dmc.SimpleGrid([
@@ -527,7 +530,7 @@ def layout():
                         ],
                         color = "blue", # default is blue
                         orientation = "horizontal", # or "vertical"
-                        variant = "default", # or "outline" or "pills"
+                        variant = "outline", # or "outline" or "pills"
                         value = "lipid_tab"
                     ),
                     dmc.Title(
@@ -601,15 +604,33 @@ def layout():
                                         value = "two-sided",
                                         label = "Term regulation:",
                                     ),
-                                    html.Div(
-                                        dmc.Button(
-                                            "Run enrichment analysis",
-                                            id = "button_run_enrichment",
-                                        ),
-                                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
-                                    ),
                                 ],
                             ),
+
+                            html.Div([
+                                dmc.Group([
+                                    dmc.Checkbox(
+                                        label = "Use lipids",
+                                        id = "checkbox_use_lipids",
+                                        checked = False,
+                                    ),
+                                    dmc.Checkbox(
+                                        label = "Use proteins",
+                                        id = "checkbox_use_proteins",
+                                        checked = False,
+                                    ),
+                                    dmc.Checkbox(
+                                        label = "Use metabolites",
+                                        id = "checkbox_use_metabolites",
+                                        checked = False,
+                                    ),
+                                ]),
+                                dmc.Button(
+                                    "Run enrichment analysis",
+                                    id = "button_run_enrichment",
+                                    style = {"margin-left": "auto"},
+                                ),
+                            ], style={"display": "flex", "width": "100%", "marginTop": "20px"}),
                         ],
                         style = {"border": "1px solid #dddddd", "radius": "10px", "padding": "10px"},
                     ),
@@ -634,6 +655,7 @@ def layout():
                                         DashIconify(icon="material-symbols:download-rounded", width = 20),
                                         id = "icon_download_results",
                                         title = "Download table",
+                                        disabled = True,
                                     ),
                                 ], spacing = 0),
                             ),
@@ -723,6 +745,9 @@ app.layout = layout
     State("switch_ignore_unknown_regulated_lipids", "checked"),
     State("select_term_regulation", "value"),
     State("sessionid", "children"),
+    State("checkbox_use_lipids", "checked"),
+    State("checkbox_use_proteins", "checked"),
+    State("checkbox_use_metabolites", "checked"),
     prevent_initial_call = True,
 )
 def run_enrichment(
@@ -740,14 +765,13 @@ def run_enrichment(
     ignore_unknown,
     term_regulation,
     session_id,
+    with_lipids,
+    with_proteins,
+    with_metabolites,
 ):
-    with_lipids = len(all_lipids_list) != 0 or len(regulated_lipids_list) != 0
-    with_proteins = len(all_proteins_list) != 0 or len(regulated_proteins_list) != 0
-    with_metabolites = len(all_metabolites_list) != 0 or len(regulated_metabolites_list) != 0
-
     if not with_lipids and not with_proteins and not with_metabolites:
         if len(all_lipids_list) == 0:
-            return "", [], False, "No omics field is filled.", "", "", "", "", "", ""
+            return "", [], False, "No omics is selected.", "", "", "", "", "", ""
 
     ontology = enrichment_ontologies[organism]
 
@@ -912,10 +936,10 @@ def run_enrichment(
         "",
         "|".join(lipidome),
         "|".join(regulated_lipids),
-        "|".join(proteome),
-        "|".join(regulated_proteins),
-        "|".join(metabolome),
-        "|".join(regulated_metabolites),
+        "|".join(proteome) if with_proteins else "",
+        "|".join(regulated_proteins) if with_proteins else "",
+        "|".join(metabolome) if with_metabolites else "",
+        "|".join(regulated_metabolites) if with_metabolites else "",
     )
 
 
@@ -928,6 +952,10 @@ def run_enrichment(
     State("graph_enrichment_results", "selectedRows"),
     State("background_lipids", "children"),
     State("regulated_lipids", "children"),
+    State("background_proteins", "children"),
+    State("regulated_proteins", "children"),
+    State("background_metabolites", "children"),
+    State("regulated_metabolites", "children"),
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
@@ -937,7 +965,11 @@ def download_table(
     selected_rows,
     background_lipids,
     regulated_lipids,
-    session_id
+    background_proteins,
+    regulated_proteins,
+    background_metabolites,
+    regulated_metabolites,
+    session_id,
 ):
     if session_id not in sessions or "data" not in sessions[session_id]:
         raise exceptions.PreventUpdate
@@ -960,28 +992,73 @@ def download_table(
         pvalues.append(row["pvalue"])
 
     df = pd.DataFrame({"Domain": domains, "Term ID": term_ids, "Term": terms, "pValue": pvalues})
-
-    background_lipids = sorted(background_lipids.split("|"))
-    regulated_lipids = sorted(regulated_lipids.split("|"))
-    regulated_lipid_set = set(regulated_lipids)
-    associated_lipids = {}
     data = sessions[session_id]["data"]
+
+    with_lipids = len(background_lipids) > 0 or len(regulated_lipids) > 0
+    with_proteins = len(background_proteins) > 0 or len(regulated_proteins) > 0
+    with_metabolites = len(background_metabolites) > 0 or len(regulated_metabolites) > 0
+
+    if with_lipids:
+        background_lipids = sorted(background_lipids.split("|"))
+        regulated_lipids = sorted(regulated_lipids.split("|"))
+        regulated_lipid_set = set(regulated_lipids)
+        associated_lipids = {}
+
+    if with_proteins:
+        background_proteins = sorted(background_proteins.split("|"))
+        regulated_proteins = sorted(regulated_proteins.split("|"))
+        regulated_protein_set = set(regulated_proteins)
+        associated_proteins = {}
+
+    if with_metabolites:
+        background_metabolites = sorted(background_metabolites.split("|"))
+        regulated_metabolites = sorted(regulated_metabolites.split("|"))
+        regulated_metabolite_set = set(regulated_metabolites)
+        associated_metabolites = {}
 
     for term_id, term in zip(term_ids, terms):
         if term_id not in data: continue
-        lipids = sorted(list(data[term_id].term.term_paths.keys()))
-        associated_lipids[term] = lipids
-        associated_lipids[f"{term}, regulated"] = ["X" if lipid in regulated_lipid_set else "" for lipid in lipids]
+        molecules = data[term_id].term.term_paths.keys()
+
+        if with_lipids:
+            lipids = sorted(list(molecules & set(background_lipids)))
+            associated_lipids[term] = lipids
+            associated_lipids[f"{term}, regulated"] = ["X" if lipid in regulated_lipid_set else "" for lipid in lipids]
+
+        if with_proteins:
+            proteins = sorted(list(molecules & set(background_proteins)))
+            associated_proteins[term] = [protein.replace("UNIPROT:", "") for protein in proteins]
+            associated_proteins[f"{term}, regulated"] = ["X" if protein in regulated_protein_set else "" for protein in proteins]
+
+        if with_metabolites:
+            metabolites = sorted(list(molecules & set(background_metabolites)))
+            associated_metabolites[term] = [metabolite.replace("CHEBI:", "") for metabolite in metabolites]
+            associated_metabolites[f"{term}, regulated"] = ["X" if metabolite in regulated_metabolite_set else "" for metabolite in metabolites]
 
     output = io.BytesIO()
     writer = pd.ExcelWriter(output, engine = 'xlsxwriter')
-    df.to_excel(writer, sheet_name = "GO lipidomics results", index = False)
-    pd.DataFrame.from_dict(associated_lipids, orient = "index").transpose().to_excel(writer, sheet_name = "Associated lipids", index = False)
-    pd.DataFrame({"LipidName": background_lipids}).to_excel(writer, sheet_name = "Background lipids", index = False)
-    pd.DataFrame({"LipidName": regulated_lipids}).to_excel(writer, sheet_name = "Regulated lipids", index = False)
+    df.to_excel(writer, sheet_name = "GO multiomics results", index = False)
+    if with_lipids:
+        pd.DataFrame.from_dict(associated_lipids, orient = "index").transpose().to_excel(writer, sheet_name = "Associated lipids", index = False)
+        pd.DataFrame({"LipidName": background_lipids}).to_excel(writer, sheet_name = "Background lipids", index = False)
+        pd.DataFrame({"LipidName": regulated_lipids}).to_excel(writer, sheet_name = "Regulated lipids", index = False)
+
+    if with_proteins:
+        background_proteins = [protein.replace("UNIPROT:", "") for protein in background_proteins]
+        regulated_proteins = [protein.replace("UNIPROT:", "") for protein in regulated_proteins]
+        pd.DataFrame.from_dict(associated_proteins, orient = "index").transpose().to_excel(writer, sheet_name = "Associated proteins", index = False)
+        pd.DataFrame({"Accession": background_proteins}).to_excel(writer, sheet_name = "Background proteins", index = False)
+        pd.DataFrame({"Accession": regulated_proteins}).to_excel(writer, sheet_name = "Regulated proteins", index = False)
+
+    if with_metabolites:
+        background_metabolites = [metabolite.replace("CHEBI:", "") for metabolite in background_metabolites]
+        regulated_metabolites = [metabolite.replace("CHEBI:", "") for metabolite in regulated_metabolites]
+        pd.DataFrame.from_dict(associated_metabolites, orient = "index").transpose().to_excel(writer, sheet_name = "Associated metabolites", index = False)
+        pd.DataFrame({"ChEBI": background_metabolites}).to_excel(writer, sheet_name = "Background metabolites", index = False)
+        pd.DataFrame({"ChEBI": regulated_metabolites}).to_excel(writer, sheet_name = "Regulated metabolites", index = False)
     writer._save()
 
-    return "", dcc.send_bytes(output.getvalue(), "GO_lipidomics_results.xlsx")
+    return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx")
 
 
 
@@ -1004,6 +1081,9 @@ def open_load_examples_modal(n_clicks):
     Output("textarea_all_metabolites", "value", allow_duplicate = True),
     Output("textarea_regulated_metabolites", "value", allow_duplicate = True),
     Output("select_organism", "value", allow_duplicate = True),
+    Output("checkbox_use_lipids", "checked", allow_duplicate = True),
+    Output("checkbox_use_proteins", "checked", allow_duplicate = True),
+    Output("checkbox_use_metabolites", "checked", allow_duplicate = True),
     Input("load_examples_modal_submit_button", "n_clicks"),
     State({"type": "checkbox_type", "index": ALL}, "checked"),
     State({"type": "checkbox_type", "index": ALL}, "id"),
@@ -1016,18 +1096,18 @@ def submit_load_examples_modal(n_clicks, checked, checkbox_ids):
             index = checkbox_id["index"]
             break
 
-    #ontology = enrichment_ontologies[examples[index]["org"]]
-
     return (
         False,
         "\n".join(examples[index]["bgl"]),
         "\n".join(examples[index]["regl"]),
         "\n".join(examples[index]["bgp"]),
-        #"\n".join([key.replace("UNIPROT:", "") for key in ontology.proteins.keys()]),
         "\n".join(examples[index]["regp"]),
         "\n".join(examples[index]["bgm"]),
         "\n".join(examples[index]["regm"]),
         examples[index]["org"],
+        len(examples[index]["bgl"]) > 0 or len(examples[index]["regl"]) > 0,
+        len(examples[index]["bgp"]) > 0 or len(examples[index]["regp"]) > 0,
+        len(examples[index]["bgm"]) > 0 or len(examples[index]["regm"]) > 0,
     )
 
 
@@ -1061,6 +1141,18 @@ def checkbox_checks(_, checkbox_ids):
 )
 def disclaimer_clicked(n_clicks):
     return True
+
+
+
+
+@callback(
+    Output("chart_results", "disabled", allow_duplicate = True),
+    Output("icon_download_results", "disabled", allow_duplicate = True),
+    Input("graph_enrichment_results", "selectedRows"),
+    prevent_initial_call = True,
+)
+def update_action_icons(selected_rows):
+    return len(selected_rows) == 0, len(selected_rows) == 0
 
 
 
