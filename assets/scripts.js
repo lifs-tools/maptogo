@@ -1,7 +1,23 @@
 var dagcomponentfuncs = (window.dashAgGridComponentFunctions = window.dashAgGridComponentFunctions || {});
 var dagfuncs = window.dashAgGridFunctions = window.dashAgGridFunctions || {};
 window.dash_clientside = window.dash_clientside || {};
+
 var LINK_COLOR = "#2980B9";
+
+dagcomponentfuncs.CustomNoRowsOverlay = function (props) {
+    return React.createElement(
+        'div',
+        {
+            style: {
+                color: 'grey',
+                padding: 10,
+                fontSize: props.fontSize
+            },
+        },
+        props.message
+    );
+};
+
 
 dagcomponentfuncs.TermIDRenderer = function (props) {
     const {setData, data} = props;

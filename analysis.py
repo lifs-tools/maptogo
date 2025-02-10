@@ -54,9 +54,8 @@ INIT_ORGANISM = "9606"
 
 sessions, examples = {}, {}
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
-first_example = ""
-for i, worksheet_name in enumerate(xl.sheet_names):
-    if i == 0: first_example = worksheet_name
+for worksheet_name in xl.sheet_names:
+    if worksheet_name[0] == "_": continue
     df = xl.parse(worksheet_name)
     worksheet = {
         "bgl": [], "regl": [],
@@ -160,6 +159,39 @@ for tax_name, tax_id in species.items():
 #enrichment_ontologies["10090"].enrichment_analysis(["LPA 18:0"], ["Biological process"])
 
 
+def get_aggrid_modal(name, molecule):
+    return dag.AgGrid(
+        id = name,
+        columnDefs = [
+            {
+                'field': "molecule",
+                "headerName": molecule,
+            },
+            {
+                'field': "regulated",
+                "headerName": "Regulated",
+                "maxWidth": 150,
+            },
+        ],
+        rowData = [],
+        columnSize = "responsiveSizeToFit",
+        defaultColDef={
+            "suppressMovable": True,
+            "sortable": True,
+            "filter": True,
+        },
+        dashGridOptions={
+            "rowSelection": "multiple",
+            "suppressMoveWhenRowDragging": True,
+            "suppressRowClickSelection": True,
+            "alwaysShowVerticalScroll": True,
+            "noRowsOverlayComponent": "CustomNoRowsOverlay",
+            "noRowsOverlayComponentParams": {
+                "message": f"No {molecule.lower()} assigned to this term",
+                "fontSize": 12,
+            },
+        },
+    )
 
 
 def session_timer_trigger(sessions):
@@ -261,35 +293,49 @@ def layout():
         ),
         dmc.Modal(
             title = "Load",
-            id = "term_lipids_modal",
+            id = "term_molecules_modal",
             zIndex = 10000,
             children = [
-                dag.AgGrid(
-                    id = "term_lipids_modal_grid",
-                    columnDefs = [
-                        {
-                            'field': "lipid",
-                            "headerName": "Lipid",
-                        },
-                        {
-                            'field': "regulated",
-                            "headerName": "Regulated",
-                            "maxWidth": 150,
-                        },
+                dmc.Tabs(
+                    [
+                        dmc.TabsList(
+                            [
+                                dmc.Tab(
+                                    "Lipids",
+                                    value = "lipid_tab_modal",
+                                    id = "lipid_tab_modal_tab",
+                                ),
+                                dmc.Tab(
+                                    "Proteins",
+                                    value = "protein_tab_modal",
+                                    id = "protein_tab_modal_tab",
+                                ),
+                                dmc.Tab(
+                                    "Metabolites",
+                                    value = "metabolite_tab_modal",
+                                    id = "metabolite_tab_modal_tab",
+                                ),
+                            ],
+                            grow = True,
+                        ),
+                        dmc.TabsPanel(
+                            get_aggrid_modal("term_lipids_modal_grid", "Lipid"),
+                            value = "lipid_tab_modal",
+                        ),
+                        dmc.TabsPanel(
+                            get_aggrid_modal("term_proteins_modal_grid", "Protein"),
+                            value = "protein_tab_modal",
+                        ),
+                        dmc.TabsPanel(
+                            get_aggrid_modal("term_metabolites_modal_grid", "Metabolite"),
+                            value = "metabolite_tab_modal",
+                        ),
                     ],
-                    rowData = [],
-                    columnSize = "responsiveSizeToFit",
-                    defaultColDef={
-                        "suppressMovable": True,
-                        "sortable": True,
-                        "filter": True,
-                    },
-                    dashGridOptions={
-                        "rowSelection": "multiple",
-                        "suppressMoveWhenRowDragging": True,
-                        "suppressRowClickSelection": True,
-                        "alwaysShowVerticalScroll": True,
-                    },
+                    id = "term_molecules_modal_tab",
+                    color = "blue", # default is blue
+                    orientation = "horizontal", # or "vertical"
+                    variant = "outline", # or "outline" or "pills"
+                    value = "lipid_tab_modal",
                 ),
             ],
             size = "40%",
@@ -472,7 +518,7 @@ def layout():
                                 [
                                     dmc.Tab("Lipids", value="lipid_tab"),
                                     dmc.Tab("Proteins", value="protein_tab"),
-                                    dmc.Tab("Metablites", value="metabolites_tab"),
+                                    dmc.Tab("Metabolites", value="metabolites_tab"),
                                 ],
                                 grow = True,
                             ),
@@ -735,6 +781,11 @@ def layout():
                             "suppressMoveWhenRowDragging": True,
                             "suppressRowClickSelection": True,
                             "alwaysShowVerticalScroll": True,
+                            "noRowsOverlayComponent": "CustomNoRowsOverlay",
+                            "noRowsOverlayComponentParams": {
+                                "message": "Run the enrichment analysis to obtain results",
+                                "fontSize": 12,
+                            },
                         },
                     ),
                 ]),
@@ -819,7 +870,7 @@ def run_enrichment(
                 lipidome.add(lipid_parser.parse(lipid_name).get_lipid_string())
             except Exception as e:
                 if not ignore_unrecognizable_molecules:
-                    return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable molecules' option.", "", ""
+                    return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
 
         for lipid_name in regulated_lipids_list.split("\n"):
             if len(lipid_name) == 0: continue
@@ -827,7 +878,7 @@ def run_enrichment(
                 regulated_lipids.add(lipid_parser.parse(lipid_name).get_lipid_string())
             except Exception as e:
                 if not ignore_unrecognizable_molecules:
-                    return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable molecules' option.", "", ""
+                    return "", [], False, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
 
         if len(lipidome) == 0:
             return "", [], False, "No background lipid left after lipid recognition.", "", "", "", "", "", ""
@@ -884,7 +935,7 @@ def run_enrichment(
             return "", [], False, "No regulated protein left after protein recognition.", "", "", "", "", "", ""
 
         if len(regulated_proteins) > len(proteome):
-            return "", [], False, "Length of regulated protein list must be smaller than background list.", "", ""
+            return "", [], False, "Length of regulated protein list must be smaller than background list.", "", "", "", "", "", ""
 
         proteome = set([f"UNIPROT:{protein}" for protein in proteome])
         regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
@@ -899,14 +950,14 @@ def run_enrichment(
 
         metabolome, regulated_metabolites = set(all_metabolites_list.split("\n")), set(regulated_metabolites_list.split("\n"))
 
-        left_metabolites = metabolome - ontology.clean_metabolite_ids
+        left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
         if len(left_metabolites) > 0:
             if ignore_unrecognizable_molecules:
                 metabolome -= left_metabolites
             else:
                 return "", [], False, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
 
-        left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids
+        left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
         if len(left_metabolites) > 0:
             if ignore_unrecognizable_molecules:
                 regulated_metabolites -= left_metabolites
@@ -929,8 +980,8 @@ def run_enrichment(
         if len(regulated_metabolites) > len(metabolome):
             return "", [], False, "Length of regulated metabolite list must be smaller than background list.", "", "", "", "", "", ""
 
-        metabolome = set([f"CHEBI:{metabolite}" for metabolite in metabolome])
-        regulated_metabolites = set([f"CHEBI:{metabolite}" for metabolite in regulated_metabolites])
+        metabolome = set([f"CHEBI:{metabolite}" if type(metabolite) == int or metabolite[:6] != "CHEBI:" else metabolite for metabolite in metabolome])
+        regulated_metabolites = set([f"CHEBI:{metabolite}" if type(metabolite) == int or metabolite[:6] != "CHEBI:" else metabolite for metabolite in regulated_metabolites])
         target_set |= regulated_metabolites
 
     if len(domains) == 0:
@@ -1059,7 +1110,7 @@ def download_table(
 
         if with_metabolites:
             metabolites = sorted(list(molecules & set(background_metabolites)))
-            associated_metabolites[term] = [metabolite.replace("CHEBI:", "") for metabolite in metabolites]
+            associated_metabolites[term] = [metabolite for metabolite in metabolites]
             associated_metabolites[f"{term}, regulated"] = ["X" if metabolite in regulated_metabolite_set else "" for metabolite in metabolites]
 
     output = io.BytesIO()
@@ -1078,8 +1129,8 @@ def download_table(
         pd.DataFrame({"Accession": regulated_proteins}).to_excel(writer, sheet_name = "Regulated proteins", index = False)
 
     if with_metabolites:
-        background_metabolites = [metabolite.replace("CHEBI:", "") for metabolite in background_metabolites]
-        regulated_metabolites = [metabolite.replace("CHEBI:", "") for metabolite in regulated_metabolites]
+        background_metabolites = [metabolite for metabolite in background_metabolites]
+        regulated_metabolites = [metabolite for metabolite in regulated_metabolites]
         pd.DataFrame.from_dict(associated_metabolites, orient = "index").transpose().to_excel(writer, sheet_name = "Associated metabolites", index = False)
         pd.DataFrame({"ChEBI": background_metabolites}).to_excel(writer, sheet_name = "Background metabolites", index = False)
         pd.DataFrame({"ChEBI": regulated_metabolites}).to_excel(writer, sheet_name = "Regulated metabolites", index = False)
@@ -1184,21 +1235,33 @@ def update_action_icons(selected_rows):
 
 
 @callback(
-    Output("term_lipids_modal", "opened", allow_duplicate = True),
-    Output("term_lipids_modal", "title", allow_duplicate = True),
+    Output("term_molecules_modal", "opened", allow_duplicate = True),
+    Output("term_molecules_modal", "title", allow_duplicate = True),
     Output("term_lipids_modal_grid", "rowData", allow_duplicate = True),
+    Output("term_proteins_modal_grid", "rowData", allow_duplicate = True),
+    Output("term_metabolites_modal_grid", "rowData", allow_duplicate = True),
+    Output("lipid_tab_modal_tab", "disabled", allow_duplicate = True),
+    Output("protein_tab_modal_tab", "disabled", allow_duplicate = True),
+    Output("metabolite_tab_modal_tab", "disabled", allow_duplicate = True),
+    Output("term_molecules_modal_tab", "value", allow_duplicate = True),
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
+    State("background_lipids", "children"),
     State("regulated_lipids", "children"),
+    State("background_proteins", "children"),
     State("regulated_proteins", "children"),
+    State("background_metabolites", "children"),
     State("regulated_metabolites", "children"),
     prevent_initial_call = True,
 )
 def open_term_window(
     row_data,
     session_id,
+    background_lipids,
     regulated_lipids,
+    background_proteins,
     regulated_proteins,
+    background_metabolites,
     regulated_metabolites,
 ):
     if session_id not in sessions or "rowId" not in row_data:
@@ -1208,17 +1271,51 @@ def open_term_window(
     if "data" not in sessions[session_id] or term_id not in sessions[session_id]["data"]:
         raise exceptions.PreventUpdate
 
+    with_lipids = len(background_lipids) > 0 or len(regulated_lipids) > 0
+    with_proteins = len(background_proteins) > 0 or len(regulated_proteins) > 0
+    with_metabolites = len(background_metabolites) > 0 or len(regulated_metabolites) > 0
+
+    lipid_table = []
+    protein_table = []
+    metabolite_table = []
+
     result = sessions[session_id]["data"][term_id]
     molecules = sorted(list(result.term.term_paths.keys()))
-    regulated_molecules = set(regulated_lipids.split("|")) | set(regulated_proteins.split("|")) | set(regulated_metabolites.split("|"))
+
+    if with_lipids:
+        background_lipids = set(background_lipids.split("|"))
+        regulated_lipids = set(regulated_lipids.split("|"))
+        lipid_table = [{"molecule": molecule, "regulated": ("X" if molecule in regulated_lipids else "")} for molecule in molecules if molecule in background_lipids]
+
+    if with_proteins:
+        background_proteins = set(background_proteins.split("|"))
+        regulated_proteins = set(regulated_proteins.split("|"))
+        protein_table = [{"molecule": molecule.replace("UNIPROT:", ""), "regulated": ("X" if molecule in regulated_proteins else "")} for molecule in molecules if molecule in background_proteins]
+
+    if with_metabolites:
+        background_metabolites = set(background_metabolites.split("|"))
+        regulated_metabolites = set(regulated_metabolites.split("|"))
+        metabolite_table = [{"molecule": molecule, "regulated": ("X" if molecule in regulated_metabolites else "")} for molecule in molecules if molecule in background_metabolites]
 
     # for term_id, term_path in result.term.term_paths.items():
     #     print(term_id, term_path)
 
+    tab_value = "lipid_tab_modal"
+    if not with_lipids:
+        tab_value = "protein_tab_modal"
+        if not with_proteins:
+            tab_value = "metabolite_tab_modal"
+
     return (
         True,
-        f"Lipids for '{result.term.name}'",
-        [{"lipid": molecule, "regulated": ("X" if molecule in regulated_molecules else "")} for molecule in molecules],
+        f"Molecules for '{result.term.name}'",
+        lipid_table,
+        protein_table,
+        metabolite_table,
+        not with_lipids,
+        not with_proteins,
+        not with_metabolites,
+        tab_value,
     )
 
 

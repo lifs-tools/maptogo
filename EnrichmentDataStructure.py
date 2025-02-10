@@ -182,6 +182,8 @@ class EnrichmentOntology:
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
 
+
+
     def set_background(self, lipid_list = [], protein_list = [], metabolite_list = []):
         for term_id in self.search_terms:
             self.ontology_terms[term_id].term_paths.clear()
@@ -272,8 +274,7 @@ class EnrichmentOntology:
 
             if lipid != None and lipid.lipid != None:
                 for fa in lipid.lipid.fa_list:
-                    if fa.num_carbon == 0:
-                        continue
+                    if fa.num_carbon == 0: continue
 
                     fa_string = (
                         "L"
@@ -291,23 +292,23 @@ class EnrichmentOntology:
 
         for protein_input_name in protein_list:
             visited_terms = set()
-            if protein_input_name in self.proteins:
-                term = self.proteins[protein_input_name]
-                if term.term_id not in visited_terms:
-                    visited_terms.add(term.term_id)
-                    self.recursive_event_adding(
-                        protein_input_name, term.term_id, visited_terms
-                    )
+            if protein_input_name not in self.proteins: continue
+            term = self.proteins[protein_input_name]
+            if term.term_id not in visited_terms:
+                visited_terms.add(term.term_id)
+                self.recursive_event_adding(
+                    protein_input_name, term.term_id, visited_terms
+                )
 
         for metabolite_input_name in metabolite_list:
             visited_terms = set()
-            if metabolite_input_name in self.proteins:
-                term = self.proteins[metabolite_input_name]
-                if term.term_id not in visited_terms:
-                    visited_terms.add(term.term_id)
-                    self.recursive_event_adding(
-                        metabolite_input_name, term.term_id, visited_terms
-                    )
+            if metabolite_input_name not in self.metabolites: continue
+            term = self.metabolites[metabolite_input_name]
+            if term.term_id not in visited_terms:
+                visited_terms.add(term.term_id)
+                self.recursive_event_adding(
+                    metabolite_input_name, term.term_id, visited_terms
+                )
 
 
 
@@ -333,6 +334,7 @@ class EnrichmentOntology:
                 len(target_set) - target_number,
                 self.num_background - len(term_metabolites) - len(target_set) + target_number,
             )
+
             p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
             result_list[i] = OntologyResult(
                 self.ontology_terms[term_id],
