@@ -624,7 +624,6 @@ app.layout = layout
 @callback(
     Output("loading_output", "children", allow_duplicate = True),
     Output("graph_enrichment_results", "rowData", allow_duplicate = True),
-    Output("graph_enrichment_results", "selectedRows", allow_duplicate = True),
     Output("alert_enrichment", "hide", allow_duplicate = True),
     Output("alert_enrichment", "children", allow_duplicate = True),
     Output("background_lipids", "children", allow_duplicate = True),
@@ -657,7 +656,7 @@ def run_enrichment(
         return "", [], False, "Please paste lipid names into the first text area.", "", ""
 
     if len(regulated_lipids_list) == 0:
-        return "", [], False, "Please paste lipid names into the second text area."
+        return "", [], False, "Please paste lipid names into the second text area.", "", ""
 
     if len(domains) == 0:
         return "", [], False, "No domain(s) selected.", "", ""
@@ -718,7 +717,6 @@ def run_enrichment(
 
     return (
         "",
-        data,
         data,
         True,
         "",
