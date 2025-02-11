@@ -5,9 +5,13 @@ from pygoslin.domain.LipidFaBondType import LipidFaBondType
 import scipy.stats as stats
 import logging
 import json
+import ctypes
+import pathlib
+current_path = pathlib.Path(__file__).parent.resolve()
 
+fisher_exact = ctypes.CDLL(f"{current_path}/assets/fisher_exact.so")
+fisher_exact.exact_fisher.restype = ctypes.c_double
 logger = logging.getLogger(__name__)
-
 
 class OntologyTerm:
     def __init__(self, _term_id, _name, _relations, _domain=""):
@@ -190,10 +194,10 @@ class EnrichmentOntology:
 
         self.compute_event_occurrance(lipid_list, protein_list, metabolite_list)
 
-        for term_id, lipid_set in self.search_terms.items():
-            lipid_set.clear()
-            lipid_set |= set(
-                path_lipid for path_lipid in self.ontology_terms[term_id].term_paths
+        for term_id, term_metabolites in self.search_terms.items():
+            term_metabolites.clear()
+            term_metabolites |= set(
+                path_metabolite for path_metabolite in self.ontology_terms[term_id].term_paths
             )
 
         self.num_background = len(lipid_list) + len(protein_list) + len(metabolite_list)
@@ -203,32 +207,31 @@ class EnrichmentOntology:
     def recursive_event_adding(
         self, molecule_input_name, term_id, visited_terms, recursion = 0, path = None
     ):
-        if recursion > 0: return
+        if recursion > 0 or term_id not in self.ontology_terms: return
 
         if path == None: path = []
-        if term_id in self.ontology_terms:
-            term = self.ontology_terms[term_id]
-            path.append(term_id)
+        path.append(term_id)
+        term = self.ontology_terms[term_id]
 
-            if molecule_input_name not in term.term_paths: term.term_paths[molecule_input_name] = {}
-            term_paths = term.term_paths[molecule_input_name]
-            if path[0] not in term_paths:
-                term_paths[path[0]] = list(path)
+        if molecule_input_name not in term.term_paths: term.term_paths[molecule_input_name] = {}
+        term_paths = term.term_paths[molecule_input_name]
+        if path[0] not in term_paths:
+            term_paths[path[0]] = list(path)
 
-            next_recursion = recursion + (1 if term.domain in self.domains else 0)
-            for parent_term_id in term.relations:
-                if parent_term_id not in visited_terms:
-                    visited_terms.add(parent_term_id)
+        next_recursion = recursion + (1 if term.domain in self.domains else 0)
+        for parent_term_id in term.relations:
+            if parent_term_id not in visited_terms:
+                visited_terms.add(parent_term_id)
 
-                    self.recursive_event_adding(
-                        molecule_input_name,
-                        parent_term_id,
-                        visited_terms,
-                        next_recursion,
-                        path,
-                    )
+                self.recursive_event_adding(
+                    molecule_input_name,
+                    parent_term_id,
+                    visited_terms,
+                    next_recursion,
+                    path,
+                )
 
-            path.pop()
+        path.pop()
 
 
 
@@ -299,6 +302,7 @@ class EnrichmentOntology:
                 self.recursive_event_adding(
                     protein_input_name, term.term_id, visited_terms
                 )
+            print(len(visited_terms))
 
         for metabolite_input_name in metabolite_list:
             visited_terms = set()
@@ -314,34 +318,54 @@ class EnrichmentOntology:
 
 
     def enrichment_analysis(self, target_list, enrichment_domains, term_regulation = "two-sided"):
-        if self.num_background == 0 or len(enrichment_domains) == 0:
-            return
+        if self.num_background == 0 or len(enrichment_domains) == 0: return
+        target_set = set(target_list)
 
-        result_list, target_set = [None] * len(self.search_terms), set(target_list)
+        try: # C++ implementation, just way faster
+            result_list = [None] * len(self.search_terms)
+            side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
+            for i, (term_id, term_metabolites) in enumerate(self.search_terms.items()):
+                if (
+                    len(term_metabolites) == 0
+                    or term_id not in self.ontology_terms
+                    or self.ontology_terms[term_id].domain not in enrichment_domains
+                ): continue
 
-        for i, (term_id, term_metabolites) in enumerate(self.search_terms.items()):
-            if (
-                len(term_metabolites) == 0
-                or term_id not in self.ontology_terms
-                or self.ontology_terms[term_id].domain not in enrichment_domains
-            ): continue
+                target_number = len(term_metabolites & target_set)
+                p_hyp = fisher_exact.exact_fisher(target_number, len(term_metabolites), len(target_list), self.num_background, side)
+                result_list[i] = OntologyResult(
+                    self.ontology_terms[term_id],
+                    self.num_background,
+                    len(term_metabolites),
+                    len(target_list),
+                    p_hyp,
+                )
 
-            target_number = len(term_metabolites & target_set)
+        except Exception as e:
+            logger.error("C++ implementation of fisher exact test failed.")
+            result_list = [None] * len(self.search_terms)
+            for i, (term_id, term_metabolites) in enumerate(self.search_terms.items()):
+                if (
+                    len(term_metabolites) == 0
+                    or term_id not in self.ontology_terms
+                    or self.ontology_terms[term_id].domain not in enrichment_domains
+                ): continue
 
-            a, b, c, d = (
-                target_number,
-                len(term_metabolites) - target_number,
-                len(target_set) - target_number,
-                self.num_background - len(term_metabolites) - len(target_set) + target_number,
-            )
+                target_number = len(term_metabolites & target_set)
 
-            p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
-            result_list[i] = OntologyResult(
-                self.ontology_terms[term_id],
-                self.num_background,
-                len(term_metabolites),
-                len(target_set),
-                p_hyp,
-            )
+                a, b, c, d = (
+                    target_number,
+                    len(term_metabolites) - target_number,
+                    len(target_list) - target_number,
+                    self.num_background - len(term_metabolites) - len(target_list) + target_number,
+                )
+                p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
+                result_list[i] = OntologyResult(
+                    self.ontology_terms[term_id],
+                    self.num_background,
+                    len(term_metabolites),
+                    len(target_list),
+                    p_hyp,
+                )
 
         return [result for result in result_list if result != None]

@@ -10,7 +10,7 @@ import pandas as pd
 import io
 import os
 from statsmodels.stats.multitest import multipletests
-from EnrichmentDataStructure import EnrichmentOntology
+from EnrichmentDataStructure import EnrichmentOntology, current_path
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
@@ -22,7 +22,6 @@ import threading
 
 
 hash_function = hashlib.new('sha256')
-current_path = pathlib.Path(__file__).parent.resolve()
 LINK_COLOR = "#2980B9"
 
 logger = logging.getLogger(__name__)
@@ -987,8 +986,9 @@ def run_enrichment(
     if len(domains) == 0:
         return "", [], False, "No domain(s) selected.", "", "", "", "", "", ""
 
+    a = time.time()
     ontology.set_background(lipid_list = lipidome, protein_list = proteome, metabolite_list = metabolome)
-
+    print(time.time() - a)
     results = ontology.enrichment_analysis(target_set, domains, term_regulation)
     if correction_method != "no" and len(results) > 0:
         pvalues = [r.pvalue for r in results]
