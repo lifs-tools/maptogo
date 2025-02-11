@@ -5,9 +5,13 @@ from pygoslin.domain.LipidFaBondType import LipidFaBondType
 import scipy.stats as stats
 import logging
 import json
+import ctypes
+import pathlib
+current_path = pathlib.Path(__file__).parent.resolve()
 
+fisher_exact = ctypes.CDLL(f"{current_path}/assets/fisher_exact.so")
+fisher_exact.exact_fisher.restype = ctypes.c_double
 logger = logging.getLogger(__name__)
-
 
 class OntologyTerm:
     def __init__(self, _term_id, _name, _relations, _domain=""):
@@ -313,37 +317,57 @@ class EnrichmentOntology:
 
 
     def enrichment_analysis(self, target_list, enrichment_domains, term_regulation = "two-sided"):
-        if self.num_background == 0 or len(enrichment_domains) == 0:
-            return
+        if self.num_background == 0 or len(enrichment_domains) == 0: return
 
-        result_list, target_set = [], set()
-        for target in target_list:
-            target_set.add(target)
+        target_set = set(target_list)
+        try:
+            result_list = []
+            side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
+            for term_id, lipid_set in self.search_terms.items():
+                if (
+                    len(lipid_set) == 0
+                    or term_id not in self.ontology_terms
+                    or self.ontology_terms[term_id].domain not in enrichment_domains
+                ): continue
 
-        for term_id, lipid_set in self.search_terms.items():
-            if (
-                len(lipid_set) == 0
-                or term_id not in self.ontology_terms
-                or self.ontology_terms[term_id].domain not in enrichment_domains
-            ): continue
-
-            target_number = len(lipid_set & target_set)
-
-            a, b, c, d = (
-                target_number,
-                len(lipid_set) - target_number,
-                len(target_list) - target_number,
-                self.num_background - len(lipid_set) - len(target_list) + target_number,
-            )
-            p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
-            result_list.append(
-                OntologyResult(
-                    self.ontology_terms[term_id],
-                    self.num_background,
-                    len(lipid_set),
-                    len(target_list),
-                    p_hyp,
+                target_number = len(lipid_set & target_set)
+                p_hyp = fisher_exact.exact_fisher(target_number, len(lipid_set), len(target_list), self.num_background, side)
+                result_list.append(
+                    OntologyResult(
+                        self.ontology_terms[term_id],
+                        self.num_background,
+                        len(lipid_set),
+                        len(target_list),
+                        p_hyp,
+                    )
                 )
-            )
+
+        except:
+            result_list = []
+            for term_id, lipid_set in self.search_terms.items():
+                if (
+                    len(lipid_set) == 0
+                    or term_id not in self.ontology_terms
+                    or self.ontology_terms[term_id].domain not in enrichment_domains
+                ): continue
+
+                target_number = len(lipid_set & target_set)
+
+                a, b, c, d = (
+                    target_number,
+                    len(lipid_set) - target_number,
+                    len(target_list) - target_number,
+                    self.num_background - len(lipid_set) - len(target_list) + target_number,
+                )
+                p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
+                result_list.append(
+                    OntologyResult(
+                        self.ontology_terms[term_id],
+                        self.num_background,
+                        len(lipid_set),
+                        len(target_list),
+                        p_hyp,
+                    )
+                )
 
         return result_list

@@ -9,7 +9,7 @@ import pandas as pd
 import io
 import os
 from statsmodels.stats.multitest import multipletests
-from EnrichmentDataStructure import EnrichmentOntology
+from EnrichmentDataStructure import EnrichmentOntology, current_path
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
@@ -21,7 +21,6 @@ import threading
 
 
 hash_function = hashlib.new('sha256')
-current_path = pathlib.Path(__file__).parent.resolve()
 LINK_COLOR = "#2980B9"
 
 logger = logging.getLogger(__name__)
