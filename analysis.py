@@ -152,7 +152,7 @@ example_options = html.Div(
 
 # Create the Dash app
 app = Dash("app", update_title = None)
-app.title = "GO lipids"
+app.title = "GO multiomics"
 
 lipid_parser = LipidParser()
 enrichment_ontologies = {}
@@ -243,7 +243,7 @@ def layout():
                     style = {"width": "48px"},
                 ),
                 html.Div(
-                    dmc.Title("Gene Ontology (GO) lipidomics enrichment analysis"),
+                    dmc.Title("Gene Ontology (GO) multiomics enrichment analysis"),
                 ),
             ]),
             html.Div([
@@ -383,9 +383,9 @@ def layout():
             zIndex = 10000,
             children = dmc.ScrollArea([
                 html.P([
-                    dmc.Title("About GO lipids", order = 4),
+                    dmc.Title("About GO multiomics", order = 4),
                     dmc.Text(
-                        "Go lipids is the first implementation that enables GO term enrichment analysis on lipids. Starting with a list of identified lipids (at least on the species level) as background and a list with only the (differentially) regulated lipids, each lipid is mapped to proteins involved in metabolic reactions. On this base, GO term analysis will then be performed with a statistical test. Depending on the selected domain (biological process, molecular function, cellular compartment, physical or chemical properties, or metabolic and signaling pathways), the analysis provides a sorted list of GO terms with a p-value for each term.",
+                        "GO multiomics is the first implementation that enables GO term enrichment analysis on lipids. Starting with a list of identified lipids (at least on the species level) as background and a list with only the (differentially) regulated lipids, each lipid is mapped to proteins involved in metabolic reactions. On this base, GO term analysis will then be performed with a statistical test. Depending on the selected domain (biological process, molecular function, cellular compartment, physical or chemical properties, or metabolic and signaling pathways), the analysis provides a sorted list of GO terms with a p-value for each term.",
                         style = {"textAlign": "justify"},
                     ),
                 ]),
@@ -428,7 +428,7 @@ def layout():
                 ]),
 
                 html.P([
-                    dmc.Text("GO lipids is using data from third-party databases. All databases are listed with their according licenses or permission:"),
+                    dmc.Text("GO multiomics is using data from third-party databases. All databases are listed with their according licenses or permission:"),
                     dmc.Text([
                         "- ",
                         html.A(
