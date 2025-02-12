@@ -23,6 +23,7 @@ import threading
 
 hash_function = hashlib.new('sha256')
 LINK_COLOR = "#2980B9"
+SESSION_DURATION_TIME =  60 * 60 # one hour
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -56,6 +57,8 @@ class SessionEntry:
         self.time = time.time()
         self.data = None
         self.data_loaded = False
+        self.search_terms = set()
+        self.num_background = 0
 
 sessions, examples = {}, {}
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
@@ -206,10 +209,11 @@ def session_timer_trigger(sessions):
         current_time = time.time()
         sessions_to_delete = []
         for session_id, session_data in sessions.items():
-            if current_time - session_data.time > 60 * 60: # one hour
+            if current_time - session_data.time > SESSION_DURATION_TIME:
                 sessions_to_delete.append(session_id)
         for session_id in sessions_to_delete:
             del sessions[session_id]
+            logger.info(f"Deleting session: {session_id}")
 
 thread = threading.Thread(target = session_timer_trigger, args = (sessions,), daemon = True)
 thread.start()
@@ -222,6 +226,7 @@ def layout():
     hash_function.update(f"{current_time}t".encode())
     session_id = hash_function.hexdigest()
     sessions[session_id] = SessionEntry()
+    logger.info(f"New session: {session_id}")
 
     return html.Div([
         dcc.Download(id = "download_data"),
@@ -825,8 +830,6 @@ app.layout = layout
 @callback(
     Output("loading_output", "children", allow_duplicate = True),
     Output("graph_enrichment_results", "rowData", allow_duplicate = True),
-    #Output("alert_enrichment", "hide", allow_duplicate = True),
-    #Output("alert_enrichment", "children", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("background_lipids", "children", allow_duplicate = True),
@@ -873,10 +876,13 @@ def run_enrichment(
     with_proteins,
     with_metabolites,
 ):
-    if session_id not in sessions:
-        raise exceptions.PreventUpdate
-
     do_activate_alert = True
+
+    if session_id not in sessions:
+        return "", [], do_activate_alert, "Your session has expired. Please refresh the website.", "", "", "", "", "", ""
+
+    logger.info(f"Enrichment session: {session_id}")
+    sessions[session_id].time = time.time()
 
     if not with_lipids and not with_proteins and not with_metabolites:
         return "", [], do_activate_alert, "No omics data is inserted.", "", "", "", "", "", ""
@@ -1032,10 +1038,10 @@ def run_enrichment(
         return "", [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", ""
 
     if sessions[session_id].data_loaded == False:
-        ontology.set_background(lipid_list = lipidome, protein_list = proteome, metabolite_list = metabolome)
+        ontology.set_background(sessions[session_id], lipid_set = lipidome, protein_set = proteome, metabolite_set = metabolome)
         sessions[session_id].data_loaded = True
 
-    results = ontology.enrichment_analysis(target_set, domains, term_regulation)
+    results = ontology.enrichment_analysis(sessions[session_id], target_set, domains, term_regulation)
 
     if correction_method != "no" and len(results) > 0:
         pvalues = [r.pvalue for r in results]
@@ -1052,7 +1058,6 @@ def run_enrichment(
         } for result in results
     ]
 
-    sessions[session_id].time = time.time()
     sessions[session_id].data = {result.term.term_id: result for result in results}
 
     return (
@@ -1071,7 +1076,8 @@ def run_enrichment(
 
 
 @callback(
-    Output("textarea_all_lipids", "id", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
     Input("textarea_all_lipids", "value"),
     Input("textarea_regulated_lipids", "value"),
     Input("textarea_all_proteins", "value"),
@@ -1097,8 +1103,9 @@ def update_background(
     session_id,
 ):
     if session_id not in sessions:
-        raise exceptions.PreventUpdate
+        return True, "Your session has expired. Please refresh the website."
 
+    sessions[session_id].time = time.time()
     sessions[session_id].data_loaded = False
 
     raise exceptions.PreventUpdate
@@ -1108,6 +1115,8 @@ def update_background(
 @callback(
     Output("loading_output", "children", allow_duplicate = True),
     Output("download_data", "data", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
     Input("icon_download_results", "n_clicks"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
@@ -1133,8 +1142,14 @@ def download_table(
     session_id,
 ):
     if session_id not in sessions:
-        raise exceptions.PreventUpdate
+        return (
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website.",
+        )
 
+    sessions[session_id].time = time.time()
     domains = []
     term_ids = []
     terms = []
@@ -1179,7 +1194,7 @@ def download_table(
 
     for term_id, term in zip(term_ids, terms):
         if term_id not in data: continue
-        molecules = data[term_id].term.term_paths.keys()
+        molecules = data[term_id].term.source_terms
 
         if with_lipids:
             lipids = sorted(list(molecules & set(background_lipids)))
@@ -1219,7 +1234,7 @@ def download_table(
         pd.DataFrame({"ChEBI": regulated_metabolites}).to_excel(writer, sheet_name = "Regulated metabolites", index = False)
     writer._save()
 
-    return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx")
+    return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), False, ""
 
 
 
@@ -1327,6 +1342,8 @@ def update_action_icons(selected_rows):
     Output("protein_tab_modal_tab", "disabled", allow_duplicate = True),
     Output("metabolite_tab_modal_tab", "disabled", allow_duplicate = True),
     Output("term_molecules_modal_tab", "value", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
     State("background_lipids", "children"),
@@ -1348,6 +1365,22 @@ def open_term_window(
     regulated_metabolites,
 ):
     if session_id not in sessions or "rowId" not in row_data:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website."
+        )
+
+    sessions[session_id].time = time.time()
+    if "rowId" not in row_data:
         raise exceptions.PreventUpdate
 
     term_id = row_data["rowId"]
@@ -1363,7 +1396,7 @@ def open_term_window(
     metabolite_table = []
 
     result = sessions[session_id].data[term_id]
-    molecules = sorted(list(result.term.term_paths.keys()))
+    molecules = sorted(list(result.source_terms))
 
     if with_lipids:
         background_lipids = set(background_lipids.split("|"))
@@ -1399,6 +1432,8 @@ def open_term_window(
         not with_proteins,
         not with_metabolites,
         tab_value,
+        False,
+        "",
     )
 
 
