@@ -272,36 +272,6 @@ def layout():
         html.Div(id = "background_metabolites", style = {"display": "none"}),
         html.Div(id = "regulated_metabolites", style = {"display": "none"}),
         dmc.Modal(
-            title = "Select predefined background proteome",
-            id = "predefined_modal",
-            zIndex = 10000,
-            children = [
-                dmc.Select(
-                    id = "predefined_modal_select",
-                    label = "Select organism",
-                    data = [{"value": v, "label": k} for k, v in species.items()],
-                    value = INIT_ORGANISM,
-                ),
-                dmc.Space(h = 50),
-                dmc.Group(
-                    [
-                        dmc.Button(
-                            "Select proteome",
-                            color = "blue.4",
-                            id = "predefined_modal_submit_button",
-                        ),
-                        dmc.Button(
-                            "Cancel",
-                            color = "red",
-                            variant = "outline",
-                            id = "predefined_modal_close_button",
-                        ),
-                    ],
-                    position="right",
-                ),
-            ],
-        ),
-        dmc.Modal(
             title = "Load example datasets",
             id = "load_examples_modal",
             zIndex = 10000,
@@ -977,7 +947,8 @@ def run_enrichment(
         if len(regulated_proteins_list) == 0:
             return "", [], do_activate_alert, "Please paste protein accessions into the second text area.", "", "", "", "", "", ""
 
-        proteome, regulated_proteins = set(all_proteins_list.split("\n")), set(regulated_proteins_list.split("\n"))
+        proteome = set(protein for protein in all_proteins_list.split("\n") if len(protein) > 0)
+        regulated_proteins = set(protein for protein in regulated_proteins_list.split("\n") if len(protein) > 0)
 
         left_proteins = proteome - ontology.clean_protein_ids
         if len(left_proteins) > 0:
@@ -1020,7 +991,8 @@ def run_enrichment(
         if len(regulated_metabolites_list) == 0:
             return "", [], do_activate_alert, "Please paste metabolite ChEBI Ids into the second text area.", "", "", "", "", "", ""
 
-        metabolome, regulated_metabolites = set(all_metabolites_list.split("\n")), set(regulated_metabolites_list.split("\n"))
+        metabolome = set(metabolite for metabolite in all_metabolites_list.split("\n") if len(metabolite) > 0)
+        regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list.split("\n") if len(metabolite) > 0)
 
         left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
         if len(left_metabolites) > 0:
@@ -1512,35 +1484,16 @@ def close_info_modal(close_clicks):
 
 
 @callback(
-    Output("predefined_modal", "opened", allow_duplicate = True),
-    Input("predefined_bg_proteome", "n_clicks"),
-    prevent_initial_call = True
-)
-def open_predefined_modal(n_clicks):
-    return True
-
-
-
-@callback(
-    Output("predefined_modal", "opened", allow_duplicate = True),
-    Input("predefined_modal_close_button", "n_clicks"),
-    prevent_initial_call = True
-)
-def close_predefined_modal(n_clicks):
-    return False
-
-
-
-@callback(
-    Output("predefined_modal", "opened", allow_duplicate = True),
     Output("textarea_all_proteins", "value", allow_duplicate = True),
-    Input("predefined_modal_submit_button", "n_clicks"),
-    State("predefined_modal_select", "value"),
+    Input("predefined_bg_proteome", "n_clicks"),
+    State("select_organism", "value"),
     prevent_initial_call = True
 )
-def close_predefined_modal(n_clicks, selected_organism):
+def select_predefined_modal(n_clicks, selected_organism):
     if selected_organism not in enrichment_ontologies:
         raise exceptions.PreventUpdate
 
     ontology = enrichment_ontologies[selected_organism]
-    return False, "\n".join([protein.replace("UNIPROT:", "") for protein in ontology.proteins])
+    return "\n".join([protein.replace("UNIPROT:", "") for protein in ontology.proteins])
+
+
