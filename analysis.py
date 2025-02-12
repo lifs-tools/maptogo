@@ -106,8 +106,8 @@ plotly_config = {
 
 
 example_options = html.Div(
-    children = [
-        dmc.Group(
+    dmc.ScrollArea(
+        [dmc.Group(
             children = [
                 dmc.Checkbox(
                     id = {"type": "checkbox_type", "index": example_name},
@@ -145,8 +145,9 @@ example_options = html.Div(
                     },
                 ),
             ],
-        ) for i, (example_name, example) in enumerate(examples.items())
-    ]
+        ) for i, (example_name, example) in enumerate(examples.items())],
+        h = 600,
+    ),
 )
 
 # Create the Dash app
@@ -271,6 +272,36 @@ def layout():
         html.Div(id = "background_metabolites", style = {"display": "none"}),
         html.Div(id = "regulated_metabolites", style = {"display": "none"}),
         dmc.Modal(
+            title = "Select predefined background proteome",
+            id = "predefined_modal",
+            zIndex = 10000,
+            children = [
+                dmc.Select(
+                    id = "predefined_modal_select",
+                    label = "Select organism",
+                    data = [{"value": v, "label": k} for k, v in species.items()],
+                    value = INIT_ORGANISM,
+                ),
+                dmc.Space(h = 50),
+                dmc.Group(
+                    [
+                        dmc.Button(
+                            "Select proteome",
+                            color = "blue.4",
+                            id = "predefined_modal_submit_button",
+                        ),
+                        dmc.Button(
+                            "Cancel",
+                            color = "red",
+                            variant = "outline",
+                            id = "predefined_modal_close_button",
+                        ),
+                    ],
+                    position="right",
+                ),
+            ],
+        ),
+        dmc.Modal(
             title = "Load example datasets",
             id = "load_examples_modal",
             zIndex = 10000,
@@ -285,7 +316,7 @@ def layout():
                             id = "load_examples_modal_submit_button",
                         ),
                         dmc.Button(
-                            "Close",
+                            "Cancel",
                             color = "red",
                             variant = "outline",
                             id = "load_examples_modal_close_button",
@@ -574,11 +605,19 @@ def layout():
                             ),
                             dmc.TabsPanel([
                                 dmc.SimpleGrid([
-                                    dmc.Title(
-                                        "All protein accessions in experiment (background)",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
+                                    dmc.Group([
+                                        dmc.Title(
+                                            "All protein accessions in experiment (background)",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.ActionIcon(
+                                            DashIconify(icon="simple-icons:helix", width = 16),
+                                            id = "predefined_bg_proteome",
+                                            title = "Select predefined background proteome",
+                                            style = {"display": "flex", "alignItems": "flex-end"},
+                                        ),
+                                    ]),
                                     dmc.Title(
                                         "All regulated protein accession in experiment",
                                         order = 5,
@@ -870,8 +909,7 @@ def run_enrichment(
     do_activate_alert = True
 
     if not with_lipids and not with_proteins and not with_metabolites:
-        if len(all_lipids_list) == 0:
-            return "", [], do_activate_alert, "No omics data is inserted.", "", "", "", "", "", ""
+        return "", [], do_activate_alert, "No omics data is inserted.", "", "", "", "", "", ""
 
     ontology = enrichment_ontologies[organism]
 
@@ -896,15 +934,20 @@ def run_enrichment(
                 lipidome[lipid_name] = lipid
 
             except Exception as e:
-                print(e)
                 if not ignore_unrecognizable_molecules:
                     return "", [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
 
         for lipid_name in regulated_lipids_list.split("\n"):
             if len(lipid_name) == 0: continue
+            if lipid_name not in lipidome:
+                if ignore_unknown: continue
+                return "", [], do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", ""
+
+
             try:
                 regulated_lipids.add(lipidome[lipid_name].get_lipid_string())
             except Exception as e:
+                print(e)
                 if not ignore_unrecognizable_molecules:
                     return "", [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in regulated list! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
 
@@ -1016,7 +1059,6 @@ def run_enrichment(
     if len(domains) == 0:
         return "", [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", ""
 
-    print(sessions[session_id].data_loaded)
     if sessions[session_id].data_loaded == False:
         ontology.set_background(lipid_list = lipidome, protein_list = proteome, metabolite_list = metabolome)
         sessions[session_id].data_loaded = True
@@ -1469,10 +1511,36 @@ def close_info_modal(close_clicks):
 
 
 
+@callback(
+    Output("predefined_modal", "opened", allow_duplicate = True),
+    Input("predefined_bg_proteome", "n_clicks"),
+    prevent_initial_call = True
+)
+def open_predefined_modal(n_clicks):
+    return True
 
 
 
+@callback(
+    Output("predefined_modal", "opened", allow_duplicate = True),
+    Input("predefined_modal_close_button", "n_clicks"),
+    prevent_initial_call = True
+)
+def close_predefined_modal(n_clicks):
+    return False
 
 
 
+@callback(
+    Output("predefined_modal", "opened", allow_duplicate = True),
+    Output("textarea_all_proteins", "value", allow_duplicate = True),
+    Input("predefined_modal_submit_button", "n_clicks"),
+    State("predefined_modal_select", "value"),
+    prevent_initial_call = True
+)
+def close_predefined_modal(n_clicks, selected_organism):
+    if selected_organism not in enrichment_ontologies:
+        raise exceptions.PreventUpdate
 
+    ontology = enrichment_ontologies[selected_organism]
+    return False, "\n".join([protein.replace("UNIPROT:", "") for protein in ontology.proteins])

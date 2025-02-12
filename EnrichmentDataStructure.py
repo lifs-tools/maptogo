@@ -324,7 +324,7 @@ class EnrichmentOntology:
 
 
     def enrichment_analysis(self, target_list, enrichment_domains, term_regulation = "two-sided"):
-        if self.num_background == 0 or len(enrichment_domains) == 0: return
+        if self.num_background == 0 or len(enrichment_domains) == 0: return []
         target_set = set(target_list)
 
         try: # C++ implementation, just way faster
