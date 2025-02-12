@@ -9,9 +9,13 @@ import ctypes
 import pathlib
 current_path = pathlib.Path(__file__).parent.resolve()
 
-fisher_exact = ctypes.CDLL(f"{current_path}/assets/fisher_exact.so")
-fisher_exact.exact_fisher.restype = ctypes.c_double
 logger = logging.getLogger(__name__)
+try:
+    fisher_exact = ctypes.CDLL(f"{current_path}/assets/fisher_exact.so")
+    fisher_exact.exact_fisher.restype = ctypes.c_double
+except Exception as e:
+    logger.error("Unable to load c++ library file(s)")
+
 
 class OntologyTerm:
     def __init__(self, _term_id, _name, _relations, _domain=""):
@@ -205,9 +209,9 @@ class EnrichmentOntology:
 
 
     def recursive_event_adding(
-        self, molecule_input_name, term_id, visited_terms, recursion = 0, path = None
+        self, molecule_input_name, term_id, visited_terms, path = None
     ):
-        if recursion > 0 or term_id not in self.ontology_terms: return
+        if term_id not in self.ontology_terms: return
 
         if path == None: path = []
         path.append(term_id)
@@ -215,37 +219,40 @@ class EnrichmentOntology:
 
         if molecule_input_name not in term.term_paths: term.term_paths[molecule_input_name] = {}
         term_paths = term.term_paths[molecule_input_name]
-        if path[0] not in term_paths:
-            term_paths[path[0]] = list(path)
+        if path[0] not in term_paths: term_paths[path[0]] = list(path)
 
-        next_recursion = recursion + (1 if term.domain in self.domains else 0)
-        for parent_term_id in term.relations:
-            if parent_term_id not in visited_terms:
-                visited_terms.add(parent_term_id)
-
-                self.recursive_event_adding(
-                    molecule_input_name,
-                    parent_term_id,
-                    visited_terms,
-                    next_recursion,
-                    path,
-                )
+        if term.domain not in self.domains:
+            for parent_term_id in term.relations:
+                if parent_term_id not in visited_terms:
+                    visited_terms.add(parent_term_id)
+                    self.recursive_event_adding(
+                        molecule_input_name,
+                        parent_term_id,
+                        visited_terms,
+                        path,
+                    )
 
         path.pop()
 
 
 
     def compute_event_occurrance(self, lipid_list = [], protein_list = [], metabolite_list = []):
+        is_dict = type(lipid_list) == dict
         for lipid_input_name in lipid_list:
-            try:
-                lipid = self.lipid_parser.parse(lipid_input_name)
-            except Exception as e:
-                logging.info("Error: %s" % e)
-                continue
 
-            if lipid.lipid.info.level.value > LipidLevel.MOLECULAR_SPECIES.value:
-                lipid.lipid.info.level = LipidLevel.MOLECULAR_SPECIES
-            lipid.sort_fatty_acyl_chains()
+            if is_dict:
+                lipid = lipid_list[lipid_input_name]
+            else:
+                try:
+                    lipid = self.lipid_parser.parse(lipid_input_name)
+                except Exception as e:
+                    logging.info("Error: %s" % e)
+                    continue
+
+                if lipid.lipid.info.level.value > LipidLevel.MOLECULAR_SPECIES.value:
+                    lipid.lipid.info.level = LipidLevel.MOLECULAR_SPECIES
+                lipid.sort_fatty_acyl_chains()
+
             lipid_name = lipid.get_lipid_string()
             lipid_name_species = lipid.get_lipid_string(LipidLevel.SPECIES)
             lipid_name_class = lipid.get_extended_class()
@@ -302,7 +309,6 @@ class EnrichmentOntology:
                 self.recursive_event_adding(
                     protein_input_name, term.term_id, visited_terms
                 )
-            print(len(visited_terms))
 
         for metabolite_input_name in metabolite_list:
             visited_terms = set()
