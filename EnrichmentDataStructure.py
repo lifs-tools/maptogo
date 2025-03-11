@@ -61,6 +61,7 @@ class EnrichmentOntology:
                 is_carbon_chain = False
                 is_protein = False
                 is_metabolite = False
+                is_any = False
                 domain, relations, synonyms = "", set(), []
 
                 for line in input_stream:
@@ -75,27 +76,27 @@ class EnrichmentOntology:
                                 )
 
                             term = OntologyTerm(term_id, name, relations, domain)
+                            if is_any:
+                                if is_lipid_species:
+                                    if name not in self.lipids: self.lipids[name] = term
 
-                            if is_lipid_species:
-                                if name not in self.lipids: self.lipids[name] = term
+                                elif is_lipid_class:
+                                    if name not in self.lipid_classes: self.lipid_classes[name] = term
+                                    for synonym in synonyms:
+                                        if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
+                                        self.lipid_classes[synonym].append(term)
 
-                            elif is_lipid_class:
-                                if name not in self.lipid_classes: self.lipid_classes[name] = term
-                                for synonym in synonyms:
-                                    if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
-                                    self.lipid_classes[synonym].append(term)
+                                elif is_carbon_chain:
+                                    if name not in self.carbon_chains: self.carbon_chains[name] = term
+                                    for synonym in synonyms:
+                                        if synonym not in self.carbon_chains: self.carbon_chains[synonym] = []
+                                        self.carbon_chains[synonym] = term
 
-                            elif is_carbon_chain:
-                                if name not in self.carbon_chains: self.carbon_chains[name] = term
-                                for synonym in synonyms:
-                                    if synonym not in self.carbon_chains: self.carbon_chains[synonym] = []
-                                    self.carbon_chains[synonym] = term
+                                elif is_protein:
+                                    if name not in self.proteins: self.proteins[term_id] = term
 
-                            elif is_protein:
-                                if name not in self.proteins: self.proteins[term_id] = term
-
-                            elif is_metabolite:
-                                if name not in self.metabolites: self.metabolites[term_id] = term
+                                elif is_metabolite:
+                                    if name not in self.metabolites: self.metabolites[term_id] = term
 
                             if len(domain) > 0:
                                 self.domains.add(domain)
@@ -109,6 +110,7 @@ class EnrichmentOntology:
                         is_carbon_chain = False
                         is_protein = False
                         is_metabolite = False
+                        is_any = False
                         domain, relations, synonyms = "", set(), []
 
                     elif line[:4] == "id: ":
@@ -120,11 +122,13 @@ class EnrichmentOntology:
                     elif line[:6] == "is_a: ":
                         relation = line[6:].split(" ! ")[0]
                         relations.add(relation)
-                        if relation == "LS:0000001": is_lipid_class = True
-                        elif relation == "LS:0000002": is_lipid_species = True
-                        elif relation == "LS:0000003": is_carbon_chain = True
-                        elif relation == "LS:0000004": is_protein = True
-                        elif relation == "LS:0000005": is_metabolite = True
+                        if relation[:3] == "LS:":
+                            if relation == "LS:0000001": is_lipid_class = True
+                            elif relation == "LS:0000002": is_lipid_species = True
+                            elif relation == "LS:0000003": is_carbon_chain = True
+                            elif relation == "LS:0000004": is_protein = True
+                            elif relation == "LS:0000005": is_metabolite = True
+                            is_any = True
 
                     elif line[:14] == "relationship: ":
                         line = line[14:]
@@ -188,27 +192,32 @@ class EnrichmentOntology:
 
 
 
-    def recursive_event_adding(self, session, molecule_input_name, term_id, visited_terms, source_term = None):
+    def recursive_event_adding(self, session, molecule_input_name, term_id, visited_terms, source_term = None, path = None):
         if term_id not in self.ontology_terms: return
 
-        if source_term == None: source_term = term_id
+        if source_term == None:
+            source_term = term_id
+            path = [term_id]
         term = self.ontology_terms[term_id]
 
         if term.domain not in self.domains:
             for parent_term_id in term.relations:
                 if parent_term_id not in visited_terms:
                     visited_terms.add(parent_term_id)
+                    path.append(parent_term_id)
                     self.recursive_event_adding(
                         session,
                         molecule_input_name,
                         parent_term_id,
                         visited_terms,
                         source_term,
+                        path,
                     )
+                    path.pop()
 
         if source_term != term_id:
-            if term_id not in session.search_terms: session.search_terms[term_id] = set()
-            session.search_terms[term_id].add(molecule_input_name)
+            if term_id not in session.search_terms: session.search_terms[term_id] = {}
+            session.search_terms[term_id][molecule_input_name] = list(path)
 
 
 
@@ -315,7 +324,7 @@ class EnrichmentOntology:
                     or self.ontology_terms[term_id].domain not in enrichment_domains
                 ): continue
 
-                target_number = len(term_metabolites & target_set)
+                target_number = len(term_metabolites.keys() & target_set)
                 p_hyp = fisher_exact.exact_fisher(target_number, len(term_metabolites), len(target_set), session.num_background, side)
                 result_list[i] = OntologyResult(
                     self.ontology_terms[term_id],

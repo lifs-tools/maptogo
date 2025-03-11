@@ -76,3 +76,27 @@ dagcomponentfuncs.TermRenderer = function (props) {
     );
 }
 
+
+
+dagcomponentfuncs.MoleculeRenderer = function (props) {
+    const {setData, data} = props;
+
+    function onTextClicked() {
+        props.api.startEditingCell({
+            rowIndex: props.rowIndex,
+            colKey: props.column.getId(),
+        });
+        setData();
+    }
+
+
+    return React.createElement(
+        "div",
+        {
+            onClick: onTextClicked,
+            "style": {"cursor": "pointer", "color": LINK_COLOR, "textDecorationLine": "underline"},
+        },
+        data["molecule"]
+    );
+}
+

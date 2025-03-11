@@ -57,7 +57,7 @@ class SessionEntry:
         self.time = time.time()
         self.data = None
         self.data_loaded = False
-        self.search_terms = set()
+        self.search_terms = {}
         self.num_background = 0
 
 sessions, examples = {}, {}
@@ -175,6 +175,7 @@ def get_aggrid_modal(name, molecule):
             {
                 'field': "molecule",
                 "headerName": molecule,
+                "cellRenderer": "MoleculeRenderer",
             },
             {
                 'field': "regulated",
@@ -184,12 +185,12 @@ def get_aggrid_modal(name, molecule):
         ],
         rowData = [],
         columnSize = "responsiveSizeToFit",
-        defaultColDef={
+        defaultColDef = {
             "suppressMovable": True,
             "sortable": True,
             "filter": True,
         },
-        dashGridOptions={
+        dashGridOptions = {
             "rowSelection": "multiple",
             "suppressMoveWhenRowDragging": True,
             "suppressRowClickSelection": True,
@@ -307,6 +308,11 @@ def layout():
             id = "term_molecules_modal",
             zIndex = 10000,
             children = [
+                html.Div(
+                    "",
+                    id = "term_molecules_modal_id",
+                    style = {"display": "none"},
+                ),
                 dmc.Tabs(
                     [
                         dmc.TabsList(
@@ -575,6 +581,26 @@ def layout():
                                         id = "textarea_regulated_lipids",
                                         minRows = 15,
                                     ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_all_lipids",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
+                                    ),
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_regulated_lipids",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
+                                    ),
                                 ], cols = 2)],
                                 value="lipid_tab",
                             ),
@@ -609,6 +635,26 @@ def layout():
                                         id = "textarea_regulated_proteins",
                                         minRows = 15,
                                     ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_all_proteins",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
+                                    ),
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_regulated_proteins",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
+                                    ),
                                 ], cols = 2)],
                                 value="protein_tab",
                             ),
@@ -634,6 +680,26 @@ def layout():
                                     dmc.Textarea(
                                         id = "textarea_regulated_metabolites",
                                         minRows = 15,
+                                    ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_all_metabolites",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
+                                    ),
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_regulated_metabolites",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
                                     ),
                                 ], cols = 2)],
                                 value="metabolites_tab",
@@ -1078,6 +1144,12 @@ def run_enrichment(
 @callback(
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("num_all_lipids", "children", allow_duplicate = True),
+    Output("num_regulated_lipids", "children", allow_duplicate = True),
+    Output("num_all_proteins", "children", allow_duplicate = True),
+    Output("num_regulated_proteins", "children", allow_duplicate = True),
+    Output("num_all_metabolites", "children", allow_duplicate = True),
+    Output("num_regulated_metabolites", "children", allow_duplicate = True),
     Input("textarea_all_lipids", "value"),
     Input("textarea_regulated_lipids", "value"),
     Input("textarea_all_proteins", "value"),
@@ -1102,13 +1174,38 @@ def update_background(
     with_metabolites,
     session_id,
 ):
+    num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))
+    num_regulated_lipids = sum(len(line) > 0 for line in regulated_lipids_list.split("\n"))
+    num_all_proteins = sum(len(line) > 0 for line in all_proteins_list.split("\n"))
+    num_regulated_proteins = sum(len(line) > 0 for line in regulated_proteins_list.split("\n"))
+    num_all_metabolites = sum(len(line) > 0 for line in all_metabolites_list.split("\n"))
+    num_regulated_metabolites = sum(len(line) > 0 for line in regulated_metabolites_list.split("\n"))
+
     if session_id not in sessions:
-        return True, "Your session has expired. Please refresh the website."
+        return (
+            True,
+            "Your session has expired. Please refresh the website.",
+            f"Entries: {num_all_lipids}",
+            f"Entries: {num_regulated_lipids}",
+            f"Entries: {num_all_proteins}",
+            f"Entries: {num_regulated_proteins}",
+            f"Entries: {num_all_metabolites}",
+            f"Entries: {num_regulated_metabolites}",
+        )
 
     sessions[session_id].time = time.time()
     sessions[session_id].data_loaded = False
 
-    raise exceptions.PreventUpdate
+    return (
+        False,
+        "",
+        f"Entries: {num_all_lipids}",
+        f"Entries: {num_regulated_lipids}",
+        f"Entries: {num_all_proteins}",
+        f"Entries: {num_regulated_proteins}",
+        f"Entries: {num_all_metabolites}",
+        f"Entries: {num_regulated_metabolites}",
+    )
 
 
 
@@ -1194,7 +1291,7 @@ def download_table(
 
     for term_id, term in zip(term_ids, terms):
         if term_id not in data: continue
-        molecules = data[term_id].term.source_terms
+        molecules = data[term_id].term.source_terms.keys()
 
         if with_lipids:
             lipids = sorted(list(molecules & set(background_lipids)))
@@ -1338,6 +1435,7 @@ def update_action_icons(selected_rows):
     Output("term_lipids_modal_grid", "rowData", allow_duplicate = True),
     Output("term_proteins_modal_grid", "rowData", allow_duplicate = True),
     Output("term_metabolites_modal_grid", "rowData", allow_duplicate = True),
+    Output("term_molecules_modal_id", "children", allow_duplicate = True),
     Output("lipid_tab_modal_tab", "disabled", allow_duplicate = True),
     Output("protein_tab_modal_tab", "disabled", allow_duplicate = True),
     Output("metabolite_tab_modal_tab", "disabled", allow_duplicate = True),
@@ -1371,6 +1469,7 @@ def open_term_window(
             no_update,
             no_update,
             no_update,
+            "",
             no_update,
             no_update,
             no_update,
@@ -1428,6 +1527,7 @@ def open_term_window(
         lipid_table,
         protein_table,
         metabolite_table,
+        result.term.term_id,
         not with_lipids,
         not with_proteins,
         not with_metabolites,
@@ -1532,3 +1632,63 @@ def select_predefined_modal(n_clicks, selected_organism):
     return "\n".join([protein.replace("UNIPROT:", "") for protein in ontology.proteins])
 
 
+
+
+
+
+@callback(
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Input("term_lipids_modal_grid", "cellRendererData"),
+    Input("term_proteins_modal_grid", "cellRendererData"),
+    Input("term_metabolites_modal_grid", "cellRendererData"),
+    State("sessionid", "children"),
+    State("term_molecules_modal_id", "children"),
+    State("term_lipids_modal_grid", "rowData"),
+    State("term_proteins_modal_grid", "rowData"),
+    State("term_metabolites_modal_grid", "rowData"),
+    State("select_organism", "value"),
+    prevent_initial_call = True,
+)
+def show_molecule_term_path(
+    renderer_data_lipids,
+    renderer_data_proteins,
+    renderer_data_metabolites,
+    session_id,
+    target_term_id,
+    row_data_lipids,
+    row_data_proteins,
+    row_data_metabolites,
+    organism,
+):
+    if session_id not in sessions:
+        return True, "Your session has expired. Please refresh the website."
+
+    if target_term_id not in sessions[session_id].search_terms:
+        return True, "Your session has expired. Please refresh the website."
+
+    trigger = callback_context.triggered[0]["prop_id"].split(".")[0]
+    if trigger == "term_lipids_modal_grid":
+        row_index = renderer_data_lipids["rowIndex"]
+        if len(row_data_lipids) <= row_index:
+            return True, "Your session has expired. Please refresh the website."
+        molecule = row_data_lipids[row_index]["molecule"]
+
+    elif trigger == "term_proteins_modal_grid":
+        row_index = renderer_data_proteins["rowIndex"]
+        if len(row_data_proteins) <= row_index:
+            return True, "Your session has expired. Please refresh the website."
+        molecule = "UNIPROT:" + row_data_proteins[row_index]["molecule"]
+
+    elif trigger == "term_metabolites_modal_grid":
+        row_index = renderer_data_metabolites["rowIndex"]
+        if len(row_data_metabolites) <= row_index:
+            return True, "Your session has expired. Please refresh the website."
+        molecule = row_data_metabolites[row_index]["molecule"]
+
+    ontology = enrichment_ontologies[organism]
+    for term_id in sessions[session_id].search_terms[target_term_id][molecule]:
+        print(term_id, "->", ontology.ontology_terms[term_id].name)
+    print()
+
+    raise exceptions.PreventUpdate
