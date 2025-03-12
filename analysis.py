@@ -313,49 +313,72 @@ def layout():
                     id = "term_molecules_modal_id",
                     style = {"display": "none"},
                 ),
-                dmc.Tabs(
-                    [
-                        dmc.TabsList(
-                            [
-                                dmc.Tab(
-                                    "Lipids",
-                                    value = "lipid_tab_modal",
-                                    id = "lipid_tab_modal_tab",
-                                ),
-                                dmc.Tab(
-                                    "Proteins",
-                                    value = "protein_tab_modal",
-                                    id = "protein_tab_modal_tab",
-                                ),
-                                dmc.Tab(
-                                    "Metabolites",
-                                    value = "metabolite_tab_modal",
-                                    id = "metabolite_tab_modal_tab",
-                                ),
-                            ],
-                            grow = True,
+                dmc.Grid(
+                    children = [
+                        dmc.Col(
+                            dmc.Tabs(
+                                [
+                                    dmc.TabsList(
+                                        [
+                                            dmc.Tab(
+                                                "Lipids",
+                                                value = "lipid_tab_modal",
+                                                id = "lipid_tab_modal_tab",
+                                            ),
+                                            dmc.Tab(
+                                                "Proteins",
+                                                value = "protein_tab_modal",
+                                                id = "protein_tab_modal_tab",
+                                            ),
+                                            dmc.Tab(
+                                                "Metabolites",
+                                                value = "metabolite_tab_modal",
+                                                id = "metabolite_tab_modal_tab",
+                                            ),
+                                        ],
+                                        grow = True,
+                                    ),
+                                    dmc.TabsPanel(
+                                        get_aggrid_modal("term_lipids_modal_grid", "Lipid"),
+                                        value = "lipid_tab_modal",
+                                    ),
+                                    dmc.TabsPanel(
+                                        get_aggrid_modal("term_proteins_modal_grid", "Protein"),
+                                        value = "protein_tab_modal",
+                                    ),
+                                    dmc.TabsPanel(
+                                        get_aggrid_modal("term_metabolites_modal_grid", "Metabolite"),
+                                        value = "metabolite_tab_modal",
+                                    ),
+                                ],
+                                id = "term_molecules_modal_tab",
+                                color = "blue", # default is blue
+                                orientation = "horizontal", # or "vertical"
+                                variant = "outline", # or "outline" or "pills"
+                                value = "lipid_tab_modal",
+                            ),
+                            span = 6,
                         ),
-                        dmc.TabsPanel(
-                            get_aggrid_modal("term_lipids_modal_grid", "Lipid"),
-                            value = "lipid_tab_modal",
-                        ),
-                        dmc.TabsPanel(
-                            get_aggrid_modal("term_proteins_modal_grid", "Protein"),
-                            value = "protein_tab_modal",
-                        ),
-                        dmc.TabsPanel(
-                            get_aggrid_modal("term_metabolites_modal_grid", "Metabolite"),
-                            value = "metabolite_tab_modal",
+                        dmc.Col(
+                            html.Div(
+                                children = [
+                                    dmc.Center(
+                                        dmc.Text("Term Path"),
+                                    ),
+                                    dmc.ScrollArea(
+                                        html.Div(
+                                            id = "term_path_area",
+                                        ),
+                                    )
+                                ]
+                            ),
+                            span = 6,
                         ),
                     ],
-                    id = "term_molecules_modal_tab",
-                    color = "blue", # default is blue
-                    orientation = "horizontal", # or "vertical"
-                    variant = "outline", # or "outline" or "pills"
-                    value = "lipid_tab_modal",
+                    gutter = "xl",
                 ),
             ],
-            size = "40%",
+            size = "60%",
         ),
         dmc.Modal(
             #title = "Load",
@@ -1442,6 +1465,7 @@ def update_action_icons(selected_rows):
     Output("term_molecules_modal_tab", "value", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("term_path_area", "children", allow_duplicate = True),
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
     State("background_lipids", "children"),
@@ -1475,7 +1499,8 @@ def open_term_window(
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website."
+            "Your session has expired. Please refresh the website.",
+            "",
         )
 
     sessions[session_id].time = time.time()
@@ -1533,6 +1558,7 @@ def open_term_window(
         not with_metabolites,
         tab_value,
         False,
+        "",
         "",
     )
 
@@ -1639,6 +1665,7 @@ def select_predefined_modal(n_clicks, selected_organism):
 @callback(
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("term_path_area", "children", allow_duplicate = True),
     Input("term_lipids_modal_grid", "cellRendererData"),
     Input("term_proteins_modal_grid", "cellRendererData"),
     Input("term_metabolites_modal_grid", "cellRendererData"),
@@ -1687,8 +1714,45 @@ def show_molecule_term_path(
         molecule = row_data_metabolites[row_index]["molecule"]
 
     ontology = enrichment_ontologies[organism]
+    term_path = []
     for term_id in sessions[session_id].search_terms[target_term_id][molecule]:
-        print(term_id, "->", ontology.ontology_terms[term_id].name)
-    print()
+        href = "."
+        if term_id[:3] == "GO:":
+            href = "https://amigo.geneontology.org/amigo/term/" + term_id
 
-    raise exceptions.PreventUpdate
+        elif term_id[:3] == "SMP":
+            href = "https://pathbank.org/view/" + term_id
+
+        elif term_id[:5] == "LION:" or term_id[:4] == "CAT:":
+            href = "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
+
+        elif term_id[:5] == "RHEA:":
+            href = f"https://www.rhea-db.org/rhea/{term_id[5:]}"
+
+        elif term_id[:8] == "UNIPROT:":
+            href = f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
+
+        elif term_id[:6] == "CHEBI:":
+            href = f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
+
+        term_path.append(
+            dmc.Paper(
+                dmc.Center(
+                    html.A(
+                        ontology.ontology_terms[term_id].name,
+                        href = href,
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ) if href != "." else dmc.Text(ontology.ontology_terms[term_id].name),
+                ),
+                shadow = "xs",
+                style = {
+                    "padding": "10px",
+                    "width": "100%",
+                    "marginBottom": "3px",
+                    "marginTop": "12px",
+                },
+            ),
+        )
+
+    return False, "", term_path
