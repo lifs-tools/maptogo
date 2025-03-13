@@ -1737,20 +1737,21 @@ def show_molecule_term_path(
 
         term_path.append(
             dmc.Paper(
-                dmc.Center(
-                    html.A(
-                        ontology.ontology_terms[term_id].name,
-                        href = href,
-                        target = "_blank",
-                        style = {"color": LINK_COLOR},
-                    ) if href != "." else dmc.Text(ontology.ontology_terms[term_id].name),
-                ),
+                html.A(
+                    ontology.ontology_terms[term_id].name,
+                    href = href,
+                    target = "_blank",
+                    style = {
+                        "color": LINK_COLOR,
+                    },
+                ) if href != "." else dmc.Text(ontology.ontology_terms[term_id].name),
                 shadow = "xs",
                 style = {
                     "padding": "10px",
                     "width": "100%",
                     "marginBottom": "3px",
                     "marginTop": "12px",
+                    "textAlign": "center",
                 },
             ),
         )
