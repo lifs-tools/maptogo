@@ -7,6 +7,8 @@ import logging
 import json
 import ctypes
 import pathlib
+import time
+
 current_path = pathlib.Path(__file__).parent.resolve()
 
 logger = logging.getLogger(__name__)
@@ -15,6 +17,17 @@ try:
     fisher_exact.exact_fisher.restype = ctypes.c_double
 except Exception as e:
     logger.error("Unable to load c++ library file(s)")
+
+
+
+class SessionEntry:
+    def __init__(self):
+        self.time = time.time()
+        self.data = None
+        self.data_loaded = False
+        self.search_terms = {}
+        self.num_background = 0
+
 
 
 class OntologyTerm:
@@ -28,7 +41,7 @@ class OntologyTerm:
 
 class OntologyResult:
     def __init__(
-        self, _term, _number_background, _number_background_events, _targets, _pvalue, _source_terms
+        self, _term, _number_background, _number_background_events, _targets, _pvalue, _source_terms, fisher = [0, 0, 0, 0]
     ):
         self.term = _term
         self.number_background = _number_background
@@ -36,6 +49,10 @@ class OntologyResult:
         self.targets = _targets
         self.pvalue = _pvalue
         self.source_terms = _source_terms
+        self.fisher_data = fisher
+
+        if min(fisher) < 0:
+            print("ERROR: ", self.term.name, self.term.term_id, fisher)
 
 
 
@@ -81,7 +98,8 @@ class EnrichmentOntology:
                                     if name not in self.lipids: self.lipids[name] = term
 
                                 elif is_lipid_class:
-                                    if name not in self.lipid_classes: self.lipid_classes[name] = term
+                                    if name not in self.lipid_classes: self.lipid_classes[name] = []
+                                    self.lipid_classes[name].append(term)
                                     for synonym in synonyms:
                                         if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
                                         self.lipid_classes[synonym].append(term)
@@ -89,7 +107,6 @@ class EnrichmentOntology:
                                 elif is_carbon_chain:
                                     if name not in self.carbon_chains: self.carbon_chains[name] = term
                                     for synonym in synonyms:
-                                        if synonym not in self.carbon_chains: self.carbon_chains[synonym] = []
                                         self.carbon_chains[synonym] = term
 
                                 elif is_protein:
@@ -221,41 +238,18 @@ class EnrichmentOntology:
 
 
 
-    def set_background(self, session, lipid_set = set(), protein_set = set(), metabolite_set = set()):
+    def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set()):
         session.search_terms = {}
-        session.num_background = len(lipid_set) + len(protein_set) + len(metabolite_set)
-        is_dict = type(lipid_set) == dict
+        session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set)
 
-        for lipid_input_name in lipid_set:
-
-            if is_dict:
-                lipid = lipid_set[lipid_input_name]
-            else:
-                try:
-                    lipid = self.lipid_parser.parse(lipid_input_name)
-                except Exception as e:
-                    logging.info("Error: %s" % e)
-                    continue
-
-                if lipid.lipid.info.level.value > LipidLevel.MOLECULAR_SPECIES.value:
-                    lipid.lipid.info.level = LipidLevel.MOLECULAR_SPECIES
-                lipid.sort_fatty_acyl_chains()
-
+        for lipid_input_name, lipid in lipid_dict.items():
+            lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
             lipid_name = lipid.get_lipid_string()
-            lipid_name_species = lipid.get_lipid_string(LipidLevel.SPECIES)
             lipid_name_class = lipid.get_extended_class()
 
             visited_terms = set()
             if lipid_name in self.lipids:
                 term = self.lipids[lipid_name]
-                if term.term_id not in visited_terms:
-                    visited_terms.add(term.term_id)
-                    self.recursive_event_adding(
-                        session, lipid_input_name, term.term_id, visited_terms
-                    )
-
-            if lipid_name_species in self.lipids:
-                term = self.lipids[lipid_name_species]
                 if term.term_id not in visited_terms:
                     visited_terms.add(term.term_id)
                     self.recursive_event_adding(
@@ -333,6 +327,12 @@ class EnrichmentOntology:
                     len(target_set),
                     p_hyp,
                     term_metabolites,
+                    [
+                        target_number,
+                        len(term_metabolites) - target_number,
+                        len(target_set) - target_number,
+                        session.num_background - len(term_metabolites) - len(target_set) + target_number,
+                    ],
                 )
 
         except Exception as e:
@@ -345,22 +345,23 @@ class EnrichmentOntology:
                     or self.ontology_terms[term_id].domain not in enrichment_domains
                 ): continue
 
-                target_number = len(term_metabolites & target_set)
+                target_number = len(term_metabolites.keys() & target_set)
 
                 a, b, c, d = (
                     target_number,
                     len(term_metabolites) - target_number,
-                    len(target_list) - target_number,
-                    session.num_background - len(term_metabolites) - len(target_list) + target_number,
+                    len(target_set) - target_number,
+                    session.num_background - len(term_metabolites) - len(target_set) + target_number,
                 )
                 p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
                 result_list[i] = OntologyResult(
                     self.ontology_terms[term_id],
                     session.num_background,
                     len(term_metabolites),
-                    len(target_list),
+                    len(target_set),
                     p_hyp,
                     term_metabolites,
+                    [a, b, c, d]
                 )
 
         return [result for result in result_list if result != None]

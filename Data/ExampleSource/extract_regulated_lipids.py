@@ -49,7 +49,7 @@ def extract_significant(df, start_data, variable, condition_1, condition_2, pval
 
 df = pd.read_excel("MK_Proteomics.xlsx")
 df.columns = [col.strip() for col in df.columns]
-extract_significant(df, 3, "Day", 0, 7, up_down = "up", fc_ths = 2)
+extract_significant(df, 3, "Day", 0, 7, fc_ths = 2) #, up_down = "down")
 
 # df = pd.read_excel("Heart-reperfusion-Metabolomics-data.xlsx")
 # extract_significant(df, 5, "Time", "0h", "I2h", fc_ths = 0.5,  filters = [("State", "MI"), ("Tissue", "Heart"), ("Group", "MI progression")])

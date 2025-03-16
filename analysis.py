@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback
+from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table
 import dash_mantine_components as dmc
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
@@ -10,7 +10,7 @@ import pandas as pd
 import io
 import os
 from statsmodels.stats.multitest import multipletests
-from EnrichmentDataStructure import EnrichmentOntology, current_path
+from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
@@ -19,6 +19,24 @@ import pathlib
 import time
 import hashlib
 import threading
+
+lipid_parser = LipidParser()
+session = SessionEntry()
+ontology = EnrichmentOntology(f"{current_path}/Data/ontology_10090.gz", lipid_parser = lipid_parser)
+ontology.set_background(session, lipid_dict = {"12-HETE": lipid_parser.parse("12-HETE")})
+#results = ontology.enrichment_analysis(session, "12-HETE", "Biological process", 'two-sided')
+
+term_ids = ["GO:0006979", "GO:0001659", "GO:0004602", "GO:0005829", "GO:0002862", "SMP0063595", "SMP0120510"]
+
+
+for term_id in term_ids:
+    if term_id not in session.search_terms:
+        print("ERROR:", term_id)
+        exit(-1)
+exit()
+
+
+
 
 
 hash_function = hashlib.new('sha256')
@@ -51,14 +69,6 @@ species = {
     # 'Arabidopsis thaliana': '3702',
 }
 INIT_ORGANISM = "9606"
-
-class SessionEntry:
-    def __init__(self):
-        self.time = time.time()
-        self.data = None
-        self.data_loaded = False
-        self.search_terms = {}
-        self.num_background = 0
 
 sessions, examples = {}, {}
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
@@ -363,12 +373,13 @@ def layout():
                             html.Div(
                                 children = [
                                     dmc.Center(
-                                        dmc.Text("Term Path"),
+                                        dmc.Text("Term path"),
                                     ),
                                     dmc.ScrollArea(
                                         html.Div(
                                             id = "term_path_area",
                                         ),
+                                        h = 414,
                                     )
                                 ]
                             ),
@@ -376,6 +387,10 @@ def layout():
                         ),
                     ],
                     gutter = "xl",
+                ),
+                html.Div(
+                    id = "contingency_table",
+                    style = {"marginTop": "10px"},
                 ),
             ],
             size = "60%",
@@ -993,9 +1008,6 @@ def run_enrichment(
             if len(lipid_name) == 0: continue
             try:
                 lipid = lipid_parser.parse(lipid_name)
-                if lipid.lipid.info.level.value > LipidLevel.MOLECULAR_SPECIES.value:
-                    lipid.lipid.info.level = LipidLevel.MOLECULAR_SPECIES
-                lipid.sort_fatty_acyl_chains()
                 lipidome[lipid_name] = lipid
 
             except Exception as e:
@@ -1007,14 +1019,7 @@ def run_enrichment(
             if lipid_name not in lipidome:
                 if ignore_unknown: continue
                 return "", [], do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", ""
-
-
-            try:
-                regulated_lipids.add(lipidome[lipid_name].get_lipid_string())
-            except Exception as e:
-                print(e)
-                if not ignore_unrecognizable_molecules:
-                    return "", [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in regulated list! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", ""
+            regulated_lipids.add(lipid_name)
 
         if len(lipidome) == 0:
             return "", [], do_activate_alert, "No background lipid left after lipid recognition.", "", "", "", "", "", ""
@@ -1025,7 +1030,7 @@ def run_enrichment(
         if len(regulated_lipids) > len(lipidome):
             return "", [], do_activate_alert, "Length of regulated lipid list must be smaller than background list.", "", "", "", "", "", ""
 
-        left_lipids = regulated_lipids - set([v.get_lipid_string() for k, v in lipidome.items()])
+        left_lipids = regulated_lipids - lipidome.keys()
         if len(left_lipids) > 0:
             if ignore_unknown:
                 for lipid_name in left_lipids:
@@ -1127,7 +1132,7 @@ def run_enrichment(
         return "", [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", ""
 
     if sessions[session_id].data_loaded == False:
-        ontology.set_background(sessions[session_id], lipid_set = lipidome, protein_set = proteome, metabolite_set = metabolome)
+        ontology.set_background(sessions[session_id], lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome)
         sessions[session_id].data_loaded = True
 
     results = ontology.enrichment_analysis(sessions[session_id], target_set, domains, term_regulation)
@@ -1466,6 +1471,7 @@ def update_action_icons(selected_rows):
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("term_path_area", "children", allow_duplicate = True),
+    Output("contingency_table", "children", allow_duplicate = True),
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
     State("background_lipids", "children"),
@@ -1500,6 +1506,7 @@ def open_term_window(
             no_update,
             True,
             "Your session has expired. Please refresh the website.",
+            "",
             "",
         )
 
@@ -1537,14 +1544,51 @@ def open_term_window(
         regulated_metabolites = set(regulated_metabolites.split("|"))
         metabolite_table = [{"molecule": molecule, "regulated": ("X" if molecule in regulated_metabolites else "")} for molecule in molecules if molecule in background_metabolites]
 
-    # for term_id, term_path in result.term.term_paths.items():
-    #     print(term_id, term_path)
-
     tab_value = "lipid_tab_modal"
     if not with_lipids:
         tab_value = "protein_tab_modal"
         if not with_proteins:
             tab_value = "metabolite_tab_modal"
+
+    col_1 = ""
+    col_2 = "Molecules associated with Term"
+    col_3 = "Molecules not associated with Term"
+    col_4 = "Sum"
+    fisher_data = result.fisher_data
+    data = {
+        col_1: ["Regulated molecules", "Not regulated Molecules", "Sum"],
+        col_2: [fisher_data[0], fisher_data[1], fisher_data[0] + fisher_data[1]],
+        col_3: [fisher_data[2], fisher_data[3], fisher_data[2] + fisher_data[3]],
+        col_4: [fisher_data[0] + fisher_data[2], fisher_data[1] + fisher_data[3], fisher_data[0] + fisher_data[1] + fisher_data[2] + fisher_data[3]]
+    }
+    dfc = pd.DataFrame(data)
+
+    contingency_table = dash_table.DataTable(
+        columns=[{"name": col, "id": col} for col in dfc.columns],
+        data = dfc.to_dict("records"),
+        style_table={'width': '80%', 'margin': 'auto'},
+
+        style_cell_conditional=[
+            {'if': {'column_id': col_2}, 'width': '30%'},
+            {'if': {'column_id': col_3}, 'width': '30%'},
+            {'if': {'column_id': col_4}, 'width': '10%'}
+        ],
+
+        # Style header row
+        style_header={'backgroundColor': '#f8f8f8', 'fontWeight': 'bold'},
+
+        style_header_conditional=[
+            {'if': {'column_id': col_3}, 'borderRight': '1px solid black'}
+        ],
+
+        # Style first column to match the header row
+        style_data_conditional=[
+            {'if': {'column_id': col_1}, 'backgroundColor': '#f8f8f8'},
+            {'if': {'row_index': 1}, 'borderBottom': '1px solid black'},
+            {'if': {'column_id': col_3}, 'borderRight': '1px solid black'},
+            {'if': {'column_id': col_1}, 'fontWeight': 'bold'},
+        ]
+    )
 
     return (
         True,
@@ -1560,6 +1604,7 @@ def open_term_window(
         False,
         "",
         "",
+        contingency_table,
     )
 
 
@@ -1715,7 +1760,8 @@ def show_molecule_term_path(
 
     ontology = enrichment_ontologies[organism]
     term_path = []
-    for term_id in sessions[session_id].search_terms[target_term_id][molecule]:
+    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][molecule]):
+        if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
         href = "."
         if term_id[:3] == "GO:":
             href = "https://amigo.geneontology.org/amigo/term/" + term_id
@@ -1738,7 +1784,7 @@ def show_molecule_term_path(
         term_path.append(
             dmc.Paper(
                 html.A(
-                    ontology.ontology_terms[term_id].name,
+                    dmc.Text(ontology.ontology_terms[term_id].name),
                     href = href,
                     target = "_blank",
                     style = {
@@ -1749,8 +1795,8 @@ def show_molecule_term_path(
                 style = {
                     "padding": "10px",
                     "width": "100%",
-                    "marginBottom": "3px",
-                    "marginTop": "12px",
+                    "marginBottom": "6px",
+                    "marginTop": "6px",
                     "textAlign": "center",
                 },
             ),
