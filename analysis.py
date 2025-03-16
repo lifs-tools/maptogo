@@ -20,25 +20,6 @@ import time
 import hashlib
 import threading
 
-lipid_parser = LipidParser()
-session = SessionEntry()
-ontology = EnrichmentOntology(f"{current_path}/Data/ontology_10090.gz", lipid_parser = lipid_parser)
-ontology.set_background(session, lipid_dict = {"12-HETE": lipid_parser.parse("12-HETE")})
-#results = ontology.enrichment_analysis(session, "12-HETE", "Biological process", 'two-sided')
-
-term_ids = ["GO:0006979", "GO:0001659", "GO:0004602", "GO:0005829", "GO:0002862", "SMP0063595", "SMP0120510"]
-
-
-for term_id in term_ids:
-    if term_id not in session.search_terms:
-        print("ERROR:", term_id)
-        exit(-1)
-exit()
-
-
-
-
-
 hash_function = hashlib.new('sha256')
 LINK_COLOR = "#2980B9"
 SESSION_DURATION_TIME =  60 * 60 # one hour
