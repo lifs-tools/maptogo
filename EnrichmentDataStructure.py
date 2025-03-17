@@ -250,11 +250,10 @@ class EnrichmentOntology:
             visited_terms = set()
             if lipid_name in self.lipids:
                 term = self.lipids[lipid_name]
-                if term.term_id not in visited_terms:
-                    visited_terms.add(term.term_id)
-                    self.recursive_event_adding(
-                        session, lipid_input_name, term.term_id, visited_terms
-                    )
+                visited_terms.add(term.term_id)
+                self.recursive_event_adding(
+                    session, lipid_input_name, term.term_id, visited_terms
+                )
 
             if lipid_name_class in self.lipid_classes:
                 for term in self.lipid_classes[lipid_name_class]:
@@ -287,21 +286,19 @@ class EnrichmentOntology:
             visited_terms = set()
             if protein_input_name not in self.proteins: continue
             term = self.proteins[protein_input_name]
-            if term.term_id not in visited_terms:
-                visited_terms.add(term.term_id)
-                self.recursive_event_adding(
-                    session, protein_input_name, term.term_id, visited_terms
-                )
+            visited_terms.add(term.term_id)
+            self.recursive_event_adding(
+                session, protein_input_name, term.term_id, visited_terms
+            )
 
         for metabolite_input_name in metabolite_set:
             visited_terms = set()
             if metabolite_input_name not in self.metabolites: continue
             term = self.metabolites[metabolite_input_name]
-            if term.term_id not in visited_terms:
-                visited_terms.add(term.term_id)
-                self.recursive_event_adding(
-                    session, metabolite_input_name, term.term_id, visited_terms
-                )
+            visited_terms.add(term.term_id)
+            self.recursive_event_adding(
+                session, metabolite_input_name, term.term_id, visited_terms
+            )
 
 
 
