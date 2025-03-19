@@ -48,6 +48,7 @@ class OntologyResult:
         self.number_background_events = _number_background_events
         self.targets = _targets
         self.pvalue = _pvalue
+        self.pvalue_corrected = _pvalue
         self.source_terms = _source_terms
         self.fisher_data = fisher
 
@@ -267,20 +268,35 @@ class EnrichmentOntology:
                 for fa in lipid.lipid.fa_list:
                     if fa.num_carbon == 0: continue
 
-                    fa_string = (
-                        "L"
-                        if fa.lipid_FA_bond_type
-                        in {LipidFaBondType.LCB_REGULAR, LipidFaBondType.LCB_EXCEPTION}
-                        else "C"
-                    ) + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
-                    if fa_string in self.carbon_chains:
-                        visited_terms.add(self.carbon_chains[fa_string].term_id)
-                        self.recursive_event_adding(
-                            session,
-                            lipid_input_name,
-                            self.carbon_chains[fa_string].term_id,
-                            visited_terms,
-                        )
+                    if fa.lipid_FA_bond_type in {LipidFaBondType.LCB_REGULAR, LipidFaBondType.LCB_EXCEPTION}:
+                        fa_string = "L" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
+                        if fa_string in self.carbon_chains:
+                            visited_terms.add(self.carbon_chains[fa_string].term_id)
+                            self.recursive_event_adding(
+                                session,
+                                lipid_input_name,
+                                self.carbon_chains[fa_string].term_id,
+                                visited_terms,
+                            )
+
+                    else:
+                        fa_string = "FA " + fa.to_string(lipid.lipid.info.level)
+                        if fa_string in self.lipids:
+                            term = self.lipids[fa_string]
+                            visited_terms.add(term.term_id)
+                            self.recursive_event_adding(
+                                session, lipid_input_name, term.term_id, visited_terms
+                            )
+
+                        fa_string = "C" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
+                        if fa_string in self.carbon_chains:
+                            visited_terms.add(self.carbon_chains[fa_string].term_id)
+                            self.recursive_event_adding(
+                                session,
+                                lipid_input_name,
+                                self.carbon_chains[fa_string].term_id,
+                                visited_terms,
+                            )
 
         for protein_input_name in protein_set:
             visited_terms = set()
@@ -303,7 +319,8 @@ class EnrichmentOntology:
 
 
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "two-sided"):
-        if session.num_background == 0 or len(enrichment_domains) == 0: return []
+        session.result = []
+        if session.num_background == 0 or len(enrichment_domains) == 0: return
 
         try: # C++ implementation, just way faster
             result_list = [None] * len(session.search_terms)
@@ -361,4 +378,4 @@ class EnrichmentOntology:
                     [a, b, c, d]
                 )
 
-        return [result for result in result_list if result != None]
+        session.result = [result for result in result_list if result != None]
