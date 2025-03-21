@@ -210,12 +210,10 @@ class EnrichmentOntology:
 
 
 
-    def recursive_event_adding(self, session, molecule_input_name, term_id, visited_terms, source_term = None, path = None):
+    def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path):
+        term_id = path[-1]
         if term_id not in self.ontology_terms: return
 
-        if source_term == None:
-            source_term = term_id
-            path = [term_id]
         term = self.ontology_terms[term_id]
 
         if term.domain not in self.domains:
@@ -224,16 +222,12 @@ class EnrichmentOntology:
                     visited_terms.add(parent_term_id)
                     path.append(parent_term_id)
                     self.recursive_event_adding(
-                        session,
-                        molecule_input_name,
-                        parent_term_id,
-                        visited_terms,
-                        source_term,
-                        path,
+                        session_and_molecule_input_name, visited_terms, path,
                     )
                     path.pop()
 
-        if source_term != term_id:
+        if path[0] != term_id:
+            session, molecule_input_name = session_and_molecule_input_name
             if term_id not in session.search_terms: session.search_terms[term_id] = {}
             session.search_terms[term_id][molecule_input_name] = list(path)
 
@@ -243,25 +237,38 @@ class EnrichmentOntology:
         session.search_terms = {}
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set)
 
+        def fill_path(lipid_term, lipid_name, lipid_input_name):
+            path = []
+            if lipid_term == None:
+                if lipid_input_name != lipid_name: path.append(lipid_input_name)
+                path.append(lipid_name)
+            else:
+                if lipid_input_name != lipid_term.name: path.append(lipid_input_name)
+                path.append(lipid_term.term_id)
+            return path
+
         for lipid_input_name, lipid in lipid_dict.items():
             lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
             lipid_name = lipid.get_lipid_string()
             lipid_name_class = lipid.get_extended_class()
 
             visited_terms = set()
-            if lipid_name in self.lipids:
-                term = self.lipids[lipid_name]
-                visited_terms.add(term.term_id)
+            lipid_term = self.lipids[lipid_name] if lipid_name in self.lipids else None
+            if lipid_term != None:
+                path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                visited_terms.add(lipid_term.term_id)
                 self.recursive_event_adding(
-                    session, lipid_input_name, term.term_id, visited_terms
+                    (session, lipid_input_name), visited_terms, path,
                 )
 
             if lipid_name_class in self.lipid_classes:
                 for term in self.lipid_classes[lipid_name_class]:
                     if term.term_id not in visited_terms:
                         visited_terms.add(term.term_id)
+                        path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                        path.append(term.term_id)
                         self.recursive_event_adding(
-                            session, lipid_input_name, term.term_id, visited_terms
+                            (session, lipid_input_name), visited_terms, path,
                         )
 
             if lipid != None and lipid.lipid != None:
@@ -269,33 +276,36 @@ class EnrichmentOntology:
                     if fa.num_carbon == 0: continue
 
                     if fa.lipid_FA_bond_type in {LipidFaBondType.LCB_REGULAR, LipidFaBondType.LCB_EXCEPTION}:
-                        fa_string = "L" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
-                        if fa_string in self.carbon_chains:
-                            visited_terms.add(self.carbon_chains[fa_string].term_id)
+                        lcb_string = "L" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
+                        if lcb_string in self.carbon_chains:
+                            lcb_term_id = self.carbon_chains[lcb_string].term_id
+                            visited_terms.add(lcb_term_id)
+                            path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                            path.append(lcb_term_id)
                             self.recursive_event_adding(
-                                session,
-                                lipid_input_name,
-                                self.carbon_chains[fa_string].term_id,
-                                visited_terms,
+                                (session, lipid_input_name), visited_terms, path,
                             )
 
                     else:
                         fa_string = "FA " + fa.to_string(lipid.lipid.info.level)
                         if fa_string in self.lipids:
-                            term = self.lipids[fa_string]
-                            visited_terms.add(term.term_id)
+                            fa_term = self.lipids[fa_string]
+                            fa_term_id = fa_term.term_id
+                            visited_terms.add(fa_term_id)
+                            path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                            path.append(fa_term_id)
                             self.recursive_event_adding(
-                                session, lipid_input_name, term.term_id, visited_terms
+                                (session, lipid_input_name), visited_terms, path,
                             )
 
                         fa_string = "C" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
                         if fa_string in self.carbon_chains:
-                            visited_terms.add(self.carbon_chains[fa_string].term_id)
+                            fa_term_id = self.carbon_chains[fa_string].term_id
+                            visited_terms.add(fa_term_id)
+                            path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                            path.append(fa_term_id)
                             self.recursive_event_adding(
-                                session,
-                                lipid_input_name,
-                                self.carbon_chains[fa_string].term_id,
-                                visited_terms,
+                                (session, lipid_input_name), visited_terms, path,
                             )
 
         for protein_input_name in protein_set:
@@ -304,7 +314,7 @@ class EnrichmentOntology:
             term = self.proteins[protein_input_name]
             visited_terms.add(term.term_id)
             self.recursive_event_adding(
-                session, protein_input_name, term.term_id, visited_terms
+                (session, protein_input_name), visited_terms, [term.term_id]
             )
 
         for metabolite_input_name in metabolite_set:
@@ -313,7 +323,7 @@ class EnrichmentOntology:
             term = self.metabolites[metabolite_input_name]
             visited_terms.add(term.term_id)
             self.recursive_event_adding(
-                session, metabolite_input_name, term.term_id, visited_terms
+                (session, metabolite_input_name), visited_terms, [term.term_id]
             )
 
 

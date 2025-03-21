@@ -1806,35 +1806,40 @@ def show_molecule_term_path(
     term_path = []
     for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][molecule]):
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
-        href = "."
-        if term_id[:3] == "GO:":
-            href = "https://amigo.geneontology.org/amigo/term/" + term_id
+        href, term_name = ".", ""
+        if term_id in ontology.ontology_terms:
+            term_name = ontology.ontology_terms[term_id].name
+            if term_id[:3] == "GO:":
+                href = "https://amigo.geneontology.org/amigo/term/" + term_id
 
-        elif term_id[:3] == "SMP":
-            href = "https://pathbank.org/view/" + term_id
+            elif term_id[:3] == "SMP":
+                href = "https://pathbank.org/view/" + term_id
 
-        elif term_id[:5] == "LION:" or term_id[:4] == "CAT:":
-            href = "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
+            elif term_id[:5] == "LION:" or term_id[:4] == "CAT:":
+                href = "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
 
-        elif term_id[:5] == "RHEA:":
-            href = f"https://www.rhea-db.org/rhea/{term_id[5:]}"
+            elif term_id[:5] == "RHEA:":
+                href = f"https://www.rhea-db.org/rhea/{term_id[5:]}"
 
-        elif term_id[:8] == "UNIPROT:":
-            href = f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
+            elif term_id[:8] == "UNIPROT:":
+                href = f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
 
-        elif term_id[:6] == "CHEBI:":
-            href = f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
+            elif term_id[:6] == "CHEBI:":
+                href = f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
+
+        else:
+            term_name = term_id
 
         term_path.append(
             dmc.Paper(
                 html.A(
-                    dmc.Text(ontology.ontology_terms[term_id].name),
+                    dmc.Text(term_name),
                     href = href,
                     target = "_blank",
                     style = {
                         "color": LINK_COLOR,
                     },
-                ) if href != "." else dmc.Text(ontology.ontology_terms[term_id].name),
+                ) if href != "." else dmc.Text(term_name),
                 shadow = "xs",
                 style = {
                     "padding": "10px",
