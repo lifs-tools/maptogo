@@ -879,6 +879,11 @@ def layout():
                                 "cellRenderer": "TermRenderer",
                             },
                             {
+                                'field': "count",
+                                "headerName": "Count",
+                                "width": 80,
+                            },
+                            {
                                 'field': "pvalue",
                                 "headerName": "pValue",
                                 "width": 150,
@@ -981,7 +986,7 @@ def run_enrichment(
     sessions[session_id].time = time.time()
 
     if not with_lipids and not with_proteins and not with_metabolites:
-        return "", [], do_activate_alert, "No omics data is inserted.", "", "", "", "", "", "", histogram_disabled
+        return "", [], do_activate_alert, "No omics data is selected.", "", "", "", "", "", "", histogram_disabled
 
     ontology = enrichment_ontologies[organism]
 
@@ -1087,6 +1092,7 @@ def run_enrichment(
         regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list.split("\n") if len(metabolite) > 0)
 
         left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
+        left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
         if len(left_metabolites) > 0:
             if ignore_unrecognizable_molecules:
                 metabolome -= left_metabolites
@@ -1094,6 +1100,7 @@ def run_enrichment(
                 return "", [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
 
         left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
+        left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
         if len(left_metabolites) > 0:
             if ignore_unrecognizable_molecules:
                 regulated_metabolites -= left_metabolites
@@ -1116,8 +1123,8 @@ def run_enrichment(
         if len(regulated_metabolites) > len(metabolome):
             return "", [], do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
 
-        metabolome = set([f"CHEBI:{metabolite}" if type(metabolite) == int or metabolite[:6] != "CHEBI:" else metabolite for metabolite in metabolome])
-        regulated_metabolites = set([f"CHEBI:{metabolite}" if type(metabolite) == int or metabolite[:6] != "CHEBI:" else metabolite for metabolite in regulated_metabolites])
+        metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
+        regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
         target_set |= regulated_metabolites
 
     if len(domains) == 0:
@@ -1136,14 +1143,40 @@ def run_enrichment(
         for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
 
     results.sort(key = lambda row: row.pvalue)
-    data = [
-        {
-            "domain": result.term.domain,
-            "term": result.term.name,
-            "termid": result.term.term_id,
-            "pvalue": result.pvalue_corrected
-        } for result in results
-    ]
+
+
+    data = []
+    for result in results:
+        cnt = 0
+        molecules = set(result.source_terms)
+        if with_lipids:
+            cnt += len(regulated_lipids & molecules & lipidome.keys())
+
+        if with_proteins:
+            cnt = len(regulated_proteins & molecules & proteome)
+
+        if with_metabolites:
+            cnt += len(regulated_metabolites & molecules & metabolome)
+
+
+        # if with_lipids:
+        #     cnt += sum((1 if molecule in regulated_lipids else 0) for molecule in molecules if molecule in lipidome)
+        #
+        # if with_proteins:
+        #     cnt = sum((1 if molecule in regulated_proteins else 0) for molecule in molecules if molecule in proteome)
+        #
+        # if with_metabolites:
+        #     cnt += sum((1 if molecule in regulated_metabolites else 0) for molecule in molecules if molecule in metabolome)
+
+        data.append(
+            {
+                "domain": result.term.domain,
+                "term": result.term.name,
+                "termid": result.term.term_id,
+                "count": f"{cnt} / {len(molecules)}",
+                "pvalue": result.pvalue_corrected
+            }
+        )
 
     histogram_disabled = False
     sessions[session_id].data = {result.term.term_id: result for result in results}
@@ -1273,6 +1306,7 @@ def download_table(
     domains = []
     term_ids = []
     terms = []
+    counts = []
     pvalues = []
 
     selected_term_ids = {row["termid"] for row in selected_rows}
@@ -1285,9 +1319,10 @@ def download_table(
         domains.append(row["domain"])
         term_ids.append(term_id)
         terms.append(row["term"])
+        counts.append(row["count"])
         pvalues.append(row["pvalue"])
 
-    df = pd.DataFrame({"Domain": domains, "Term ID": term_ids, "Term": terms, "pValue": pvalues})
+    df = pd.DataFrame({"Domain": domains, "Term ID": term_ids, "Term": terms, "Count": counts, "pValue": pvalues})
     data = sessions[session_id].data
 
     with_lipids = len(background_lipids) > 0 or len(regulated_lipids) > 0

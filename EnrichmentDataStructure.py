@@ -69,6 +69,7 @@ class EnrichmentOntology:
         self.clean_metabolite_ids = set()
         self.domains = set()
         self.lipid_parser = lipid_parser
+        self.metabolite_names = {}
 
         try:
             with gzip.open(file_name) as input_stream:
@@ -111,10 +112,13 @@ class EnrichmentOntology:
                                         self.carbon_chains[synonym] = term
 
                                 elif is_protein:
-                                    if name not in self.proteins: self.proteins[term_id] = term
+                                    if term_id not in self.proteins: self.proteins[term_id] = term
 
                                 elif is_metabolite:
-                                    if name not in self.metabolites: self.metabolites[term_id] = term
+                                    if term_id not in self.metabolites:
+                                        self.metabolites[term_id] = term
+                                    if name not in self.metabolite_names:
+                                        self.metabolite_names[name.lower()] = term
 
                             if len(domain) > 0:
                                 self.domains.add(domain)
@@ -172,27 +176,27 @@ class EnrichmentOntology:
                         )
 
                     term = OntologyTerm(term_id, name, relations, domain)
+                    if is_any:
+                        if is_lipid_species:
+                            if name not in self.lipids: self.lipids[name] = term
 
-                    if is_lipid_species:
-                        if name not in self.lipids: self.lipids[name] = term
+                        elif is_lipid_class:
+                            if name not in self.lipid_classes: self.lipid_classes[name] = []
+                            self.lipid_classes[name].append(term)
+                            for synonym in synonyms:
+                                if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
+                                self.lipid_classes[synonym].append(term)
 
-                    elif is_lipid_class:
-                        if name not in self.lipid_classes: self.lipid_classes[name] = term
-                        for synonym in synonyms:
-                            if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
-                            self.lipid_classes[synonym].append(term)
+                        elif is_carbon_chain:
+                            if name not in self.carbon_chains: self.carbon_chains[name] = term
+                            for synonym in synonyms:
+                                self.carbon_chains[synonym] = term
 
-                    elif is_carbon_chain:
-                        if name not in self.carbon_chains: self.carbon_chains[name] = term
-                        for synonym in synonyms:
-                            if synonym not in self.carbon_chains: self.carbon_chains[synonym] = []
-                            self.carbon_chains[synonym] = term
+                        elif is_protein:
+                            if term_id not in self.proteins: self.proteins[term_id] = term
 
-                    elif is_protein:
-                        if name not in self.proteins: self.proteins[name] = term
-
-                    elif is_metabolite:
-                        if name not in self.metabolites: self.metabolites[name] = term
+                        elif is_metabolite:
+                            if term_id not in self.metabolites: self.metabolites[term_id] = term
 
                     if len(domain) > 0:
                         self.domains.add(domain)
@@ -207,7 +211,6 @@ class EnrichmentOntology:
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
-
 
 
     def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path):
@@ -319,13 +322,18 @@ class EnrichmentOntology:
 
         for metabolite_input_name in metabolite_set:
             visited_terms = set()
-            if metabolite_input_name not in self.metabolites: continue
-            term = self.metabolites[metabolite_input_name]
+            if metabolite_input_name in self.metabolites:
+                term = self.metabolites[metabolite_input_name]
+
+            elif metabolite_input_name.lower() in self.metabolite_names:
+                term = self.metabolite_names[metabolite_input_name.lower()]
+
+            else: continue
+
             visited_terms.add(term.term_id)
             self.recursive_event_adding(
                 (session, metabolite_input_name), visited_terms, [term.term_id]
             )
-
 
 
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "two-sided"):
