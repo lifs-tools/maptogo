@@ -115,10 +115,7 @@ class EnrichmentOntology:
                                     if term_id not in self.proteins: self.proteins[term_id] = term
 
                                 elif is_metabolite:
-                                    if term_id not in self.metabolites:
-                                        self.metabolites[term_id] = term
-                                    if name not in self.metabolite_names:
-                                        self.metabolite_names[name.lower()] = term
+                                    if term_id not in self.metabolites: self.metabolites[term_id] = term
 
                             if len(domain) > 0:
                                 self.domains.add(domain)
@@ -211,6 +208,8 @@ class EnrichmentOntology:
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
+        self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
+
 
 
     def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path):

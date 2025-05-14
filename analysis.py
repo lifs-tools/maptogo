@@ -37,7 +37,7 @@ CC_LINK = html.A(
     style = {"color": LINK_COLOR},
 )
 
-species = {
+organisms = {
     'Homo sapiens': '9606',
     'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
@@ -50,6 +50,11 @@ species = {
     # 'Arabidopsis thaliana': '3702',
 }
 INIT_ORGANISM = "9606"
+
+try:
+    from organisms import organisms
+except Exception as e:
+    pass
 
 sessions, examples = {}, {}
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
@@ -150,7 +155,7 @@ app.title = "GO multiomics"
 
 lipid_parser = LipidParser()
 enrichment_ontologies = {}
-for tax_name, tax_id in species.items():
+for tax_name, tax_id in organisms.items():
     logger.info(f"loading {tax_name}")
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", lipid_parser = lipid_parser)
 
@@ -742,7 +747,7 @@ def layout():
                                     dmc.Select(
                                         id = "select_organism",
                                         data = [
-                                            {"value": species[key], "label": key} for key in sorted(species.keys())
+                                            {"value": organisms[key], "label": key} for key in sorted(organisms.keys())
                                         ],
                                         value = INIT_ORGANISM,
                                         label = "Select organism:",
@@ -764,14 +769,14 @@ def layout():
                                         value = "fdr_bh",
                                     ),
                                     dmc.Select(
-                                        id = "select_term_regulation",
+                                        id = "select_term_representation",
                                         data = [
-                                            {"value": "two-sided", "label": "Term regulated"},
-                                            {"value": "less", "label": "Term down-regulated"},
-                                            {"value": "greater", "label": "Term up-regulated"},
+                                            {"value": "two-sided", "label": "Term over/under-represented"},
+                                            {"value": "less", "label": "Term under-represented"},
+                                            {"value": "greater", "label": "Term over-represented"},
                                         ],
                                         value = "two-sided",
-                                        label = "Term regulation:",
+                                        label = "Term representation:",
                                     ),
                                     html.Div(
                                         dmc.Switch(
@@ -882,6 +887,7 @@ def layout():
                                 'field': "count",
                                 "headerName": "Count",
                                 "width": 80,
+                                "headerTooltip": "Number of regulated associated molecules / Number of all associated molecules",
                             },
                             {
                                 'field': "pvalue",
@@ -950,7 +956,7 @@ app.layout = layout
     State("switch_ignore_unparsable_lipids", "checked"),
     State("select_test_method", "value"),
     State("switch_ignore_unknown_regulated_lipids", "checked"),
-    State("select_term_regulation", "value"),
+    State("select_term_representation", "value"),
     State("sessionid", "children"),
     State("checkbox_use_lipids", "checked"),
     State("checkbox_use_proteins", "checked"),
@@ -1153,20 +1159,10 @@ def run_enrichment(
             cnt += len(regulated_lipids & molecules & lipidome.keys())
 
         if with_proteins:
-            cnt = len(regulated_proteins & molecules & proteome)
+            cnt += len(regulated_proteins & molecules & proteome)
 
         if with_metabolites:
             cnt += len(regulated_metabolites & molecules & metabolome)
-
-
-        # if with_lipids:
-        #     cnt += sum((1 if molecule in regulated_lipids else 0) for molecule in molecules if molecule in lipidome)
-        #
-        # if with_proteins:
-        #     cnt = sum((1 if molecule in regulated_proteins else 0) for molecule in molecules if molecule in proteome)
-        #
-        # if with_metabolites:
-        #     cnt += sum((1 if molecule in regulated_metabolites else 0) for molecule in molecules if molecule in metabolome)
 
         data.append(
             {
