@@ -8,9 +8,9 @@ import json
 import ctypes
 import pathlib
 import time
+from collections import defaultdict
 
 current_path = pathlib.Path(__file__).parent.resolve()
-
 logger = logging.getLogger(__name__)
 try:
     fisher_exact = ctypes.CDLL(f"{current_path}/assets/fisher_exact.so")
@@ -73,104 +73,32 @@ class EnrichmentOntology:
 
         try:
             with gzip.open(file_name) as input_stream:
+                input_content = [l for l in input_stream.read().decode("utf8").split("\n") if len(l) > 0]
                 term_id = ""
                 name = ""
-                is_lipid_species = False
-                is_lipid_class = False
-                is_carbon_chain = False
-                is_protein = False
-                is_metabolite = False
-                is_any = False
-                domain, relations, synonyms = "", set(), []
 
-                for line in input_stream:
-                    line = line.decode("utf8").strip().strip(" ")
+                for line in input_content:
+                    tokens = line.strip(" ").split("\t")
+                    if len(tokens) < 5: continue
 
-                    if line == "[Term]":
-                        if term_id != "" and name != "": # and name.find("inding") == -1:
-                            if term_id in self.ontology_terms:
-                                raise Exception(
-                                    "Term id '%s' in ontology already defined."
-                                    % term_id
-                                )
-
-                            term = OntologyTerm(term_id, name, relations, domain)
-                            if is_any:
-                                if is_lipid_species:
-                                    if name not in self.lipids: self.lipids[name] = term
-
-                                elif is_lipid_class:
-                                    if name not in self.lipid_classes: self.lipid_classes[name] = []
-                                    self.lipid_classes[name].append(term)
-                                    for synonym in synonyms:
-                                        if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
-                                        self.lipid_classes[synonym].append(term)
-
-                                elif is_carbon_chain:
-                                    if name not in self.carbon_chains: self.carbon_chains[name] = term
-                                    for synonym in synonyms:
-                                        self.carbon_chains[synonym] = term
-
-                                elif is_protein:
-                                    if term_id not in self.proteins: self.proteins[term_id] = term
-
-                                elif is_metabolite:
-                                    if term_id not in self.metabolites: self.metabolites[term_id] = term
-
-                            if len(domain) > 0:
-                                self.domains.add(domain)
-
-                            self.ontology_terms[term_id] = term
-
-                        term_id = ""
-                        name = ""
-                        is_lipid_species = False
-                        is_lipid_class = False
-                        is_carbon_chain = False
-                        is_protein = False
-                        is_metabolite = False
-                        is_any = False
-                        domain, relations, synonyms = "", set(), []
-
-                    elif line[:4] == "id: ":
-                        term_id = line[4:]
-
-                    elif line[:6] == "name: ":
-                        name = line[6:]
-
-                    elif line[:6] == "is_a: ":
-                        relation = line[6:].split(" ! ")[0]
-                        relations.add(relation)
-                        if relation[:3] == "LS:":
-                            if relation == "LS:0000001": is_lipid_class = True
-                            elif relation == "LS:0000002": is_lipid_species = True
-                            elif relation == "LS:0000003": is_carbon_chain = True
-                            elif relation == "LS:0000004": is_protein = True
-                            elif relation == "LS:0000005": is_metabolite = True
-                            is_any = True
-
-                    elif line[:14] == "relationship: ":
-                        line = line[14:]
-                        pos = line.find(" ")
-                        if pos > -1:
-                            relations.add(line[pos + 1 :].split(" ! ")[0])
-
-                    elif line[:11] == "namespace: ":
-                        domain = line[11:]
-
-                    elif line[:8] == "synonym:":
-                        tokens = line.split('"')
-                        if len(tokens) >= 2:
-                            synonyms.append(tokens[1])
-
-                    elif line == "is_obsolete: true":
-                        term_id, name = "", ""
-
-                if term_id != "" and name != "" and name.find("inding") == -1:
-                    if term_id in self.ontology_terms:
-                        raise Exception(
-                            "Term id '%s' in ontology already defined." % term_id
-                        )
+                    term_id, name, relations, synonyms, domain = tokens
+                    is_lipid_species = False
+                    is_lipid_class = False
+                    is_carbon_chain = False
+                    is_protein = False
+                    is_metabolite = False
+                    is_any = False
+                    relations = relations.split("|")
+                    synonyms = synonyms.split("|")
+                    for relation in relations:
+                        if relation[:9] == "LS:000000":
+                            match relation[9]:
+                                case "1": is_lipid_class = True
+                                case "2": is_lipid_species = True
+                                case "3": is_carbon_chain = True
+                                case "4": is_protein = True
+                                case "5": is_metabolite = True
+                            is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite
 
                     term = OntologyTerm(term_id, name, relations, domain)
                     if is_any:
@@ -200,15 +128,169 @@ class EnrichmentOntology:
 
                     self.ontology_terms[term_id] = term
 
-                if "external" in self.domains:
-                    self.domains.remove("external")
-
         except Exception as e:
             logger.error(e)
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
         self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
+
+
+
+
+
+
+
+
+
+        # try:
+        #     with gzip.open(file_name) as input_stream:
+        #         input_content = [l for l in input_stream.read().decode("utf8").split("\n") if len(l) > 0]
+        #         term_id = ""
+        #         name = ""
+        #         is_lipid_species = False
+        #         is_lipid_class = False
+        #         is_carbon_chain = False
+        #         is_protein = False
+        #         is_metabolite = False
+        #         is_any = False
+        #         domain, relations, synonyms = "", set(), []
+        #
+        #         dd = defaultdict(lambda: -1)
+        #         for i, c in enumerate("[inrs"): dd[c] = i
+        #
+        #         for line in input_content:
+        #             line = line.strip(" ")
+        #             match dd[line[0]]:
+        #                 case 0:
+        #                     if line == "[Term]":
+        #                         if term_id != "" and name != "": # and name.find("inding") == -1:
+        #                             if term_id in self.ontology_terms:
+        #                                 raise Exception(
+        #                                     "Term id '%s' in ontology already defined."
+        #                                     % term_id
+        #                                 )
+        #
+        #                             term = OntologyTerm(term_id, name, relations, domain)
+        #                             if is_any:
+        #                                 if is_lipid_species:
+        #                                     if name not in self.lipids: self.lipids[name] = term
+        #
+        #                                 elif is_lipid_class:
+        #                                     if name not in self.lipid_classes: self.lipid_classes[name] = []
+        #                                     self.lipid_classes[name].append(term)
+        #                                     for synonym in synonyms:
+        #                                         if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
+        #                                         self.lipid_classes[synonym].append(term)
+        #
+        #                                 elif is_carbon_chain:
+        #                                     if name not in self.carbon_chains: self.carbon_chains[name] = term
+        #                                     for synonym in synonyms:
+        #                                         self.carbon_chains[synonym] = term
+        #
+        #                                 elif is_protein:
+        #                                     if term_id not in self.proteins: self.proteins[term_id] = term
+        #
+        #                                 elif is_metabolite:
+        #                                     if term_id not in self.metabolites: self.metabolites[term_id] = term
+        #
+        #                             if len(domain) > 0:
+        #                                 self.domains.add(domain)
+        #
+        #                             self.ontology_terms[term_id] = term
+        #
+        #                         term_id = ""
+        #                         name = ""
+        #                         is_lipid_species = False
+        #                         is_lipid_class = False
+        #                         is_carbon_chain = False
+        #                         is_protein = False
+        #                         is_metabolite = False
+        #                         is_any = False
+        #                         domain, relations, synonyms = "", set(), []
+        #
+        #                 case 1:
+        #                     if line.startswith("id: "):
+        #                         term_id = line[4:]
+        #
+        #                     elif line.startswith("is_obsolete: true"):
+        #                         term_id, name = "", ""
+        #
+        #                     elif line.startswith("is_a: "):
+        #                         relation = line[6:].split(" ! ")[0]
+        #                         relations.add(relation)
+        #                         if relation[:3] == "LS:":
+        #                             if relation == "LS:0000001": is_lipid_class = True
+        #                             elif relation == "LS:0000002": is_lipid_species = True
+        #                             elif relation == "LS:0000003": is_carbon_chain = True
+        #                             elif relation == "LS:0000004": is_protein = True
+        #                             elif relation == "LS:0000005": is_metabolite = True
+        #                             is_any = True
+        #
+        #                 case 2:
+        #                     if line.startswith("name: "):
+        #                         name = line[6:]
+        #
+        #                     elif line.startswith("namespace: "):
+        #                         domain = line[11:]
+        #
+        #                 case 3:
+        #                     if line.startswith("relationship: "):
+        #                         line = line[14:]
+        #                         pos = line.find(" ")
+        #                         if pos > -1:
+        #                             relations.add(line[pos + 1 :].split(" ! ")[0])
+        #
+        #                 case 4:
+        #                     if line.startswith("synonym:"):
+        #                         tokens = line.split('"')
+        #                         if len(tokens) >= 2:
+        #                             synonyms.append(tokens[1])
+        #
+        #         if term_id != "" and name != "" and name.find("inding") == -1:
+        #             if term_id in self.ontology_terms:
+        #                 raise Exception(
+        #                     "Term id '%s' in ontology already defined." % term_id
+        #                 )
+        #
+        #             term = OntologyTerm(term_id, name, relations, domain)
+        #             if is_any:
+        #                 if is_lipid_species:
+        #                     if name not in self.lipids: self.lipids[name] = term
+        #
+        #                 elif is_lipid_class:
+        #                     if name not in self.lipid_classes: self.lipid_classes[name] = []
+        #                     self.lipid_classes[name].append(term)
+        #                     for synonym in synonyms:
+        #                         if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
+        #                         self.lipid_classes[synonym].append(term)
+        #
+        #                 elif is_carbon_chain:
+        #                     if name not in self.carbon_chains: self.carbon_chains[name] = term
+        #                     for synonym in synonyms:
+        #                         self.carbon_chains[synonym] = term
+        #
+        #                 elif is_protein:
+        #                     if term_id not in self.proteins: self.proteins[term_id] = term
+        #
+        #                 elif is_metabolite:
+        #                     if term_id not in self.metabolites: self.metabolites[term_id] = term
+        #
+        #             if len(domain) > 0:
+        #                 self.domains.add(domain)
+        #
+        #             self.ontology_terms[term_id] = term
+        #
+        #         if "external" in self.domains:
+        #             self.domains.remove("external")
+        #
+        # except Exception as e:
+        #     logger.error(e)
+        #
+        # self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
+        # self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
+        # self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
+
 
 
 
