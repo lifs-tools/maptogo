@@ -54,20 +54,27 @@ def text_size(text, font_size = 14):
     return bbox[2] - bbox[0]
 
 
-def annotate_polar(figure, annotations, text_to_add, mid_angle, distance, fontsize = 14, max_radius = 400, color = "black"):
+def annotate_polar(
+    figure,
+    annotations,
+    text_to_add,
+    mid_angle,
+    angle_width,
+    distance,
+    fontsize = 14,
+    max_radius = 400,
+    color = "black"
+):
     text_width = sum(char_sizes[ord(char)] for char in text_to_add)
+
+    if 360 / (2 * max_radius * np.pi) * text_width > angle_width:
+        text_width = angle_width / 360 * (2 * max_radius * np.pi)
 
     # Calculate positions of each character along the arc
     start_pos = (2 * max_radius * np.pi) / 360 * mid_angle - text_width / 2
     # Compute the positions (x, y) for each character
     x, y, rotation_angles, text = [], [], [], []
     for i, char in enumerate(text_to_add):
-        #prefix_witdh = text_size(text_to_add[: i])
-        #current_pos = start_pos + prefix_witdh - char_width / 2
-
-        # char_width = text_size(char)
-        # current_pos = start_pos + char_width / 2
-        # start_pos += char_width
 
         char_size = char_sizes[ord(char)]
         current_pos = start_pos + char_size / 2
@@ -1756,16 +1763,17 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         )
 
     fig = go.Figure()
-
     session_data = sessions[session_id].data
     selected_term_ids = [row["termid"] for row in selected_rows]
     pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
     number_entities = np.array([len(session_data[term_id].source_terms) for term_id in selected_term_ids])
     number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
-    term_domain_colors_def = [domain_colors[session_data[term_id].term.domain][0] for term_id in selected_term_ids]
-    term_domain_colors_bar = [domain_colors[session_data[term_id].term.domain][1] for term_id in selected_term_ids]
+    domains = [row["domain"] for row in selected_rows]
+    term_domain_colors_def = [domain_colors[domain][0] for domain in domains]
+    term_domain_colors_bar = [domain_colors[domain][1] for domain in domains]
     max_axis = int(max(pvalues) + 1)
 
+    custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
     inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
     pvalues = pvalues + inner_margin
     n = len(pvalues)
@@ -1782,11 +1790,15 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
     entities_arc_inner_radius = arc_outer_radius * 0.80
     #regulated_arc_inner_radius = arc_outer_radius * 0.76
     #regulated_arc_outer_radius = arc_outer_radius * 0.70
-    number_entities_sizes = np.log(number_entities + 2)
+
+    #number_entities_sizes = np.log(number_entities + 2)
+    #number_regulated_entities_sizes = np.log(number_regulated_entities + 2)
+    number_entities_sizes = number_entities + 5
+    number_regulated_entities_sizes = number_regulated_entities + 5
+
     mnes = np.max(number_entities_sizes)
-    number_entities_sizes /= mnes
-    number_regulated_entities_sizes = np.log(number_regulated_entities + 2)
-    number_regulated_entities_sizes /= mnes
+    number_entities_sizes = number_entities_sizes / mnes
+    number_regulated_entities_sizes = number_regulated_entities_sizes / mnes
 
     # Text to display along arcs
 
@@ -1800,7 +1812,6 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         theta = angles,
         width = [bar_width] * n,
         marker_color = "#eeeeee",
-        opacity = 1,
         hoverinfo = 'skip',
         showlegend = False,
     ))
@@ -1810,7 +1821,8 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         theta = angles,
         width = [bar_width] * n,
         marker_color = term_domain_colors_bar,
-        opacity = 1
+        customdata = custom_data,
+        hovertemplate = "Term ID: %{customdata[0]}<br />Term: %{customdata[1]}<br />p-value: %{customdata[2]}<br />Regulated molecules: %{customdata[3]}<br />Associated molecules: %{customdata[4]}<br />Domain: %{customdata[5]}<extra></extra>",
     ))
 
     # Add thick arcs above bars
@@ -1828,8 +1840,7 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
             term_domain_colors_def[i],
         )
         arc_mid_radius = (description_arc_inner_radius + arc_outer_radius) / 2
-        annotate_polar(fig, annotations, selected_term_ids[i], angles[i], arc_mid_radius)
-
+        annotate_polar(fig, annotations, selected_term_ids[i], angles[i], bar_width, arc_mid_radius)
 
         entities_start_angle = center_angle + bar_width / 2
         entities_mid_angle = entities_start_angle
@@ -1859,40 +1870,7 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
         arc_angle = (entities_start_angle + entities_end_angle) / 2
         entities_number_text = f"{str(int(number_regulated_entities[i]))} / {str(int(number_entities[i]))}"
-        annotate_polar(fig, annotations, entities_number_text, -arc_angle, arc_mid_radius)
-
-        # up_regulated, down_regulated = number_regulated[i]
-        # up_end_angle = center_angle + bar_width / 2
-        # if up_regulated > 0:
-        #     up_start_angle = center_angle + bar_width / 2
-        #     up_end_angle = up_start_angle - bar_width * up_regulated / (up_regulated +  down_regulated)
-        #     add_arc(
-        #         fig,
-        #         up_start_angle,
-        #         up_end_angle,
-        #         regulated_arc_inner_radius,
-        #         regulated_arc_outer_radius,
-        #         upregulated_color,
-        #     )
-        #     arc_mid_radius = (regulated_arc_inner_radius + regulated_arc_outer_radius) / 2
-        #     arc_angle = (up_start_angle + up_end_angle) / 2
-        #     annotate_polar(fig, str(int(up_regulated)), -arc_angle, arc_mid_radius)
-        #
-        # if down_regulated > 0:
-        #     down_start_angle = up_end_angle
-        #     down_end_angle = center_angle - bar_width / 2
-        #     add_arc(
-        #         fig,
-        #         down_start_angle,
-        #         down_end_angle,
-        #         regulated_arc_inner_radius,
-        #         regulated_arc_outer_radius,
-        #         downregulated_color,
-        #     )
-        #     arc_mid_radius = (regulated_arc_inner_radius + regulated_arc_outer_radius) / 2
-        #     arc_angle = (down_start_angle + down_end_angle) / 2
-        #     annotate_polar(fig, str(int(down_regulated)), -arc_angle, arc_mid_radius)
-
+        annotate_polar(fig, annotations, entities_number_text, -arc_angle, abs(entities_start_angle - entities_end_angle), arc_mid_radius)
 
     # Add white donut hole
     theta_circle = np.linspace(0, 360, 100)
@@ -1931,6 +1909,8 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
                 ticks = '',
                 showline = False,
                 showgrid = False,
+                categoryorder = 'array',
+                categoryarray = selected_term_ids,
             ),
             bgcolor = 'white'
         ),
@@ -1938,10 +1918,9 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         xaxis = dict(
             domain=[0, 1],
             range = [-arc_outer_radius, arc_outer_radius],
-            showgrid=False,
-            zeroline=True,
-            showticklabels=False,  # Hide the tick labels on the x-axis
-            #ticks = 'none'        # Hide the ticks themselves on the x-axis
+            showgrid = False,
+            zeroline = True,
+            showticklabels = False,  # Hide the tick labels on the x-axis
         ),
 
         yaxis = dict(
@@ -1950,7 +1929,6 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
             showgrid = False,
             zeroline = True,
             showticklabels = False,  # Hide the tick labels on the x-axis
-            #ticks = 'none'        # Hide the ticks themselves on the x-axis
         ),
         showlegend = False,
         paper_bgcolor='white',
@@ -1958,10 +1936,10 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         width = CIRCLE_WIDTH * 2,
         height = CIRCLE_WIDTH * 2,
         margin = dict(
-            l = 0,  # left margin
-            r = 0,  # right margin
-            t = 0,  # top margin
-            b = 0   # bottom margin
+            l = 0,
+            r = 0,
+            t = 0,
+            b = 0
         ),
     )
 
