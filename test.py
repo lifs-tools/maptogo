@@ -1,7 +1,6 @@
 from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry
-#from pygoslin.domain.LipidFaBondType import LipidFaBondType
-#from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
+import time
 
 lipid_parser = LipidParser()
 session = SessionEntry()
@@ -28,7 +27,9 @@ with open(f"{current_path}/Test/test_data.csv", "rt") as infile:
 unit_tests = 0
 for organism, organism_test_data in test_data.items():
     print(f"testing organism {organism}")
+    start_time = time.time()
     ontology = EnrichmentOntology(f"{current_path}/Data/ontology_{organism}.gz", lipid_parser = lipid_parser)
+    print(f"time: {time.time() - start_time}\n")
     ontology.set_background(session, lipid_dict = lipid_dict, protein_set = protein_set, metabolite_set = metabolite_set)
     for molecule_name, term_ids in organism_test_data.items():
         for term_id in term_ids:

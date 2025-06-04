@@ -1,12 +1,12 @@
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table
 import dash_mantine_components as dmc
-import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 import dash_ag_grid as dag
 from dash_iconify import DashIconify
 import json
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import io
 import os
 from statsmodels.stats.multitest import multipletests
@@ -19,10 +19,112 @@ import pathlib
 import time
 import hashlib
 import threading
+from PIL import ImageFont
+import freetype
+
+
+face = freetype.Face("assets/DejaVuSans.ttf")
+face.set_char_size(14 * 64)
+char_sizes = []
+for char in range(256):
+    face.load_char(chr(char))
+    char_sizes.append((face.glyph.advance.x >> 6) * 1.5)
+
+
+
 
 hash_function = hashlib.new('sha256')
 LINK_COLOR = "#2980B9"
 SESSION_DURATION_TIME = 60 * 60 # one hour
+domain_colors = {
+    "Biological process": ["#fc7255", "#fc947e"],
+    "Cellular component": ["#c86932", "#c87c50"],
+    "Metabolic and signalling pathway": ["#4daf4a", "#68af66"],
+    "Molecular function": ["#ffeda0", "#fff4c7"],
+    "Physical or chemical properties": ["#377eb8", "#538ab8"],
+}
+upregulated_color = "#F49E4C"
+downregulated_color = "#87BCDE"
+entities_number_color = "#F49E4C"
+INNER_CIRCLE = 100
+CIRCLE_WIDTH = 300
+
+text_fonts = [ImageFont.truetype("assets/DejaVuSans.ttf", i) if i > 0 else None for i in range(40)]
+
+# text_renderer_fig, text_renderer_ax = plt.subplots()
+# text_renderer = text_renderer_fig.canvas.get_renderer()
+# def text_size(text, fontsize = 14):
+#     text = text_renderer_ax.text(0, 0, text, fontsize = fontsize)
+#     bbox = text.get_window_extent(renderer = text_renderer)
+#     return bbox.width
+
+def text_size(text, font_size = 14):
+    bbox = text_fonts[font_size].getbbox(text)
+    return bbox[2] - bbox[0]
+
+
+def annotate_polar(figure, annotations, text_to_add, mid_angle, distance, fontsize = 14, max_radius = 400, color = "black"):
+    text_width = sum(char_sizes[ord(char)] for char in text_to_add)
+
+    # Calculate positions of each character along the arc
+    start_pos = (2 * max_radius * np.pi) / 360 * mid_angle - text_width / 2
+    # Compute the positions (x, y) for each character
+    x, y, rotation_angles, text = [], [], [], []
+    for i, char in enumerate(text_to_add):
+        #prefix_witdh = text_size(text_to_add[: i])
+        #current_pos = start_pos + prefix_witdh - char_width / 2
+
+        # char_width = text_size(char)
+        # current_pos = start_pos + char_width / 2
+        # start_pos += char_width
+
+        char_size = char_sizes[ord(char)]
+        current_pos = start_pos + char_size / 2
+        start_pos += char_size
+
+        if char == " ": continue
+        rotation_angle = 360 / (2 * max_radius * np.pi) * current_pos
+        # Convert polar coordinates (r, theta) to Cartesian (x, y)
+        x = distance * np.cos(np.radians(rotation_angle))
+        y = -distance * np.sin(np.radians(rotation_angle))
+
+        annotations.append(
+            dict(
+                x = x, y = y,
+                text = f"<b>{char}</b>",
+                showarrow = False,
+                textangle = rotation_angle + 90,
+                font = dict(color = color, size = fontsize),
+                xanchor = "center",
+                yanchor = "middle"
+            )
+        )
+
+
+
+def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, color, arc_resolution = 50):
+    theta_outer = np.linspace(start_angle, end_angle, arc_resolution)
+    theta_inner = theta_outer[::-1]
+
+    r_outer = [arc_outer_radius] * arc_resolution
+    r_inner = [arc_inner_radius] * arc_resolution
+
+    r_arc = np.concatenate([r_outer, r_inner])
+    theta_arc = np.concatenate([theta_outer, theta_inner])
+
+    figure.add_trace(go.Scatterpolar(
+        r = r_arc,
+        theta = theta_arc,
+        mode = 'lines',
+        fill = 'toself',
+        fillcolor = color,
+        line = dict(color = color),
+        opacity = 1.0,
+        hoverinfo = 'skip',
+        showlegend = False,
+    ))
+
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -30,12 +132,16 @@ logging.basicConfig(
     format = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
 )
 
+
+
 CC_LINK = html.A(
     "CC BY 4.0",
     href = "https://creativecommons.org/licenses/by/4.0/legalcode#s3a1",
     target = "_blank",
     style = {"color": LINK_COLOR},
 )
+
+
 
 organisms = {
     'Homo sapiens': '9606',
@@ -726,7 +832,7 @@ def layout():
                                         position = "right",
                                     ),
                                 ], cols = 2)],
-                                value="metabolites_tab",
+                                value = "metabolites_tab",
                             ),
                         ],
                         color = "blue", # default is blue
@@ -792,6 +898,15 @@ def layout():
                                             id = "switch_ignore_unknown_regulated_lipids",
                                             checked = False,
                                             label = "Ignore regulated molecules that aren't in background",
+                                            style = {"paddingBottom": "8px"},
+                                        ),
+                                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
+                                    ),
+                                    html.Div(
+                                        dmc.Switch(
+                                            id = "use_bounded_fatty_acyls",
+                                            checked = True,
+                                            label = "Use bounded fatty acyls for analysis, too",
                                             style = {"paddingBottom": "8px"},
                                         ),
                                         style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
@@ -1148,29 +1263,18 @@ def run_enrichment(
         pvalues = multipletests(pvalues, method = correction_method)[1]
         for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
 
-    results.sort(key = lambda row: row.pvalue)
+    results.sort(key = lambda row: row.pvalue_corrected)
 
 
     data = []
     for result in results:
-        cnt = 0
-        molecules = set(result.source_terms)
-        if with_lipids:
-            cnt += len(regulated_lipids & molecules & lipidome.keys())
-
-        if with_proteins:
-            cnt += len(regulated_proteins & molecules & proteome)
-
-        if with_metabolites:
-            cnt += len(regulated_metabolites & molecules & metabolome)
-
         data.append(
             {
                 "domain": result.term.domain,
                 "term": result.term.name,
                 "termid": result.term.term_id,
-                "count": f"{cnt} / {len(molecules)}",
-                "pvalue": result.pvalue_corrected
+                "count": f"{result.fisher_data[0]} / {len(set(result.source_terms))}",
+                "pvalue": "{:.6g}".format(result.pvalue_corrected)
             }
         )
 
@@ -1638,39 +1742,251 @@ def open_term_window(
 @callback(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
+    Output("barplot_terms_modal", "size", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
     Input("chart_results", "n_clicks"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
+    State("sessionid", "children"),
     prevent_initial_call = True,
 )
-def open_barplot(n_clicks, row_data, selected_rows):
+def open_barplot(n_clicks, row_data, selected_rows, session_id):
+    if session_id == None:
+        raise exceptions.PreventUpdate
+
+    if session_id not in sessions:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website.",
+        )
+
     fig = go.Figure()
-    selected_term_ids = set([row["termid"] for row in selected_rows])
+
+    session_data = sessions[session_id].data
+    selected_term_ids = [row["termid"] for row in selected_rows]
     pvalues = -np.log10([row["pvalue"] for row in row_data if row["termid"] in selected_term_ids])
-    categories = [row["term"] for row in row_data if row["termid"] in selected_term_ids]
-    # Add bar trace with red color
-    fig.add_trace(go.Bar(
-        x = pvalues,
-        y = categories,
-        orientation = "h",  # Horizontal bars
-        marker = dict(color = "#1f77b4")  # Set bars to red
+    number_entities = np.array([len(session_data[term_id].source_terms) for term_id in selected_term_ids])
+    number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
+    term_domain_colors_def = [domain_colors[session_data[term_id].term.domain][0] for term_id in selected_term_ids]
+    term_domain_colors_bar = [domain_colors[session_data[term_id].term.domain][1] for term_id in selected_term_ids]
+
+    #pvalues = np.array([3, 6, 3, 4, 5])
+    #number_entities = np.array([20, 32, 4, 51, 12])
+    #number_regulated = [(4, 6), (12, 2), (0, 1), (2, 17), (6, 0)]
+    max_axis = int(max(pvalues) + 1)
+
+    inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
+    pvalues = pvalues + inner_margin
+    n = len(pvalues)
+    max_height = max(pvalues) * 1.02
+    angle_gap = 360 / n
+    angles = [i * angle_gap for i in range(n)]
+    bar_width = angle_gap - 1
+    arc_outer_radius = max_height * 1.3
+    axis_step_size = int(max(1, 0.7 * np.sqrt(max_axis)))
+
+    # Arc settings
+    description_arc_inner_radius = arc_outer_radius * 0.9
+    entities_arc_outer_radius = arc_outer_radius * 0.86
+    entities_arc_inner_radius = arc_outer_radius * 0.80
+    #regulated_arc_inner_radius = arc_outer_radius * 0.76
+    #regulated_arc_outer_radius = arc_outer_radius * 0.70
+    number_entities_sizes = np.log(number_entities + 2)
+    mnes = np.max(number_entities_sizes)
+    number_entities_sizes /= mnes
+    number_regulated_entities_sizes = np.log(number_regulated_entities + 2)
+    number_regulated_entities_sizes /= mnes
+
+    # Text to display along arcs
+
+    # Start figure
+    fig = go.Figure(data = go.Bar())
+
+    # Add radial bars
+
+    fig.add_trace(go.Barpolar(
+        r = [max_height] * n,
+        theta = angles,
+        width = [bar_width] * n,
+        marker_color = "#eeeeee",
+        opacity = 1,
+        hoverinfo = 'skip',
+        showlegend = False,
     ))
 
-    # Layout customization
+    fig.add_trace(go.Barpolar(
+        r = pvalues,
+        theta = angles,
+        width = [bar_width] * n,
+        marker_color = term_domain_colors_bar,
+        opacity = 1
+    ))
+
+    # Add thick arcs above bars
+    annotations = []
+    for i in range(n):
+        center_angle = angles[i]
+        description_start_angle = center_angle - bar_width / 2
+        description_end_angle = center_angle + bar_width / 2
+        add_arc(
+            fig,
+            description_start_angle,
+            description_end_angle,
+            description_arc_inner_radius,
+            arc_outer_radius,
+            term_domain_colors_def[i],
+        )
+        arc_mid_radius = (description_arc_inner_radius + arc_outer_radius) / 2
+        annotate_polar(fig, annotations, selected_term_ids[i], angles[i], arc_mid_radius)
+
+
+        entities_start_angle = center_angle + bar_width / 2
+        entities_mid_angle = entities_start_angle
+        print(i, number_regulated_entities_sizes[i], number_entities_sizes[i])
+        if number_regulated_entities[i] > 0:
+            entities_end_angle = entities_start_angle - number_regulated_entities_sizes[i] * bar_width
+            add_arc(
+                fig,
+                entities_start_angle,
+                entities_end_angle,
+                entities_arc_inner_radius,
+                entities_arc_outer_radius,
+                upregulated_color,
+            )
+            entities_mid_angle = entities_end_angle
+
+        if number_entities[i] - number_regulated_entities[i] > 1e-60:
+            entities_end_angle = entities_mid_angle - (number_entities_sizes[i] - number_regulated_entities_sizes[i]) * bar_width
+            add_arc(
+                fig,
+                entities_mid_angle,
+                entities_end_angle,
+                entities_arc_inner_radius,
+                entities_arc_outer_radius,
+                downregulated_color,
+            )
+
+        arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
+        arc_angle = (entities_start_angle + entities_end_angle) / 2
+        entities_number_text = f"{str(int(number_regulated_entities[i]))} / {str(int(number_entities[i]))}"
+        annotate_polar(fig, annotations, entities_number_text, -arc_angle, arc_mid_radius)
+
+        # up_regulated, down_regulated = number_regulated[i]
+        # up_end_angle = center_angle + bar_width / 2
+        # if up_regulated > 0:
+        #     up_start_angle = center_angle + bar_width / 2
+        #     up_end_angle = up_start_angle - bar_width * up_regulated / (up_regulated +  down_regulated)
+        #     add_arc(
+        #         fig,
+        #         up_start_angle,
+        #         up_end_angle,
+        #         regulated_arc_inner_radius,
+        #         regulated_arc_outer_radius,
+        #         upregulated_color,
+        #     )
+        #     arc_mid_radius = (regulated_arc_inner_radius + regulated_arc_outer_radius) / 2
+        #     arc_angle = (up_start_angle + up_end_angle) / 2
+        #     annotate_polar(fig, str(int(up_regulated)), -arc_angle, arc_mid_radius)
+        #
+        # if down_regulated > 0:
+        #     down_start_angle = up_end_angle
+        #     down_end_angle = center_angle - bar_width / 2
+        #     add_arc(
+        #         fig,
+        #         down_start_angle,
+        #         down_end_angle,
+        #         regulated_arc_inner_radius,
+        #         regulated_arc_outer_radius,
+        #         downregulated_color,
+        #     )
+        #     arc_mid_radius = (regulated_arc_inner_radius + regulated_arc_outer_radius) / 2
+        #     arc_angle = (down_start_angle + down_end_angle) / 2
+        #     annotate_polar(fig, str(int(down_regulated)), -arc_angle, arc_mid_radius)
+
+
+    # Add white donut hole
+    theta_circle = np.linspace(0, 360, 100)
+    r_circle = [inner_margin] * 100
+
+    fig.add_trace(go.Scatterpolar(
+        r = r_circle,
+        theta = theta_circle,
+        mode = 'lines',
+        fill = 'toself',
+        fillcolor = 'white',
+        line = dict(color = 'white'),
+        hoverinfo = 'skip',
+        showlegend = False
+    ))
+
+    # Layout settings with visible radial axis (height of bars)
     fig.update_layout(
-        xaxis = dict(title = "-log<sub>10</sub>(p-value)", fixedrange = True),
-        yaxis = dict(title = "Term", categoryarray = categories[::-1]),
-        template = "plotly_white",
-        dragmode = "pan",
-        margin = dict(l = 20, r = 20, t = 20, b = 20),
+        annotations = annotations,
+        polar = dict(
+            domain = dict(x = [0, 1], y = [0, 1]),  # same domain as Cartesian
+            barmode = 'overlay',
+            radialaxis = dict(
+                visible = True,
+                tickvals = [i + inner_margin for i in range(0, max_axis, axis_step_size)],
+                ticktext = list(range(0, max_axis, axis_step_size)),
+                showticklabels = True,
+                ticks = 'inside',
+                showline = True,
+                showgrid = True,
+                range = [0, arc_outer_radius],
+            ),
+            angularaxis = dict(
+                visible = False,       # Hide angular axis ticks, labels, and grid
+                showticklabels = False,
+                ticks = '',
+                showline = False,
+                showgrid = False,
+            ),
+            bgcolor = 'white'
+        ),
+
+        xaxis = dict(
+            domain=[0, 1],
+            range = [-arc_outer_radius, arc_outer_radius],
+            showgrid=False,
+            zeroline=True,
+            showticklabels=False,  # Hide the tick labels on the x-axis
+            #ticks = 'none'        # Hide the ticks themselves on the x-axis
+        ),
+
+        yaxis = dict(
+            domain = [0, 1],
+            range = [-arc_outer_radius, arc_outer_radius],
+            showgrid = False,
+            zeroline = True,
+            showticklabels = False,  # Hide the tick labels on the x-axis
+            #ticks = 'none'        # Hide the ticks themselves on the x-axis
+        ),
+        showlegend = False,
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        width = CIRCLE_WIDTH * 2,
+        height = CIRCLE_WIDTH * 2,
+        margin = dict(
+            l = 0,  # left margin
+            r = 0,  # right margin
+            t = 0,  # top margin
+            b = 0   # bottom margin
+        ),
     )
-    return True, fig
+
+    return True, fig, CIRCLE_WIDTH * 2 + 50, False, ""
 
 
 
 @callback(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
+    Output("barplot_terms_modal", "size", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Input("histogram_results", "n_clicks"),
@@ -1682,6 +1998,7 @@ def open_histogram(n_clicks, session_id):
     if session_id not in sessions:
         return (
             False,
+            no_update,
             no_update,
             True,
             "Your session has expired. Please refresh the website.",
@@ -1713,7 +2030,7 @@ def open_histogram(n_clicks, session_id):
     #     dragmode = "pan",
     #     margin = dict(l = 20, r = 20, t = 20, b = 20),
     # )
-    return True, fig, False, ""
+    return True, fig, "90%", False, ""
 
 
 
@@ -1883,3 +2200,26 @@ def show_molecule_term_path(
         )
 
     return False, "", term_path
+
+
+@callback(
+    Output("use_bounded_fatty_acyls", "checked", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Input("use_bounded_fatty_acyls", "checked"),
+    State("sessionid", "children"),
+    prevent_initial_call = True,
+)
+def switch_bounded_fatty_acyls(checked, session_id):
+    if checked == None:
+        raise exceptions.PreventUpdate
+
+    if session_id not in sessions:
+        return dash.no_update, do_activate_alert, "Your session has expired. Please refresh the website."
+
+    session = sessions[session_id]
+    session.use_bounded_fatty_acyls = checked
+    session.data_loaded = False
+
+    raise exceptions.PreventUpdate
+
