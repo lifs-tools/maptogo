@@ -6,7 +6,6 @@ from dash_iconify import DashIconify
 import json
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import io
 import os
 from statsmodels.stats.multitest import multipletests
@@ -23,7 +22,7 @@ from PIL import ImageFont
 import freetype
 
 
-face = freetype.Face("assets/DejaVuSans.ttf")
+face = freetype.Face(f"{current_path}/assets/DejaVuSans.ttf")
 face.set_char_size(14 * 64)
 char_sizes = []
 for char in range(256):
@@ -50,14 +49,6 @@ INNER_CIRCLE = 100
 CIRCLE_WIDTH = 300
 
 text_fonts = [ImageFont.truetype("assets/DejaVuSans.ttf", i) if i > 0 else None for i in range(40)]
-
-# text_renderer_fig, text_renderer_ax = plt.subplots()
-# text_renderer = text_renderer_fig.canvas.get_renderer()
-# def text_size(text, fontsize = 14):
-#     text = text_renderer_ax.text(0, 0, text, fontsize = fontsize)
-#     bbox = text.get_window_extent(renderer = text_renderer)
-#     return bbox.width
-
 def text_size(text, font_size = 14):
     bbox = text_fonts[font_size].getbbox(text)
     return bbox[2] - bbox[0]
@@ -1768,15 +1759,11 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
 
     session_data = sessions[session_id].data
     selected_term_ids = [row["termid"] for row in selected_rows]
-    pvalues = -np.log10([row["pvalue"] for row in row_data if row["termid"] in selected_term_ids])
+    pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
     number_entities = np.array([len(session_data[term_id].source_terms) for term_id in selected_term_ids])
     number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
     term_domain_colors_def = [domain_colors[session_data[term_id].term.domain][0] for term_id in selected_term_ids]
     term_domain_colors_bar = [domain_colors[session_data[term_id].term.domain][1] for term_id in selected_term_ids]
-
-    #pvalues = np.array([3, 6, 3, 4, 5])
-    #number_entities = np.array([20, 32, 4, 51, 12])
-    #number_regulated = [(4, 6), (12, 2), (0, 1), (2, 17), (6, 0)]
     max_axis = int(max(pvalues) + 1)
 
     inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
@@ -1846,7 +1833,6 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
 
         entities_start_angle = center_angle + bar_width / 2
         entities_mid_angle = entities_start_angle
-        print(i, number_regulated_entities_sizes[i], number_entities_sizes[i])
         if number_regulated_entities[i] > 0:
             entities_end_angle = entities_start_angle - number_regulated_entities_sizes[i] * bar_width
             add_arc(
