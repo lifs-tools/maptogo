@@ -45,7 +45,7 @@ domain_colors = {
 upregulated_color = "#F49E4C"
 downregulated_color = "#87BCDE"
 entities_number_color = "#F49E4C"
-INNER_CIRCLE = 100
+INNER_CIRCLE = 300
 CIRCLE_WIDTH = 300
 
 text_fonts = [ImageFont.truetype("assets/DejaVuSans.ttf", i) if i > 0 else None for i in range(40)]
@@ -1796,17 +1796,14 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
     number_entities_sizes = number_entities + 5
     number_regulated_entities_sizes = number_regulated_entities + 5
 
+    annotations = []
     mnes = np.max(number_entities_sizes)
     number_entities_sizes = number_entities_sizes / mnes
     number_regulated_entities_sizes = number_regulated_entities_sizes / mnes
 
-    # Text to display along arcs
-
-    # Start figure
     fig = go.Figure(data = go.Bar())
 
     # Add radial bars
-
     fig.add_trace(go.Barpolar(
         r = [max_height] * n,
         theta = angles,
@@ -1826,7 +1823,6 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
     ))
 
     # Add thick arcs above bars
-    annotations = []
     for i in range(n):
         center_angle = angles[i]
         description_start_angle = center_angle - bar_width / 2
@@ -1887,6 +1883,49 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         showlegend = False
     ))
 
+    source_terms = [
+        set(session_data[term_id].source_terms.keys()) for term_id in selected_term_ids
+    ]
+
+    for i in range(0, n - 1):
+        for j in range(i + 1, n):
+            i_terms = source_terms[i]
+            j_terms = source_terms[j]
+
+            jaccard = len(i_terms & j_terms) / len(i_terms | j_terms)
+            if jaccard < 0.85: continue
+            jaccard = 100 * (jaccard - 0.85) / 0.15
+
+            x0 = inner_margin * np.cos(np.radians(angles[i]))
+            y0 = -inner_margin * np.sin(np.radians(angles[i]))
+            x2 = inner_margin * np.cos(np.radians(angles[j]))
+            y2 = -inner_margin * np.sin(np.radians(angles[j]))
+
+            P0 = np.array([x0, y0])
+            P1 = np.array([0, 0])
+            P2 = np.array([x2, y2])
+
+            # Generate Bezier curve points
+            t = np.linspace(0, 1, 10)
+            bezier_points = (1 - t)[:, None]**2 * P0 + \
+                            2 * (1 - t)[:, None] * t[:, None] * P1 + \
+                            t[:, None]**2 * P2
+
+            xx, yy = bezier_points[:, 0], bezier_points[:, 1]
+            rr = np.sqrt(xx**2 + yy**2)
+            theta = np.mod(np.arctan2(yy, xx) * (180 / np.pi) + 360, 360)
+
+            fig.add_trace(go.Scatterpolar(
+                r = rr,
+                theta = theta,
+                mode = 'lines',
+                line_shape = 'spline',
+                line = dict(color = f'hsv(0,0,{jaccard})', width = 1),
+                name = 'Curved Line',
+                hoverinfo = 'skip',
+                showlegend = False
+            ))
+
     # Layout settings with visible radial axis (height of bars)
     fig.update_layout(
         annotations = annotations,
@@ -1899,7 +1938,7 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
                 ticktext = list(range(0, max_axis, axis_step_size)),
                 showticklabels = True,
                 ticks = 'inside',
-                showline = True,
+                showline = False,
                 showgrid = True,
                 range = [0, arc_outer_radius],
             ),
@@ -1983,17 +2022,7 @@ def open_histogram(n_clicks, session_id):
         title = 'P-value Histogram',
         xaxis_title = 'Uncorrected p-values',
         yaxis_title = 'Count',
-        #margin = dict(l = 20, r = 20, t = 20, b = 20),
     )
-
-    # # Layout customization
-    # fig.update_layout(
-    #     xaxis = dict(title = "-log<sub>10</sub>(p-value)", fixedrange = True),
-    #     yaxis = dict(title = "Term", categoryarray = categories[::-1]),
-    #     template = "plotly_white",
-    #     dragmode = "pan",
-    #     margin = dict(l = 20, r = 20, t = 20, b = 20),
-    # )
     return True, fig, "90%", False, ""
 
 
