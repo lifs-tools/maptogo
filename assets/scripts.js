@@ -33,6 +33,9 @@ dagcomponentfuncs.TermIDRenderer = function (props) {
     else if (term_id.startsWith("LION:") || term_id.startsWith("CAT:")){
         href = "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_");
     }
+    else if (term_id.startsWith("DOID:")){
+        href = "https://disease-ontology.org/?id=" + term_id;
+    }
 
     if (href !== ""){
         return React.createElement(

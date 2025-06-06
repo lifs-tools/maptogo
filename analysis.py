@@ -18,17 +18,18 @@ import pathlib
 import time
 import hashlib
 import threading
-from PIL import ImageFont
 import freetype
 
 
 face = freetype.Face(f"{current_path}/assets/DejaVuSans.ttf")
-face.set_char_size(14 * 64)
 char_sizes = []
-for char in range(256):
-    face.load_char(chr(char))
-    char_sizes.append((face.glyph.advance.x >> 6) * 1.5)
-
+for font_size in range(1, 23):
+    char_sizes_font = []
+    char_sizes.append(char_sizes_font)
+    face.set_char_size(14 * 64)
+    for char in range(256):
+        face.load_char(chr(char))
+        char_sizes_font.append((face.glyph.advance.x >> 6) * 0.1 * font_size)
 
 
 
@@ -41,6 +42,7 @@ domain_colors = {
     "Metabolic and signalling pathway": ["#4daf4a", "#68af66"],
     "Molecular function": ["#ffeda0", "#fff4c7"],
     "Physical or chemical properties": ["#377eb8", "#538ab8"],
+    "Disease": ["#377eb8", "#538ab8"],
 }
 upregulated_color = "#F49E4C"
 downregulated_color = "#87BCDE"
@@ -48,10 +50,6 @@ entities_number_color = "#F49E4C"
 INNER_CIRCLE = 300
 CIRCLE_WIDTH = 300
 
-text_fonts = [ImageFont.truetype("assets/DejaVuSans.ttf", i) if i > 0 else None for i in range(40)]
-def text_size(text, font_size = 14):
-    bbox = text_fonts[font_size].getbbox(text)
-    return bbox[2] - bbox[0]
 
 
 def annotate_polar(
@@ -61,38 +59,38 @@ def annotate_polar(
     mid_angle,
     angle_width,
     distance,
-    fontsize = 14,
+    font_size = 14,
     max_radius = 400,
     color = "black"
 ):
-    text_width = sum(char_sizes[ord(char)] for char in text_to_add)
-
+    text_width = sum(char_sizes[font_size][ord(char)] for char in text_to_add)
     if 360 / (2 * max_radius * np.pi) * text_width > angle_width:
         text_width = angle_width / 360 * (2 * max_radius * np.pi)
 
     # Calculate positions of each character along the arc
-    start_pos = (2 * max_radius * np.pi) / 360 * mid_angle - text_width / 2
+    start_pos = (2 * max_radius * np.pi) / 360 * mid_angle + text_width / 2
     # Compute the positions (x, y) for each character
     x, y, rotation_angles, text = [], [], [], []
     for i, char in enumerate(text_to_add):
 
-        char_size = char_sizes[ord(char)]
-        current_pos = start_pos + char_size / 2
-        start_pos += char_size
+        char_size = char_sizes[font_size][ord(char)]
+        current_pos = start_pos - char_size / 2
+        start_pos -= char_size
 
         if char == " ": continue
-        rotation_angle = 360 / (2 * max_radius * np.pi) * current_pos
+        rotation_angle = np.mod(360 / (2 * max_radius * np.pi) * current_pos, 360)
         # Convert polar coordinates (r, theta) to Cartesian (x, y)
         x = distance * np.cos(np.radians(rotation_angle))
-        y = -distance * np.sin(np.radians(rotation_angle))
+        y = distance * np.sin(np.radians(rotation_angle))
+
 
         annotations.append(
             dict(
                 x = x, y = y,
                 text = f"<b>{char}</b>",
                 showarrow = False,
-                textangle = rotation_angle + 90,
-                font = dict(color = color, size = fontsize),
+                textangle = -rotation_angle + 90,
+                font = dict(color = color, size = font_size),
                 xanchor = "center",
                 yanchor = "middle"
             )
@@ -493,6 +491,35 @@ def layout():
                 dcc.Graph(
                     id = "barplot_terms",
                     config = plotly_config,
+                ),
+                html.Div(
+                    dmc.SimpleGrid(
+                        [
+                            dmc.NumberInput(
+                                id = "barplot_numberinput_font_size",
+                                label = "Font size",
+                                value = 14,
+                                min = 1,
+                                max = 20,
+                            ),
+                            dmc.NumberInput(
+                                id = "barplot_numberinput_connect_ths",
+                                label = "Connectivity Threshold",
+                                value = 80,
+                                min = 0,
+                                max = 100,
+                            ),
+                            dmc.Select(
+                                id = "barplot_select_name",
+                                label = "Select bar label:",
+                                data = [{"value": "id", "label": "Term ID"}, {"value": "name", "label": "Term name"}],
+                                value = "id",
+                            ),
+                        ],
+                        cols = 2,
+                    ),
+                    id = "barplot_controls",
+                    style = {"marginTop": "10px"},
                 ),
             ],
             size = "90%",
@@ -1743,14 +1770,19 @@ def open_term_window(
     Output("barplot_terms_modal", "size", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("barplot_controls", "style", allow_duplicate = True),
     Input("chart_results", "n_clicks"),
+    Input("barplot_numberinput_connect_ths", "value"),
+    Input("barplot_numberinput_font_size", "value"),
+    Input("barplot_select_name", "value"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
+    State("barplot_controls", "style"),
     prevent_initial_call = True,
 )
-def open_barplot(n_clicks, row_data, selected_rows, session_id):
-    if session_id == None:
+def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected_rows, session_id, controls_style):
+    if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"}:
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -1760,18 +1792,24 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
             no_update,
             True,
             "Your session has expired. Please refresh the website.",
+            no_update,
         )
 
     fig = go.Figure()
+    id_position = {row["termid"]: i for i, row in enumerate(row_data)}
     session_data = sessions[session_id].data
-    selected_term_ids = [row["termid"] for row in selected_rows]
+    selected_term_ids = sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])
     pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
     number_entities = np.array([len(session_data[term_id].source_terms) for term_id in selected_term_ids])
     number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
-    domains = [row["domain"] for row in selected_rows]
+    domains = [session_data[term_id].term.domain for term_id in selected_term_ids]
+    term_names = [session_data[term_id].term.name for term_id in selected_term_ids]
+    print(term_names)
     term_domain_colors_def = [domain_colors[domain][0] for domain in domains]
     term_domain_colors_bar = [domain_colors[domain][1] for domain in domains]
     max_axis = int(max(pvalues) + 1)
+    controls_style["display"] = "block"
+    jaccard_ths /= 100
 
     custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
     inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
@@ -1823,10 +1861,11 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
     ))
 
     # Add thick arcs above bars
+    annotation_label = selected_term_ids if bar_label == "id" else term_names
     for i in range(n):
         center_angle = angles[i]
-        description_start_angle = center_angle - bar_width / 2
-        description_end_angle = center_angle + bar_width / 2
+        description_start_angle = center_angle + bar_width / 2
+        description_end_angle = center_angle - bar_width / 2
         add_arc(
             fig,
             description_start_angle,
@@ -1836,7 +1875,7 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
             term_domain_colors_def[i],
         )
         arc_mid_radius = (description_arc_inner_radius + arc_outer_radius) / 2
-        annotate_polar(fig, annotations, selected_term_ids[i], angles[i], bar_width, arc_mid_radius)
+        annotate_polar(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size)
 
         entities_start_angle = center_angle + bar_width / 2
         entities_mid_angle = entities_start_angle
@@ -1866,7 +1905,7 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
         arc_angle = (entities_start_angle + entities_end_angle) / 2
         entities_number_text = f"{str(int(number_regulated_entities[i]))} / {str(int(number_entities[i]))}"
-        annotate_polar(fig, annotations, entities_number_text, -arc_angle, abs(entities_start_angle - entities_end_angle), arc_mid_radius)
+        annotate_polar(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), arc_mid_radius, font_size = font_size)
 
     # Add white donut hole
     theta_circle = np.linspace(0, 360, 100)
@@ -1893,16 +1932,22 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
             j_terms = source_terms[j]
 
             jaccard = len(i_terms & j_terms) / len(i_terms | j_terms)
-            if jaccard < 0.85: continue
-            jaccard = 100 * (jaccard - 0.85) / 0.15
+            if jaccard < jaccard_ths: continue
+            if jaccard_ths < 1:
+                jaccard = int(min(90, 100 - 100 * (jaccard - jaccard_ths) / (1 - jaccard_ths)))
+            else:
+                jaccard = 90
+
 
             x0 = inner_margin * np.cos(np.radians(angles[i]))
-            y0 = -inner_margin * np.sin(np.radians(angles[i]))
+            y0 = inner_margin * np.sin(np.radians(angles[i]))
             x2 = inner_margin * np.cos(np.radians(angles[j]))
-            y2 = -inner_margin * np.sin(np.radians(angles[j]))
+            y2 = inner_margin * np.sin(np.radians(angles[j]))
+            x1 = (x0 + x2) * 0.25
+            y1 = (y0 + y2) * 0.25
 
             P0 = np.array([x0, y0])
-            P1 = np.array([0, 0])
+            P1 = np.array([x1, y1])
             P2 = np.array([x2, y2])
 
             # Generate Bezier curve points
@@ -1920,7 +1965,7 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
                 theta = theta,
                 mode = 'lines',
                 line_shape = 'spline',
-                line = dict(color = f'hsv(0,0,{jaccard})', width = 1),
+                line = dict(color = f'hsv(0,0,{jaccard})', width = 2),
                 name = 'Curved Line',
                 hoverinfo = 'skip',
                 showlegend = False
@@ -1982,7 +2027,7 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
         ),
     )
 
-    return True, fig, CIRCLE_WIDTH * 2 + 50, False, ""
+    return True, fig, CIRCLE_WIDTH * 2 + 50, False, "", controls_style
 
 
 
@@ -1992,11 +2037,13 @@ def open_barplot(n_clicks, row_data, selected_rows, session_id):
     Output("barplot_terms_modal", "size", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("barplot_controls", "style", allow_duplicate = True),
     Input("histogram_results", "n_clicks"),
     State("sessionid", "children"),
+    State("barplot_controls", "style"),
     prevent_initial_call = True,
 )
-def open_histogram(n_clicks, session_id):
+def open_histogram(n_clicks, session_id, controls_style):
 
     if session_id not in sessions:
         return (
@@ -2005,10 +2052,12 @@ def open_histogram(n_clicks, session_id):
             no_update,
             True,
             "Your session has expired. Please refresh the website.",
+            no_update,
         )
 
     sessions[session_id].time = time.time()
     results = sessions[session_id].result
+    controls_style["display"] = "none"
 
     fig = go.Figure()
     fig.add_trace(
@@ -2023,7 +2072,7 @@ def open_histogram(n_clicks, session_id):
         xaxis_title = 'Uncorrected p-values',
         yaxis_title = 'Count',
     )
-    return True, fig, "90%", False, ""
+    return True, fig, "90%", False, "", controls_style
 
 
 
@@ -2168,6 +2217,9 @@ def show_molecule_term_path(
             elif term_id[:6] == "CHEBI:":
                 href = f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
 
+            elif term_id[:5] == "DOID:":
+                href = f"https://disease-ontology.org/?id={term_id}"
+
         else:
             term_name = term_id
 
@@ -2215,4 +2267,6 @@ def switch_bounded_fatty_acyls(checked, session_id):
     session.data_loaded = False
 
     raise exceptions.PreventUpdate
+
+
 
