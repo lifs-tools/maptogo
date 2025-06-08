@@ -49,7 +49,9 @@ downregulated_color = "#87BCDE"
 entities_number_color = "#F49E4C"
 INNER_CIRCLE = 300
 CIRCLE_WIDTH = 300
-
+LIPIDS_COLOR = "#f5b935"
+PROTEINS_COLOR = "#3778c2"
+METABOLITES_COLOR = "#4bac35"
 
 
 def annotate_polar(
@@ -130,9 +132,16 @@ logging.basicConfig(
 
 
 
-CC_LINK = html.A(
+CC4_LINK = html.A(
     "CC BY 4.0",
     href = "https://creativecommons.org/licenses/by/4.0/legalcode#s3a1",
+    target = "_blank",
+    style = {"color": LINK_COLOR},
+)
+
+CC0_LINK = html.A(
+    "CC0 - 1.0",
+    href = "https://creativecommons.org/publicdomain/zero/1.0/",
     target = "_blank",
     style = {"color": LINK_COLOR},
 )
@@ -604,7 +613,7 @@ def layout():
                             style = {"color": LINK_COLOR},
                         ),
                         ": ",
-                        CC_LINK
+                        CC4_LINK
                     ]),
                     dmc.Text([
                         "- ",
@@ -615,7 +624,18 @@ def layout():
                             style = {"color": LINK_COLOR},
                         ),
                         ": ",
-                        CC_LINK
+                        CC4_LINK
+                    ]),
+                    dmc.Text([
+                        "- ",
+                        html.A(
+                            "Disease Ontology (DO)",
+                            href = "https://github.com/DiseaseOntology/HumanDiseaseOntology/",
+                            target = "_blank",
+                            style = {"color": LINK_COLOR},
+                        ),
+                        ": ",
+                        CC0_LINK
                     ]),
                     dmc.Text([
                         "- ",
@@ -643,7 +663,7 @@ def layout():
                             style = {"color": LINK_COLOR},
                         ),
                         ": ",
-                        CC_LINK
+                        CC4_LINK
                     ]),
                     dmc.Text([
                         "- ",
@@ -670,7 +690,7 @@ def layout():
                             style = {"color": LINK_COLOR},
                         ),
                         ": ",
-                        CC_LINK
+                        CC4_LINK
                     ]),
                     dmc.Text([
                         "- ",
@@ -681,7 +701,7 @@ def layout():
                             style = {"color": LINK_COLOR},
                         ),
                         ": ",
-                        CC_LINK
+                        CC4_LINK
                     ]),
                     dmc.Text([
                         "- ",
@@ -692,7 +712,7 @@ def layout():
                             style = {"color": LINK_COLOR},
                         ),
                         ": ",
-                        CC_LINK
+                        CC4_LINK
                     ]),
                 ]),
             ], h = 450, offsetScrollbars = True, scrollHideDelay = 0),
@@ -1069,6 +1089,22 @@ def layout():
     ])
 
 app.layout = layout
+
+
+
+
+@callback(
+    Output("select_domains", "value", allow_duplicate = True),
+    Output("select_domains", "data", allow_duplicate = True),
+    Input("select_organism", "value"),
+    Input("select_domains", "value"),
+    prevent_initial_call = True,
+)
+def organism_changed(organism, domain_values):
+    domains = enrichment_ontologies[organism].domains
+    data = sorted(list(domains))
+    values = [v for v in domain_values if v in domains]
+    return values, data
 
 
 
@@ -1779,9 +1815,24 @@ def open_term_window(
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
     State("barplot_controls", "style"),
+    State("background_lipids", "children"),
+    State("background_proteins", "children"),
+    State("background_metabolites", "children"),
     prevent_initial_call = True,
 )
-def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected_rows, session_id, controls_style):
+def open_barplot(
+    n_clicks,
+    jaccard_ths,
+    font_size,
+    bar_label,
+    row_data,
+    selected_rows,
+    session_id,
+    controls_style,
+    background_lipids,
+    background_proteins,
+    background_metabolites,
+):
     if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"}:
         raise exceptions.PreventUpdate
 
@@ -1795,6 +1846,11 @@ def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected
             no_update,
         )
 
+    with_lipids = len(background_lipids) > 0
+    with_proteins = len(background_proteins) > 0
+    with_metabolites = len(background_metabolites) > 0
+    multiomics = sum([with_lipids + with_proteins + with_metabolites]) > 1
+
     fig = go.Figure()
     id_position = {row["termid"]: i for i, row in enumerate(row_data)}
     session_data = sessions[session_id].data
@@ -1804,7 +1860,6 @@ def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected
     number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
     domains = [session_data[term_id].term.domain for term_id in selected_term_ids]
     term_names = [session_data[term_id].term.name for term_id in selected_term_ids]
-    print(term_names)
     term_domain_colors_def = [domain_colors[domain][0] for domain in domains]
     term_domain_colors_bar = [domain_colors[domain][1] for domain in domains]
     max_axis = int(max(pvalues) + 1)
@@ -1814,20 +1869,20 @@ def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected
     custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
     inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
     pvalues = pvalues + inner_margin
-    n = len(pvalues)
+    n = len(selected_term_ids)
     max_height = max(pvalues) * 1.02
     angle_gap = 360 / n
     angles = [i * angle_gap for i in range(n)]
     bar_width = angle_gap - 1
-    arc_outer_radius = max_height * 1.3
+    arc_outer_radius = max_height * (1.3 + multiomics * 0.2)
     axis_step_size = int(max(1, 0.7 * np.sqrt(max_axis)))
 
     # Arc settings
     description_arc_inner_radius = arc_outer_radius * 0.9
     entities_arc_outer_radius = arc_outer_radius * 0.86
     entities_arc_inner_radius = arc_outer_radius * 0.80
-    #regulated_arc_inner_radius = arc_outer_radius * 0.76
-    #regulated_arc_outer_radius = arc_outer_radius * 0.70
+    molecules_arc_inner_radius = arc_outer_radius * 0.76
+    molecules_arc_outer_radius = arc_outer_radius * 0.70
 
     #number_entities_sizes = np.log(number_entities + 2)
     #number_regulated_entities_sizes = np.log(number_regulated_entities + 2)
@@ -1860,6 +1915,15 @@ def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected
         hovertemplate = "Term ID: %{customdata[0]}<br />Term: %{customdata[1]}<br />p-value: %{customdata[2]}<br />Regulated molecules: %{customdata[3]}<br />Associated molecules: %{customdata[4]}<br />Domain: %{customdata[5]}<extra></extra>",
     ))
 
+    if with_lipids:
+        background_lipids = set(background_lipids.split("|"))
+
+    if with_proteins:
+        background_proteins = set(background_proteins.split("|"))
+
+    if with_metabolites:
+        background_metabolites = set(background_metabolites.split("|"))
+
     # Add thick arcs above bars
     annotation_label = selected_term_ids if bar_label == "id" else term_names
     for i in range(n):
@@ -1876,6 +1940,17 @@ def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected
         )
         arc_mid_radius = (description_arc_inner_radius + arc_outer_radius) / 2
         annotate_polar(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size)
+
+        len_lipid_table = 0
+        len_protein_table = 0
+        len_metabolite_table = 0
+
+        result = session_data[selected_term_ids[i]]
+        molecules = set(result.source_terms.keys())
+
+        if with_lipids: len_lipid_table = len(molecules & background_lipids)
+        if with_proteins: len_protein_table = len(molecules & background_proteins)
+        if with_metabolites: len_metabolite_table = len(molecules & background_metabolites)
 
         entities_start_angle = center_angle + bar_width / 2
         entities_mid_angle = entities_start_angle
@@ -1902,10 +1977,61 @@ def open_barplot(n_clicks, jaccard_ths, font_size, bar_label, row_data, selected
                 downregulated_color,
             )
 
-        arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
+        entities_arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
         arc_angle = (entities_start_angle + entities_end_angle) / 2
         entities_number_text = f"{str(int(number_regulated_entities[i]))} / {str(int(number_entities[i]))}"
-        annotate_polar(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), arc_mid_radius, font_size = font_size)
+        annotate_polar(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), entities_arc_mid_radius, font_size = font_size)
+
+        molecules_label = ""
+        molecule_normalizer = len_lipid_table + len_protein_table + len_metabolite_table
+        if multiomics:
+            molecules_l_start_angle = center_angle + bar_width / 2
+            molecules_p_start_angle = molecules_l_start_angle
+            molecules_m_start_angle = molecules_l_start_angle
+            if with_lipids:
+                molecules_label = f"{len_lipid_table}"
+                if len_lipid_table > 0:
+                    molecules_l_end_angle = molecules_l_start_angle - len_lipid_table / molecule_normalizer * bar_width
+                    add_arc(
+                        fig,
+                        molecules_l_start_angle,
+                        molecules_l_end_angle,
+                        molecules_arc_inner_radius,
+                        molecules_arc_outer_radius,
+                        LIPIDS_COLOR,
+                    )
+                    molecules_p_start_angle = molecules_l_end_angle
+                    molecules_m_start_angle = molecules_l_end_angle
+
+            if with_proteins:
+                molecules_label += (" / " if len(molecules_label) > 1 else "") + f"{len_protein_table}"
+                if len_protein_table > 0:
+                    molecules_p_end_angle = molecules_p_start_angle - len_protein_table / molecule_normalizer * bar_width
+                    add_arc(
+                        fig,
+                        molecules_p_start_angle,
+                        molecules_p_end_angle,
+                        molecules_arc_inner_radius,
+                        molecules_arc_outer_radius,
+                        PROTEINS_COLOR,
+                    )
+                    molecules_m_start_angle = molecules_p_end_angle
+
+            if with_metabolites:
+                molecules_label += (" / " if len(molecules_label) > 1 else "") + f"{len_metabolite_table}"
+                if len_metabolite_table > 0:
+                    molecules_m_end_angle = molecules_m_start_angle - len_metabolite_table / molecule_normalizer * bar_width
+                    add_arc(
+                        fig,
+                        molecules_m_start_angle,
+                        molecules_m_end_angle,
+                        molecules_arc_inner_radius,
+                        molecules_arc_outer_radius,
+                        METABOLITES_COLOR,
+                    )
+        molecule_arc_mid_radius = (molecules_arc_inner_radius + molecules_arc_outer_radius) / 2
+        annotate_polar(fig, annotations, molecules_label, angles[i], bar_width, molecule_arc_mid_radius, font_size = font_size)
+
 
     # Add white donut hole
     theta_circle = np.linspace(0, 360, 100)
