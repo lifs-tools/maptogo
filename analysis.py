@@ -629,13 +629,24 @@ def layout():
                     dmc.Text([
                         "- ",
                         html.A(
-                            "Disease Ontology (DO)",
-                            href = "https://github.com/DiseaseOntology/HumanDiseaseOntology/",
+                            "HUGO Gene Nomenclature Committee (HGNC)",
+                            href = "https://www.genenames.org/about/license/",
                             target = "_blank",
                             style = {"color": LINK_COLOR},
                         ),
                         ": ",
                         CC0_LINK
+                    ]),
+                    dmc.Text([
+                        "- ",
+                        html.A(
+                            "Mondo Disease Ontology",
+                            href = "https://mondo.monarchinitiative.org/pages/download/",
+                            target = "_blank",
+                            style = {"color": LINK_COLOR},
+                        ),
+                        ": ",
+                        CC4_LINK
                     ]),
                     dmc.Text([
                         "- ",
@@ -2325,26 +2336,32 @@ def show_molecule_term_path(
         href, term_name = ".", ""
         if term_id in ontology.ontology_terms:
             term_name = ontology.ontology_terms[term_id].name
-            if term_id[:3] == "GO:":
+            if term_id.startswith("GO:"):
                 href = "https://amigo.geneontology.org/amigo/term/" + term_id
 
-            elif term_id[:3] == "SMP":
+            elif term_id.startswith("SMP"):
                 href = "https://pathbank.org/view/" + term_id
 
-            elif term_id[:5] == "LION:" or term_id[:4] == "CAT:":
+            elif term_id.startswith("LION:") or term_id.startswith("CAT:"):
                 href = "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
 
-            elif term_id[:5] == "RHEA:":
+            elif term_id.startswith("RHEA:"):
                 href = f"https://www.rhea-db.org/rhea/{term_id[5:]}"
 
-            elif term_id[:8] == "UNIPROT:":
+            elif term_id.startswith("UNIPROT:"):
                 href = f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
 
-            elif term_id[:6] == "CHEBI:":
+            elif term_id.startswith("CHEBI:"):
                 href = f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
 
-            elif term_id[:5] == "DOID:":
+            elif term_id.startswith("DOID:"):
                 href = f"https://disease-ontology.org/?id={term_id}"
+
+            elif term_id.startswith("MONDO:"):
+                href = f"https://monarchinitiative.org/{term_id}"
+
+            elif term_id.startswith("HGNC:"):
+                href = f"https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/{term_id}"
 
         else:
             term_name = term_id

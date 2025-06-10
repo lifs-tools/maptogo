@@ -36,6 +36,12 @@ dagcomponentfuncs.TermIDRenderer = function (props) {
     else if (term_id.startsWith("DOID:")){
         href = "https://disease-ontology.org/?id=" + term_id;
     }
+    else if (term_id.startsWith("MONDO:")){
+        href = "https://monarchinitiative.org/" + term_id;
+    }
+    else if (term_id.startsWith("HGNC:")){
+        href = "https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/" + term_id;
+    }
 
     if (href !== ""){
         return React.createElement(
