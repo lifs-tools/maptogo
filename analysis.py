@@ -501,6 +501,7 @@ def layout():
                 dcc.Graph(
                     id = "barplot_terms",
                     config = plotly_config,
+                    style = {'height': '80vh'},
                 ),
                 html.Div(
                     dmc.SimpleGrid(
@@ -1129,6 +1130,7 @@ def organism_changed(organism, domain_values):
 @callback(
     Output("loading_output", "children", allow_duplicate = True),
     Output("graph_enrichment_results", "rowData", allow_duplicate = True),
+    Output("graph_enrichment_results", "selectedRows", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("background_lipids", "children", allow_duplicate = True),
@@ -1180,13 +1182,13 @@ def run_enrichment(
     histogram_disabled = True
 
     if session_id not in sessions:
-        return "", [], do_activate_alert, "Your session has expired. Please refresh the website.", "", "", "", "", "", "", histogram_disabled
+        return "", [], [], do_activate_alert, "Your session has expired. Please refresh the website.", "", "", "", "", "", "", histogram_disabled
 
     logger.info(f"Enrichment session: {session_id}")
     sessions[session_id].time = time.time()
 
     if not with_lipids and not with_proteins and not with_metabolites:
-        return "", [], do_activate_alert, "No omics data is selected.", "", "", "", "", "", "", histogram_disabled
+        return "", [], [], do_activate_alert, "No omics data is selected.", "", "", "", "", "", "", histogram_disabled
 
     ontology = enrichment_ontologies[organism]
 
@@ -1196,10 +1198,10 @@ def run_enrichment(
     metabolome, regulated_metabolites = set(), set()
     if with_lipids:
         if len(all_lipids_list) == 0:
-            return "", [], do_activate_alert, "Please paste lipid names into the first text area.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Please paste lipid names into the first text area.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_lipids_list) == 0:
-            return "", [], do_activate_alert, "Please paste lipid names into the second text area.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Please paste lipid names into the second text area.", "", "", "", "", "", "", histogram_disabled
 
         for lipid_name in all_lipids_list.split("\n"):
             if len(lipid_name) == 0: continue
@@ -1209,23 +1211,23 @@ def run_enrichment(
 
             except Exception as e:
                 if not ignore_unrecognizable_molecules:
-                    return "", [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+                    return "", [], [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
 
         for lipid_name in regulated_lipids_list.split("\n"):
             if len(lipid_name) == 0: continue
             if lipid_name not in lipidome:
                 if ignore_unknown: continue
-                return "", [], do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
             regulated_lipids.add(lipid_name)
 
         if len(lipidome) == 0:
-            return "", [], do_activate_alert, "No background lipid left after lipid recognition.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "No background lipid left after lipid recognition.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_lipids) == 0:
-            return "", [], do_activate_alert, "No regulated lipid left after lipid recognition.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "No regulated lipid left after lipid recognition.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_lipids) > len(lipidome):
-            return "", [], do_activate_alert, "Length of regulated lipid list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Length of regulated lipid list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
 
         left_lipids = regulated_lipids - lipidome.keys()
         if len(left_lipids) > 0:
@@ -1233,16 +1235,16 @@ def run_enrichment(
                 for lipid_name in left_lipids:
                     del lipidome[lipid_name]
             else:
-                return "", [], do_activate_alert, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
 
         target_set |= regulated_lipids
 
     if with_proteins:
         if len(all_proteins_list) == 0:
-            return "", [], do_activate_alert, "Please paste protein accession into the first text area.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Please paste protein accession into the first text area.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_proteins_list) == 0:
-            return "", [], do_activate_alert, "Please paste protein accessions into the second text area.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Please paste protein accessions into the second text area.", "", "", "", "", "", "", histogram_disabled
 
         proteome = set(protein for protein in all_proteins_list.split("\n") if len(protein) > 0)
         regulated_proteins = set(protein for protein in regulated_proteins_list.split("\n") if len(protein) > 0)
@@ -1252,30 +1254,30 @@ def run_enrichment(
             if ignore_unrecognizable_molecules:
                 proteome -= left_proteins
             else:
-                return "", [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
 
         left_proteins = regulated_proteins - ontology.clean_protein_ids
         if len(left_proteins) > 0:
             if ignore_unrecognizable_molecules:
                 regulated_proteins -= left_proteins
             else:
-                return "", [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
 
         left_proteins = regulated_proteins - proteome
         if len(left_proteins) > 0:
             if ignore_unknown:
                 proteome -= left_proteins
             else:
-                return "", [], do_activate_alert, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
 
         if len(proteome) == 0:
-            return "", [], do_activate_alert, "No background protein left after protein recognition.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "No background protein left after protein recognition.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_proteins) == 0:
-            return "", [], do_activate_alert, "No regulated protein left after protein recognition.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "No regulated protein left after protein recognition.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_proteins) > len(proteome):
-            return "", [], do_activate_alert, "Length of regulated protein list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Length of regulated protein list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
 
         proteome = set([f"UNIPROT:{protein}" for protein in proteome])
         regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
@@ -1283,10 +1285,10 @@ def run_enrichment(
 
     if with_metabolites:
         if len(all_metabolites_list) == 0:
-            return "", [], do_activate_alert, "Please paste metabolite ChEBI Ids into the first text area.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the first text area.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_metabolites_list) == 0:
-            return "", [], do_activate_alert, "Please paste metabolite ChEBI Ids into the second text area.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the second text area.", "", "", "", "", "", "", histogram_disabled
 
         metabolome = set(metabolite for metabolite in all_metabolites_list.split("\n") if len(metabolite) > 0)
         regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list.split("\n") if len(metabolite) > 0)
@@ -1297,7 +1299,7 @@ def run_enrichment(
             if ignore_unrecognizable_molecules:
                 metabolome -= left_metabolites
             else:
-                return "", [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
 
         left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
         left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
@@ -1305,30 +1307,30 @@ def run_enrichment(
             if ignore_unrecognizable_molecules:
                 regulated_metabolites -= left_metabolites
             else:
-                return "", [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
 
         left_metabolites = regulated_metabolites - metabolome
         if len(left_metabolites) > 0:
             if ignore_unknown:
                 metabolome -= left_metabolites
             else:
-                return "", [], do_activate_alert, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
+                return "", [], [], do_activate_alert, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
 
         if len(metabolome) == 0:
-            return "", [], do_activate_alert, "No background metabolite left after metabolite recognition.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "No background metabolite left after metabolite recognition.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_metabolites) == 0:
-            return "", [], do_activate_alert, "No regulated metabolite left after metabolite recognition.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "No regulated metabolite left after metabolite recognition.", "", "", "", "", "", "", histogram_disabled
 
         if len(regulated_metabolites) > len(metabolome):
-            return "", [], do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
+            return "", [], [], do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
 
         metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
         regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
         target_set |= regulated_metabolites
 
     if len(domains) == 0:
-        return "", [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", "", histogram_disabled
+        return "", [], [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", "", histogram_disabled
 
     if sessions[session_id].data_loaded == False:
         ontology.set_background(sessions[session_id], lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome)
@@ -1364,6 +1366,7 @@ def run_enrichment(
     return (
         "",
         data,
+        [],
         not do_activate_alert,
         "",
         "|".join(lipidome),
@@ -1824,6 +1827,7 @@ def open_term_window(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
     Output("barplot_terms_modal", "size", allow_duplicate = True),
+    Output("barplot_terms", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
@@ -1849,6 +1853,7 @@ def open_sunburstplot(
             no_update,
             no_update,
             no_update,
+            no_update,
             True,
             "Your session has expired. Please refresh the website.",
             no_update,
@@ -1863,8 +1868,12 @@ def open_sunburstplot(
     selected_term_ids = sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])
     terms = ontology.ontology_terms
 
+    def shorten_label(label, max_len = 10):
+        return label if len(label) <= max_len else label[:max_len].rsplit(" ", 1)[0] + "..."
+
+
     visited_terms = set()
-    labels, parents, colors, values, custom_data = [], [], [], [], []
+    labels, parents, colors, values, names, custom_data = [], [], [], [], [], []
     for term_id in selected_term_ids:
         queue = [term_id]
         while len(queue) > 0:
@@ -1879,6 +1888,7 @@ def open_sunburstplot(
                     visited_terms.add(child_term_id)
                     values.append(int(term_id == child_term_id))
                     colors.append("#ff3333" if term_id == child_term_id else "#cccccc")
+                    names.append(shorten_label(terms[child_term_id].name) if term_id == child_term_id else "")
                     custom_data.append(f"<br>Name: {terms[child_term_id].name}" + (f"<br>-log<sub>10</sub>(p-value): " + "{:.6g}".format(session_data[term_id].pvalue_corrected) if term_id == child_term_id else ""))
 
                     if parent_term_id in terms:
@@ -1891,17 +1901,18 @@ def open_sunburstplot(
             else:
                 labels.append(child_term_id)
                 parents.append("")
+                names.append(shorten_label(terms[child_term_id].name) if term_id == child_term_id else "")
                 colors.append("#ff3333" if term_id == child_term_id else "#cccccc")
                 values.append(int(term_id == child_term_id))
                 custom_data.append(f"<br>Name: {terms[child_term_id].name}" + (f"<br>-log<sub>10</sub>(p-value): " + "{:.6g}".format(session_data[term_id].pvalue_corrected) if term_id == child_term_id else ""))
 
     fig.add_trace(go.Sunburst(
-        labels = labels,
+        ids = labels,
         parents = parents,
-        #values = [1] * len(labels),
+        labels = names,
         values = values,
         marker = dict(colors = colors),
-        textinfo = 'none',
+        #textinfo = 'none',
         customdata = custom_data,
         hovertemplate="Id: <b>%{label}</b>%{customdata}<extra></extra>",
     ))
@@ -1909,7 +1920,7 @@ def open_sunburstplot(
         margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
     )
 
-    return True, fig, "70%", False, "", controls_style
+    return True, fig, "70%", {'height': '80vh'}, False, "", controls_style
 
 
 
@@ -1917,6 +1928,7 @@ def open_sunburstplot(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
     Output("barplot_terms_modal", "size", allow_duplicate = True),
+    Output("barplot_terms", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
@@ -1951,6 +1963,7 @@ def open_barplot(
 
     if session_id not in sessions:
         return (
+            no_update,
             no_update,
             no_update,
             no_update,
@@ -2266,7 +2279,7 @@ def open_barplot(
         ),
     )
 
-    return True, fig, CIRCLE_WIDTH * 2 + 50, False, "", controls_style
+    return True, fig, CIRCLE_WIDTH * 2 + 50, {'height': '50vh'}, False, "", controls_style
 
 
 
@@ -2274,6 +2287,7 @@ def open_barplot(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
     Output("barplot_terms_modal", "size", allow_duplicate = True),
+    Output("barplot_terms", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
@@ -2287,6 +2301,7 @@ def open_histogram(n_clicks, session_id, controls_style):
     if session_id not in sessions:
         return (
             False,
+            no_update,
             no_update,
             no_update,
             True,
@@ -2311,7 +2326,7 @@ def open_histogram(n_clicks, session_id, controls_style):
         xaxis_title = 'Uncorrected p-values',
         yaxis_title = 'Count',
     )
-    return True, fig, "90%", False, "", controls_style
+    return True, fig, "90%", {'height': '80vh'}, False, "", controls_style
 
 
 
