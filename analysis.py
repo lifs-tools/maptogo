@@ -42,7 +42,8 @@ domain_colors = {
     "Metabolic and signalling pathway": ["#4daf4a", "#68af66"],
     "Molecular function": ["#ffeda0", "#fff4c7"],
     "Physical or chemical properties": ["#377eb8", "#538ab8"],
-    "Disease": ["#377eb8", "#538ab8"],
+    "Disease": ["#ac754d", "#ac8264"],
+    "Phenotype": ["#ac754d", "#ac8264"],
 }
 upregulated_color = "#F49E4C"
 downregulated_color = "#87BCDE"
@@ -140,8 +141,8 @@ CC4_LINK = html.A(
 )
 
 CC0_LINK = html.A(
-    "CC0 - 1.0",
-    href = "https://creativecommons.org/publicdomain/zero/1.0/",
+    "CC0",
+    href = "https://creativecommons.org/public-domain/cc0/",
     target = "_blank",
     style = {"color": LINK_COLOR},
 )
@@ -556,7 +557,7 @@ def layout():
             #title = "Description & disclaimer",
             id = "disclaimer_modal",
             zIndex = 10000,
-            children = dmc.ScrollArea([
+            children = dmc.ScrollArea(html.Div([
                 html.P([
                     dmc.Title("About GO multiomics", order = 4),
                     dmc.Text(
@@ -726,7 +727,7 @@ def layout():
                         CC4_LINK
                     ]),
                 ]),
-            ], h = 450, offsetScrollbars = True, scrollHideDelay = 0),
+            ], style = {"width": "98%"}), h = 450, offsetScrollbars = True, scrollHideDelay = 0),
             size = "50%",
         ),
         dmc.SimpleGrid(
@@ -1022,7 +1023,13 @@ def layout():
                                         disabled = True,
                                         style = {"marginRight": "5px"},
                                     ),
-                                    " ",
+                                    dmc.ActionIcon(
+                                        DashIconify(icon="carbon:chart-sunburst", width = 20),
+                                        id = "sunburst_results",
+                                        title = "Show term hierarchy",
+                                        disabled = True,
+                                        style = {"marginRight": "5px"},
+                                    ),
                                     dmc.ActionIcon(
                                         DashIconify(icon="material-symbols:download-rounded", width = 20),
                                         id = "icon_download_results",
@@ -1326,6 +1333,7 @@ def run_enrichment(
     if sessions[session_id].data_loaded == False:
         ontology.set_background(sessions[session_id], lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome)
         sessions[session_id].data_loaded = True
+        sessions[session_id].ontology = ontology
 
     ontology.enrichment_analysis(sessions[session_id], target_set, domains, term_regulation)
     results = sessions[session_id].result
@@ -1650,12 +1658,13 @@ def disclaimer_clicked(n_clicks):
 
 @callback(
     Output("chart_results", "disabled", allow_duplicate = True),
+    Output("sunburst_results", "disabled", allow_duplicate = True),
     Output("icon_download_results", "disabled", allow_duplicate = True),
     Input("graph_enrichment_results", "selectedRows"),
     prevent_initial_call = True,
 )
 def update_action_icons(selected_rows):
-    return len(selected_rows) == 0, len(selected_rows) == 0
+    return len(selected_rows) == 0, len(selected_rows) == 0, len(selected_rows) == 0
 
 
 
@@ -1818,6 +1827,99 @@ def open_term_window(
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
+    Input("sunburst_results", "n_clicks"),
+    State("graph_enrichment_results", "virtualRowData"),
+    State("graph_enrichment_results", "selectedRows"),
+    State("sessionid", "children"),
+    State("barplot_controls", "style"),
+    prevent_initial_call = True,
+)
+def open_sunburstplot(
+    n_clicks,
+    row_data,
+    selected_rows,
+    session_id,
+    controls_style,
+):
+    if session_id == None or n_clicks == None:
+        raise exceptions.PreventUpdate
+
+    if session_id not in sessions:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website.",
+            no_update,
+        )
+
+    controls_style["display"] = "none"
+    fig = go.Figure()
+    ontology = sessions[session_id].ontology
+
+    id_position = {row["termid"]: i for i, row in enumerate(row_data)}
+    session_data = sessions[session_id].data
+    selected_term_ids = sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])
+    terms = ontology.ontology_terms
+
+    visited_terms = set()
+    labels, parents, colors, values, custom_data = [], [], [], [], []
+    for term_id in selected_term_ids:
+        queue = [term_id]
+        while len(queue) > 0:
+            child_term_id = queue.pop()
+            if child_term_id not in terms: continue
+
+            if len(terms[child_term_id].relations) > 0:
+                for parent_term_id in terms[child_term_id].relations:
+                    if child_term_id in visited_terms: continue
+
+                    labels.append(child_term_id)
+                    visited_terms.add(child_term_id)
+                    values.append(int(term_id == child_term_id))
+                    colors.append("#ff3333" if term_id == child_term_id else "#cccccc")
+                    custom_data.append(f"<br>Name: {terms[child_term_id].name}" + (f"<br>-log<sub>10</sub>(p-value): " + "{:.6g}".format(session_data[term_id].pvalue_corrected) if term_id == child_term_id else ""))
+
+                    if parent_term_id in terms:
+                        queue.append(parent_term_id)
+                        parents.append(parent_term_id)
+                    else:
+                        parents.append("")
+                    break
+
+            else:
+                labels.append(child_term_id)
+                parents.append("")
+                colors.append("#ff3333" if term_id == child_term_id else "#cccccc")
+                values.append(int(term_id == child_term_id))
+                custom_data.append(f"<br>Name: {terms[child_term_id].name}" + (f"<br>-log<sub>10</sub>(p-value): " + "{:.6g}".format(session_data[term_id].pvalue_corrected) if term_id == child_term_id else ""))
+
+    fig.add_trace(go.Sunburst(
+        labels = labels,
+        parents = parents,
+        #values = [1] * len(labels),
+        values = values,
+        marker = dict(colors = colors),
+        textinfo = 'none',
+        customdata = custom_data,
+        hovertemplate="Id: <b>%{label}</b>%{customdata}<extra></extra>",
+    ))
+    fig.update_layout(
+        margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
+    )
+
+    return True, fig, "70%", False, "", controls_style
+
+
+
+@callback(
+    Output("barplot_terms_modal", "opened", allow_duplicate = True),
+    Output("barplot_terms", "figure", allow_duplicate = True),
+    Output("barplot_terms_modal", "size", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Output("barplot_controls", "style", allow_duplicate = True),
     Input("chart_results", "n_clicks"),
     Input("barplot_numberinput_connect_ths", "value"),
     Input("barplot_numberinput_font_size", "value"),
@@ -1861,6 +1963,7 @@ def open_barplot(
     with_proteins = len(background_proteins) > 0
     with_metabolites = len(background_metabolites) > 0
     multiomics = sum([with_lipids + with_proteins + with_metabolites]) > 1
+    controls_style["display"] = "block"
 
     fig = go.Figure()
     id_position = {row["termid"]: i for i, row in enumerate(row_data)}
@@ -1874,7 +1977,6 @@ def open_barplot(
     term_domain_colors_def = [domain_colors[domain][0] for domain in domains]
     term_domain_colors_bar = [domain_colors[domain][1] for domain in domains]
     max_axis = int(max(pvalues) + 1)
-    controls_style["display"] = "block"
     jaccard_ths /= 100
 
     custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
@@ -2363,6 +2465,12 @@ def show_molecule_term_path(
             elif term_id.startswith("HGNC:"):
                 href = f"https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/{term_id}"
 
+            elif term_id.startswith("HP:"):
+                href = f"https://hpo.jax.org/browse/term/{term_id}"
+
+            elif term_id.startswith("NCBI:"):
+                href = f"https://www.ncbi.nlm.nih.gov/gene/{term_id.split(':')[1]}"
+
         else:
             term_name = term_id
 
@@ -2408,6 +2516,7 @@ def switch_bounded_fatty_acyls(checked, session_id):
     session = sessions[session_id]
     session.use_bounded_fatty_acyls = checked
     session.data_loaded = False
+    session.ontology = None
 
     raise exceptions.PreventUpdate
 

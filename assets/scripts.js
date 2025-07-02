@@ -42,6 +42,12 @@ dagcomponentfuncs.TermIDRenderer = function (props) {
     else if (term_id.startsWith("HGNC:")){
         href = "https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/" + term_id;
     }
+    else if (term_id.startsWith("HP:")){
+        href = "https://hpo.jax.org/browse/term/" + term_id;
+    }
+    else if (term_id.startsWith("NCBI:")){
+        href = "https://www.ncbi.nlm.nih.gov/gene/" + term_id.split(":")[1];
+    }
 
     if (href !== ""){
         return React.createElement(

@@ -28,15 +28,20 @@ class SessionEntry:
         self.search_terms = {}
         self.num_background = 0
         self.use_bounded_fatty_acyls = True
+        self.ontology = None
+
 
 
 class OntologyTerm:
-    def __init__(self, _term_id, _name, _relations, _domain = ""):
+    def __init__(self, _term_id, _name, _relations, _domain = "", _xrefs = None):
         self.term_id = _term_id
         self.name = _name
         self.relations = list(_relations)
         self.domain = _domain
+        self.xrefs = list(_xrefs) if _xrefs != None else []
 
+    def to_string(self):
+        return f"{self.term_id}\t{self.name}\t{'|'.join(self.relations)}\t{self.domain}\t{'|'.join(self.xrefs)}\n"
 
 
 class OntologyResult:
@@ -79,9 +84,10 @@ class EnrichmentOntology:
 
                 for line in input_content:
                     tokens = line.strip(" ").split("\t")
-                    if len(tokens) < 5: continue
+                    if len(tokens) < 6: continue
+                    term_id, name, relations, synonyms, domain, xrefs = tokens
+                    xrefs = [xref for xref in xrefs.split("|") if xref in self.ontology_terms and self.ontology_terms[xref].domain == domain]
 
-                    term_id, name, relations, synonyms, domain = tokens
                     is_lipid_species = False
                     is_lipid_class = False
                     is_carbon_chain = False
@@ -100,7 +106,7 @@ class EnrichmentOntology:
                                 case "5": is_metabolite = True
                             is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite
 
-                    term = OntologyTerm(term_id, name, relations, domain)
+                    term = OntologyTerm(term_id, name, relations, domain, xrefs)
                     if is_any:
                         if is_lipid_species:
                             if name not in self.lipids: self.lipids[name] = term
@@ -135,29 +141,39 @@ class EnrichmentOntology:
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
         self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
 
+        try:
+            for line in open("Data/additional_links.csv").read().split("\n"):
+                if len(line) < 2: continue
+                tokens = line.split("\t")
+                if len(tokens) < 2 or tokens[0] not in self.ontology_terms or tokens[1] not in self.ontology_terms: continue
+                self.ontology_terms[tokens[0]].relations.append(tokens[1])
+
+        except Exception as e:
+            logger.error(e)
+            pass
 
 
     def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path):
         term_id = path[-1]
-        if term_id not in self.ontology_terms: return
-
         term = self.ontology_terms[term_id]
+        accepting_state = term.domain != ""
 
-        if term.domain not in self.domains:
-            for parent_term_id in term.relations:
-                if parent_term_id not in visited_terms:
-                    visited_terms.add(parent_term_id)
-                    path.append(parent_term_id)
-                    self.recursive_event_adding(
-                        session_and_molecule_input_name, visited_terms, path,
-                    )
-                    path.pop()
+        if term.domain not in self.domains or len(term.xrefs) > 0:
+            for is_xref, terms in zip([False, True], [term.relations, term.xrefs]):
+                for parent_term_id in terms:
+                    if is_xref and term.domain != "": accepting_state = False
+                    if parent_term_id not in visited_terms and parent_term_id in self.ontology_terms:
+                        visited_terms.add(parent_term_id)
+                        path.append(parent_term_id)
+                        self.recursive_event_adding(
+                            session_and_molecule_input_name, visited_terms, path,
+                        )
+                        path.pop()
 
-        if path[0] != term_id:
+        if accepting_state and path[0] != term_id:
             session, molecule_input_name = session_and_molecule_input_name
-            if term_id not in session.search_terms: session.search_terms[term_id] = {}
-            session.search_terms[term_id][molecule_input_name] = list(path)
-
+            if term_id not in session.search_terms: session.search_terms[term_id] = {molecule_input_name: list(path)}
+            else: session.search_terms[term_id][molecule_input_name] = list(path)
 
 
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set()):
