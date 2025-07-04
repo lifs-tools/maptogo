@@ -290,10 +290,6 @@ for tax_name, tax_id in organisms.items():
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", lipid_parser = lipid_parser)
 
 
-#enrichment_ontologies["10090"].set_background(protein_list = ["Q921I1"])
-#enrichment_ontologies["10090"].enrichment_analysis(["LPA 18:0"], ["Biological process"])
-
-
 def get_aggrid_modal(name, molecule):
     return dag.AgGrid(
         id = name,
@@ -1014,6 +1010,15 @@ def layout():
                                         ),
                                         style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
                                     ),
+                                    html.Div(
+                                        dmc.Switch(
+                                            id = "enrichment_parent_terms",
+                                            checked = True,
+                                            label = "Include all domain terms",
+                                            style = {"paddingBottom": "8px"},
+                                        ),
+                                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
+                                    ),
                                 ],
                             ),
 
@@ -1378,12 +1383,19 @@ def run_enrichment(
         return "", [], [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", "", histogram_disabled
 
     if sessions[session_id].data_loaded == False:
+        a = time.time()
         ontology.set_background(sessions[session_id], lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome)
+        b = time.time()
+        print("set:", b - a)
         sessions[session_id].data_loaded = True
         sessions[session_id].ontology = ontology
 
     sessions[session_id].domains = set(domains)
+    a = time.time()
     ontology.enrichment_analysis(sessions[session_id], target_set, domains, term_regulation)
+    b = time.time()
+    print("enrichment:", b - a)
+    print("fooo:", ontology.fooo)
     results = sessions[session_id].result
 
     if correction_method != "no" and len(results) > 0:
@@ -1954,7 +1966,8 @@ def open_sunburstplot(
                 parent_prefix = parent_term_id.split(":")[0] if parent_term_id.find(":") > -1 else "SNP"
                 if parent_prefix not in LIBRARY_TO_DOMAINS \
                     or len(LIBRARY_TO_DOMAINS[parent_prefix] & domains) == 0 \
-                    or term_prefix != parent_prefix: continue
+                    or term_prefix != parent_prefix \
+                    or parent_term_id not in terms: continue
 
                 parent_term = terms[parent_term_id]
                 sunburst_terms[child_term].parent = parent_term.get_term_id()

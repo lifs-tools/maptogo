@@ -31,6 +31,7 @@ class SessionEntry:
         self.use_bounded_fatty_acyls = True
         self.ontology = None
         self.domains = None
+        self.all_domain_terms = True
 
 
 
@@ -81,6 +82,7 @@ class EnrichmentOntology:
         self.domains = set()
         self.lipid_parser = lipid_parser
         self.metabolite_names = {}
+        self.fooo = 0
 
         try:
             with gzip.open(file_name) as input_stream:
@@ -167,6 +169,7 @@ class EnrichmentOntology:
 
 
     def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path):
+        self.fooo += 1
         term_id = path[-1]
         term = self.ontology_terms[term_id]
 
