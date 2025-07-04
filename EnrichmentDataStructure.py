@@ -9,6 +9,7 @@ import ctypes
 import pathlib
 import time
 from collections import defaultdict
+import traceback
 
 current_path = pathlib.Path(__file__).parent.resolve()
 logger = logging.getLogger(__name__)
@@ -29,19 +30,24 @@ class SessionEntry:
         self.num_background = 0
         self.use_bounded_fatty_acyls = True
         self.ontology = None
+        self.domains = None
 
 
 
 class OntologyTerm:
-    def __init__(self, _term_id, _name, _relations, _domain = "", _xrefs = None):
-        self.term_id = _term_id
+    def __init__(self, _term_id, _name, _relations, _domain = ""):
+        self.term_id = set(_term_id) if type(_term_id) in {list, set} else set(_term_id.split("|"))
         self.name = _name
         self.relations = list(_relations)
-        self.domain = _domain
-        self.xrefs = list(_xrefs) if _xrefs != None else []
+        self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {""}
 
     def to_string(self):
-        return f"{self.term_id}\t{self.name}\t{'|'.join(self.relations)}\t{self.domain}\t{'|'.join(self.xrefs)}\n"
+        return f"{'|'.join(self.term_id)}\t{self.name}\t{'|'.join(self.relations)}\t{'|'.join(self.domain)}\n"
+
+    def get_term_id(self, space = False):
+        if space: " | ".join(sorted(list(self.term_id)))
+        return "|".join(sorted(list(self.term_id)))
+
 
 
 class OntologyResult:
@@ -58,7 +64,7 @@ class OntologyResult:
         self.fisher_data = fisher
 
         if min(fisher) < 0:
-            print("ERROR: ", self.term.name, self.term.term_id, fisher)
+            print("ERROR: ", self.term.name, self.term.get_term_id(), fisher)
 
 
 
@@ -84,9 +90,12 @@ class EnrichmentOntology:
 
                 for line in input_content:
                     tokens = line.strip(" ").split("\t")
-                    if len(tokens) < 6: continue
-                    term_id, name, relations, synonyms, domain, xrefs = tokens
-                    xrefs = [xref for xref in xrefs.split("|") if xref in self.ontology_terms and self.ontology_terms[xref].domain == domain]
+                    if len(tokens) < 5: continue
+                    term_id = tokens[0]
+                    name = tokens[1]
+                    relations = tokens[2]
+                    synonyms = tokens[3]
+                    domain = tokens[4]
 
                     is_lipid_species = False
                     is_lipid_class = False
@@ -106,7 +115,8 @@ class EnrichmentOntology:
                                 case "5": is_metabolite = True
                             is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite
 
-                    term = OntologyTerm(term_id, name, relations, domain, xrefs)
+                    term = OntologyTerm(term_id, name, relations, domain)
+                    str_term_id = term.get_term_id()
                     if is_any:
                         if is_lipid_species:
                             if name not in self.lipids: self.lipids[name] = term
@@ -124,17 +134,20 @@ class EnrichmentOntology:
                                 self.carbon_chains[synonym] = term
 
                         elif is_protein:
-                            if term_id not in self.proteins: self.proteins[term_id] = term
+                            if str_term_id not in self.proteins: self.proteins[str_term_id] = term
 
                         elif is_metabolite:
-                            if term_id not in self.metabolites: self.metabolites[term_id] = term
+                            if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
 
-                    if len(domain) > 0 and domain != "external":
-                        self.domains.add(domain)
+                    for d in domain.split("|"):
+                        if len(d) > 0 and d != "external":
+                            self.domains.add(d)
 
-                    self.ontology_terms[term_id] = term
+                    for t_id in term_id.split("|"):
+                        self.ontology_terms[t_id] = term
 
         except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error(e)
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
@@ -149,28 +162,25 @@ class EnrichmentOntology:
                 self.ontology_terms[tokens[0]].relations.append(tokens[1])
 
         except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error(e)
-            pass
 
 
     def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path):
         term_id = path[-1]
         term = self.ontology_terms[term_id]
-        accepting_state = term.domain != ""
 
-        if term.domain not in self.domains or len(term.xrefs) > 0:
-            for is_xref, terms in zip([False, True], [term.relations, term.xrefs]):
-                for parent_term_id in terms:
-                    if is_xref and term.domain != "": accepting_state = False
-                    if parent_term_id not in visited_terms and parent_term_id in self.ontology_terms:
-                        visited_terms.add(parent_term_id)
-                        path.append(parent_term_id)
-                        self.recursive_event_adding(
-                            session_and_molecule_input_name, visited_terms, path,
-                        )
-                        path.pop()
+        if True or len(term.domain & self.domains) == 0:
+            for parent_term_id in term.relations:
+                if parent_term_id not in visited_terms and parent_term_id in self.ontology_terms:
+                    visited_terms.add(parent_term_id)
+                    path.append(parent_term_id)
+                    self.recursive_event_adding(
+                        session_and_molecule_input_name, visited_terms, path,
+                    )
+                    path.pop()
 
-        if accepting_state and path[0] != term_id:
+        if path[0] != term_id:
             session, molecule_input_name = session_and_molecule_input_name
             if term_id not in session.search_terms: session.search_terms[term_id] = {molecule_input_name: list(path)}
             else: session.search_terms[term_id][molecule_input_name] = list(path)
@@ -187,7 +197,7 @@ class EnrichmentOntology:
                 path.append(lipid_name)
             else:
                 if lipid_input_name != lipid_term.name: path.append(lipid_input_name)
-                path.append(lipid_term.term_id)
+                path.append(lipid_term.get_term_id())
             return path
 
         for lipid_input_name, lipid in lipid_dict.items():
@@ -199,17 +209,17 @@ class EnrichmentOntology:
             lipid_term = self.lipids[lipid_name] if lipid_name in self.lipids else None
             if lipid_term != None:
                 path = fill_path(lipid_term, lipid_name, lipid_input_name)
-                visited_terms.add(lipid_term.term_id)
+                visited_terms.add(lipid_term.get_term_id())
                 self.recursive_event_adding(
                     (session, lipid_input_name), visited_terms, path,
                 )
 
             if lipid_name_class in self.lipid_classes:
                 for term in self.lipid_classes[lipid_name_class]:
-                    if term.term_id not in visited_terms:
-                        visited_terms.add(term.term_id)
+                    if term.get_term_id() not in visited_terms:
+                        visited_terms.add(term.get_term_id())
                         path = fill_path(lipid_term, lipid_name, lipid_input_name)
-                        path.append(term.term_id)
+                        path.append(term.get_term_id())
                         self.recursive_event_adding(
                             (session, lipid_input_name), visited_terms, path,
                         )
@@ -221,7 +231,7 @@ class EnrichmentOntology:
                     if fa.lipid_FA_bond_type in {LipidFaBondType.LCB_REGULAR, LipidFaBondType.LCB_EXCEPTION}:
                         lcb_string = "L" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
                         if lcb_string in self.carbon_chains:
-                            lcb_term_id = self.carbon_chains[lcb_string].term_id
+                            lcb_term_id = self.carbon_chains[lcb_string].get_term_id()
                             visited_terms.add(lcb_term_id)
                             path = fill_path(lipid_term, lipid_name, lipid_input_name)
                             path.append(lcb_term_id)
@@ -233,7 +243,7 @@ class EnrichmentOntology:
                         fa_string = "FA " + fa.to_string(lipid.lipid.info.level)
                         if fa_string in self.lipids:
                             fa_term = self.lipids[fa_string]
-                            fa_term_id = fa_term.term_id
+                            fa_term_id = fa_term.get_term_id()
                             visited_terms.add(fa_term_id)
                             path = fill_path(lipid_term, lipid_name, lipid_input_name)
                             path.append(fa_term_id)
@@ -243,7 +253,7 @@ class EnrichmentOntology:
 
                         fa_string = "C" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
                         if fa_string in self.carbon_chains:
-                            fa_term_id = self.carbon_chains[fa_string].term_id
+                            fa_term_id = self.carbon_chains[fa_string].get_term_id()
                             visited_terms.add(fa_term_id)
                             path = fill_path(lipid_term, lipid_name, lipid_input_name)
                             path.append(fa_term_id)
@@ -255,9 +265,9 @@ class EnrichmentOntology:
             visited_terms = set()
             if protein_input_name not in self.proteins: continue
             term = self.proteins[protein_input_name]
-            visited_terms.add(term.term_id)
+            visited_terms.add(term.get_term_id())
             self.recursive_event_adding(
-                (session, protein_input_name), visited_terms, [term.term_id]
+                (session, protein_input_name), visited_terms, [term.get_term_id()]
             )
 
         for metabolite_input_name in metabolite_set:
@@ -270,9 +280,9 @@ class EnrichmentOntology:
 
             else: continue
 
-            visited_terms.add(term.term_id)
+            visited_terms.add(term.get_term_id())
             self.recursive_event_adding(
-                (session, metabolite_input_name), visited_terms, [term.term_id]
+                (session, metabolite_input_name), visited_terms, [term.get_term_id()]
             )
 
 
@@ -280,20 +290,24 @@ class EnrichmentOntology:
         session.result = []
         if session.num_background == 0 or len(enrichment_domains) == 0: return
 
+        enrichment_domains = set(enrichment_domains)
         try: # C++ implementation, just way faster
             result_list = [None] * len(session.search_terms)
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
+            visited_terms = set()
             for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
+                if term_id not in self.ontology_terms: continue
+                term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
-                    or term_id not in self.ontology_terms
-                    or self.ontology_terms[term_id].domain not in enrichment_domains
+                    or len(term.domain & enrichment_domains) == 0
+                    or term in visited_terms
                 ): continue
-
+                visited_terms.add(term)
                 target_number = len(term_metabolites.keys() & target_set)
                 p_hyp = fisher_exact.exact_fisher(target_number, len(term_metabolites), len(target_set), session.num_background, side)
                 result_list[i] = OntologyResult(
-                    self.ontology_terms[term_id],
+                    term,
                     session.num_background,
                     len(term_metabolites),
                     len(target_set),
@@ -308,15 +322,19 @@ class EnrichmentOntology:
                 )
 
         except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error("C++ implementation of fisher exact test failed.")
             result_list = [None] * len(session.search_terms)
+            visited_terms = set()
             for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
+                if term_id not in self.ontology_terms: continue
+                term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
-                    or term_id not in self.ontology_terms
-                    or self.ontology_terms[term_id].domain not in enrichment_domains
+                    or len(term.domain & enrichment_domains) == 0
+                    or term in visited_terms
                 ): continue
-
+                visited_terms.add(term)
                 target_number = len(term_metabolites.keys() & target_set)
 
                 a, b, c, d = (
@@ -327,7 +345,7 @@ class EnrichmentOntology:
                 )
                 p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
                 result_list[i] = OntologyResult(
-                    self.ontology_terms[term_id],
+                    term,
                     session.num_background,
                     len(term_metabolites),
                     len(target_set),

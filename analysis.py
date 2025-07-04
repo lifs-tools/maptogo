@@ -21,6 +21,24 @@ import threading
 import freetype
 
 
+class SunburstTerm:
+    def __init__(self, _term, _leaf, _pvalue = None):
+        self.term = _term
+        self.leaf = _leaf
+        self.parent = ""
+        self.pvalue = _pvalue
+
+
+LIBRARY_TO_DOMAINS = {
+    "GO": {"Biological process", "Cellular component", "Molecular function"},
+    "SNP": {"Metabolic and signalling pathway"},
+    "LION": {"Physical or chemical properties"},
+    "DOID": {"Disease"},
+    "MONDO": {"Disease"},
+    "HP": {"Phenotype"},
+}
+
+
 face = freetype.Face(f"{current_path}/assets/DejaVuSans.ttf")
 char_sizes = []
 for font_size in range(1, 23):
@@ -530,6 +548,33 @@ def layout():
                         cols = 2,
                     ),
                     id = "barplot_controls",
+                    style = {"marginTop": "10px"},
+                ),
+                html.Div(
+                    dmc.SimpleGrid(
+                        [
+                            dmc.NumberInput(
+                                id = "barplot_numberinput_max_pvalue",
+                                label = "Maximum p-value",
+                                value = 0.05,
+                                precision = 10,
+                                min = 1e-10,
+                                max = 1,
+                                step = 1e-10,
+                            ),
+                            dmc.NumberInput(
+                                id = "barplot_numberinput_min_pvalue",
+                                label = "Minimum p-value",
+                                value = 0.0001,
+                                precision = 10,
+                                min = 1e-10,
+                                max = 1,
+                                step = 1e-10,
+                            ),
+                        ],
+                        cols = 2,
+                    ),
+                    id = "sunburst_controls",
                     style = {"marginTop": "10px"},
                 ),
             ],
@@ -1337,6 +1382,7 @@ def run_enrichment(
         sessions[session_id].data_loaded = True
         sessions[session_id].ontology = ontology
 
+    sessions[session_id].domains = set(domains)
     ontology.enrichment_analysis(sessions[session_id], target_set, domains, term_regulation)
     results = sessions[session_id].result
 
@@ -1352,16 +1398,19 @@ def run_enrichment(
     for result in results:
         data.append(
             {
-                "domain": result.term.domain,
+                "domain": " | ".join(result.term.domain),
                 "term": result.term.name,
-                "termid": result.term.term_id,
+                "termid": result.term.get_term_id(),
                 "count": f"{result.fisher_data[0]} / {len(set(result.source_terms))}",
                 "pvalue": "{:.6g}".format(result.pvalue_corrected)
             }
         )
 
     histogram_disabled = False
-    sessions[session_id].data = {result.term.term_id: result for result in results}
+    sessions[session_id].data = {}
+    for result in results:
+        for term_id in result.term.term_id:
+            sessions[session_id].data[term_id] = result
 
     return (
         "",
@@ -1531,6 +1580,7 @@ def download_table(
         associated_metabolites = {}
 
     for term_id, term in zip(term_ids, terms):
+        term_id = term_id.split("|")[0]
         if term_id not in data: continue
         molecules = data[term_id].source_terms.keys()
 
@@ -1728,7 +1778,7 @@ def open_term_window(
     if "rowId" not in row_data:
         raise exceptions.PreventUpdate
 
-    term_id = row_data["rowId"]
+    term_id = row_data["rowId"].split("|")[0]
     if term_id not in sessions[session_id].data:
         raise exceptions.PreventUpdate
 
@@ -1810,7 +1860,7 @@ def open_term_window(
         lipid_table,
         protein_table,
         metabolite_table,
-        result.term.term_id,
+        list(result.term.term_id)[0],
         not with_lipids,
         not with_proteins,
         not with_metabolites,
@@ -1831,21 +1881,28 @@ def open_term_window(
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
+    Output("sunburst_controls", "style", allow_duplicate = True),
     Input("sunburst_results", "n_clicks"),
+    Input("barplot_numberinput_max_pvalue", "value"),
+    Input("barplot_numberinput_min_pvalue", "value"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
     State("barplot_controls", "style"),
+    State("sunburst_controls", "style"),
     prevent_initial_call = True,
 )
 def open_sunburstplot(
     n_clicks,
+    pval_max,
+    pval_min,
     row_data,
     selected_rows,
     session_id,
-    controls_style,
+    barplot_controls_style,
+    sunburst_controls_style,
 ):
-    if session_id == None or n_clicks == None:
+    if session_id == None or n_clicks == None or pval_max < pval_min:
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -1857,70 +1914,100 @@ def open_sunburstplot(
             True,
             "Your session has expired. Please refresh the website.",
             no_update,
+            no_update,
         )
 
-    controls_style["display"] = "none"
+    barplot_controls_style["display"] = "none"
+    sunburst_controls_style["display"] = "block"
     fig = go.Figure()
     ontology = sessions[session_id].ontology
+    domains = sessions[session_id].domains
 
-    id_position = {row["termid"]: i for i, row in enumerate(row_data)}
     session_data = sessions[session_id].data
-    selected_term_ids = sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])
+    selected_term_ids = [row["termid"] for row in selected_rows]
     terms = ontology.ontology_terms
 
     def shorten_label(label, max_len = 10):
         return label if len(label) <= max_len else label[:max_len].rsplit(" ", 1)[0] + "..."
 
+    pval_max = -np.log10(pval_max)
+    pval_min = -np.log10(pval_min)
 
-    visited_terms = set()
-    labels, parents, colors, values, names, custom_data = [], [], [], [], [], []
+    sunburst_terms = {}
     for term_id in selected_term_ids:
         queue = [term_id]
+        term = terms[term_id.split("|")[0]]
+        term_prefix = [t.split(":")[0] if t.find(":") > -1 else "SNP" for t in term_id.split("|")]
+        term_prefix = [t for t in term_prefix if ((t in LIBRARY_TO_DOMAINS) and (len(LIBRARY_TO_DOMAINS[t] & domains) > 0))]
+        if len(term_prefix) == 0: continue
+        term_prefix = term_prefix[0]
+
         while len(queue) > 0:
-            child_term_id = queue.pop()
+            child_term_id = queue.pop().split("|")[0]
             if child_term_id not in terms: continue
+            child_term = terms[child_term_id]
+            if child_term in sunburst_terms: continue
+            pvalue = session_data[child_term_id].pvalue_corrected if child_term_id in session_data else -1
+            sunburst_terms[child_term] = SunburstTerm(child_term, term == child_term, pvalue)
 
-            if len(terms[child_term_id].relations) > 0:
-                for parent_term_id in terms[child_term_id].relations:
-                    if child_term_id in visited_terms: continue
+            for parent_term_id in child_term.relations:
+                parent_prefix = parent_term_id.split(":")[0] if parent_term_id.find(":") > -1 else "SNP"
+                if parent_prefix not in LIBRARY_TO_DOMAINS \
+                    or len(LIBRARY_TO_DOMAINS[parent_prefix] & domains) == 0 \
+                    or term_prefix != parent_prefix: continue
 
-                    labels.append(child_term_id)
-                    visited_terms.add(child_term_id)
-                    values.append(int(term_id == child_term_id))
-                    colors.append("#ff3333" if term_id == child_term_id else "#cccccc")
-                    names.append(shorten_label(terms[child_term_id].name) if term_id == child_term_id else "")
-                    custom_data.append(f"<br>Name: {terms[child_term_id].name}" + (f"<br>-log<sub>10</sub>(p-value): " + "{:.6g}".format(session_data[term_id].pvalue_corrected) if term_id == child_term_id else ""))
+                parent_term = terms[parent_term_id]
+                sunburst_terms[child_term].parent = parent_term.get_term_id()
+                queue.append(sunburst_terms[child_term].parent)
+                break
 
-                    if parent_term_id in terms:
-                        queue.append(parent_term_id)
-                        parents.append(parent_term_id)
-                    else:
-                        parents.append("")
-                    break
 
-            else:
-                labels.append(child_term_id)
-                parents.append("")
-                names.append(shorten_label(terms[child_term_id].name) if term_id == child_term_id else "")
-                colors.append("#ff3333" if term_id == child_term_id else "#cccccc")
-                values.append(int(term_id == child_term_id))
-                custom_data.append(f"<br>Name: {terms[child_term_id].name}" + (f"<br>-log<sub>10</sub>(p-value): " + "{:.6g}".format(session_data[term_id].pvalue_corrected) if term_id == child_term_id else ""))
+    labels, parents, colors, values, names, custom_data = [], [], [], [], [], []
+    num_letters = 10 + int(80 / len(selected_term_ids))
+    for term, sunburst_term in sunburst_terms.items():
+        labels.append(term.get_term_id())
+        parents.append(sunburst_term.parent)
+        values.append(int(sunburst_term.leaf))
+        color = "#cccccc"
+        names.append(shorten_label(term.name, num_letters) if sunburst_term.leaf else "")
+        custom_text = f"Id: <b>{labels[-1]}</b><br>Name: {term.name}"
+        if sunburst_term.pvalue > 0:
+            pvalue = max(min(-np.log10(sunburst_term.pvalue), pval_min), pval_max)
+            ratio = (pvalue - pval_max) / (pval_min - pval_max)
+            h, s, l = 0, int(ratio * 100), 75 - int(ratio * 25)
+            color = f"hsl({h}, {s}%, {l}%)"
+
+
+            term_session_data = session_data[list(term.term_id)[0]]
+            regulated_metabolites = term_session_data.fisher_data[0]
+            all_metabolites = regulated_metabolites + term_session_data.fisher_data[1]
+            custom_text += f"<br>p-value: {sunburst_term.pvalue}<br>Regulated: {regulated_metabolites} / {all_metabolites}"
+
+        colors.append(color)
+        custom_data.append(custom_text)
+
 
     fig.add_trace(go.Sunburst(
         ids = labels,
         parents = parents,
         labels = names,
         values = values,
-        marker = dict(colors = colors),
+        marker = dict(
+            colors = colors,
+            colorscale = None,
+            cmin = 0,
+            cmax = 1,
+            showscale = False,
+        ),
         #textinfo = 'none',
         customdata = custom_data,
-        hovertemplate="Id: <b>%{label}</b>%{customdata}<extra></extra>",
+        hovertemplate="%{customdata}<extra></extra>",
     ))
     fig.update_layout(
         margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
     )
 
-    return True, fig, "70%", {'height': '80vh'}, False, "", controls_style
+    return True, fig, "70%", {'height': '70vh'}, False, "", barplot_controls_style, sunburst_controls_style
 
 
 
@@ -1932,6 +2019,7 @@ def open_sunburstplot(
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
+    Output("sunburst_controls", "style", allow_duplicate = True),
     Input("chart_results", "n_clicks"),
     Input("barplot_numberinput_connect_ths", "value"),
     Input("barplot_numberinput_font_size", "value"),
@@ -1940,6 +2028,7 @@ def open_sunburstplot(
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
     State("barplot_controls", "style"),
+    State("sunburst_controls", "style"),
     State("background_lipids", "children"),
     State("background_proteins", "children"),
     State("background_metabolites", "children"),
@@ -1953,7 +2042,8 @@ def open_barplot(
     row_data,
     selected_rows,
     session_id,
-    controls_style,
+    barplot_controls_style,
+    sunburst_controls_style,
     background_lipids,
     background_proteins,
     background_metabolites,
@@ -1970,28 +2060,35 @@ def open_barplot(
             True,
             "Your session has expired. Please refresh the website.",
             no_update,
+            no_update,
         )
 
     with_lipids = len(background_lipids) > 0
     with_proteins = len(background_proteins) > 0
     with_metabolites = len(background_metabolites) > 0
     multiomics = sum([with_lipids + with_proteins + with_metabolites]) > 1
-    controls_style["display"] = "block"
+    barplot_controls_style["display"] = "block"
+    sunburst_controls_style["display"] = "none"
 
     fig = go.Figure()
     id_position = {row["termid"]: i for i, row in enumerate(row_data)}
     session_data = sessions[session_id].data
-    selected_term_ids = sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])
+    selected_term_ids = [t.split("|")[0] for t in sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])]
+
     pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
     number_entities = np.array([len(session_data[term_id].source_terms) for term_id in selected_term_ids])
     number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
-    domains = [session_data[term_id].term.domain for term_id in selected_term_ids]
+
+    domains = ["|".join(session_data[term_id].term.domain) for term_id in selected_term_ids]
     term_names = [session_data[term_id].term.name for term_id in selected_term_ids]
-    term_domain_colors_def = [domain_colors[domain][0] for domain in domains]
-    term_domain_colors_bar = [domain_colors[domain][1] for domain in domains]
+    #term_domain_colors_def = [domain_colors[domain][0] for domain in domains]
+    #term_domain_colors_bar = [domain_colors[domain][1] for domain in domains]
+    #term_domain_colors_def = ["#fc7255" for domain in domains]
+    #term_domain_colors_bar = ["#fc947e" for domain in domains]
     max_axis = int(max(pvalues) + 1)
     jaccard_ths /= 100
 
+    #custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
     custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
     inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
     pvalues = pvalues + inner_margin
@@ -2036,7 +2133,7 @@ def open_barplot(
         r = pvalues,
         theta = angles,
         width = [bar_width] * n,
-        marker_color = term_domain_colors_bar,
+        marker_color = "#fc947e", #term_domain_colors_bar,
         customdata = custom_data,
         hovertemplate = "Term ID: %{customdata[0]}<br />Term: %{customdata[1]}<br />p-value: %{customdata[2]}<br />Regulated molecules: %{customdata[3]}<br />Associated molecules: %{customdata[4]}<br />Domain: %{customdata[5]}<extra></extra>",
     ))
@@ -2062,7 +2159,7 @@ def open_barplot(
             description_end_angle,
             description_arc_inner_radius,
             arc_outer_radius,
-            term_domain_colors_def[i],
+            "#fc7255", #term_domain_colors_def[i],
         )
         arc_mid_radius = (description_arc_inner_radius + arc_outer_radius) / 2
         annotate_polar(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size)
@@ -2279,7 +2376,7 @@ def open_barplot(
         ),
     )
 
-    return True, fig, CIRCLE_WIDTH * 2 + 50, {'height': '50vh'}, False, "", controls_style
+    return True, fig, CIRCLE_WIDTH * 2 + 50, {}, False, "", barplot_controls_style, sunburst_controls_style
 
 
 
@@ -2291,12 +2388,14 @@ def open_barplot(
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
+    Output("sunburst_controls", "style", allow_duplicate = True),
     Input("histogram_results", "n_clicks"),
     State("sessionid", "children"),
     State("barplot_controls", "style"),
+    State("sunburst_controls", "style"),
     prevent_initial_call = True,
 )
-def open_histogram(n_clicks, session_id, controls_style):
+def open_histogram(n_clicks, session_id, barplot_controls_style, sunburst_controls_style):
 
     if session_id not in sessions:
         return (
@@ -2307,11 +2406,13 @@ def open_histogram(n_clicks, session_id, controls_style):
             True,
             "Your session has expired. Please refresh the website.",
             no_update,
+            no_update,
         )
 
     sessions[session_id].time = time.time()
     results = sessions[session_id].result
-    controls_style["display"] = "none"
+    barplot_controls_style["display"] = "none"
+    sunburst_controls_style["display"] = "none"
 
     fig = go.Figure()
     fig.add_trace(
@@ -2326,7 +2427,7 @@ def open_histogram(n_clicks, session_id, controls_style):
         xaxis_title = 'Uncorrected p-values',
         yaxis_title = 'Count',
     )
-    return True, fig, "90%", {'height': '80vh'}, False, "", controls_style
+    return True, fig, "90%", {'height': '80vh'}, False, "", barplot_controls_style, sunburst_controls_style
 
 
 
@@ -2532,6 +2633,7 @@ def switch_bounded_fatty_acyls(checked, session_id):
     session.use_bounded_fatty_acyls = checked
     session.data_loaded = False
     session.ontology = None
+    session.domains = None
 
     raise exceptions.PreventUpdate
 
