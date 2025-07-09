@@ -36,11 +36,17 @@ class SessionEntry:
 
 
 class OntologyTerm:
-    def __init__(self, _term_id, _name, _relations, _domain = ""):
+    def __init__(self, _term_id, _name, _relations, _domain = None, _categories = None):
+
+        if _domain == None: _domain = set()
+        if _categories == None: _categories = set()
+
+
         self.term_id = set(_term_id) if type(_term_id) in {list, set} else set(_term_id.split("|"))
         self.name = _name
         self.relations = list(_relations)
         self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {""}
+        self.categories = (set(_categories) if type(_categories) in {list, set} else set(_categories.split("|"))) - {""}
 
     def to_string(self):
         return f"{'|'.join(self.term_id)}\t{self.name}\t{'|'.join(self.relations)}\t{'|'.join(self.domain)}\n"
@@ -53,8 +59,17 @@ class OntologyTerm:
 
 class OntologyResult:
     def __init__(
-        self, _term, _number_background, _number_background_events, _targets, _pvalue, _source_terms, fisher = [0, 0, 0, 0]
+        self,
+        _term,
+        _number_background,
+        _number_background_events,
+        _targets,
+        _pvalue,
+        _source_terms,
+        _fisher = None,
+        _leaf = True,
     ):
+        if _fisher == None: _fisher = [0, 0, 0, 0]
         self.term = _term
         self.number_background = _number_background
         self.number_background_events = _number_background_events
@@ -62,10 +77,11 @@ class OntologyResult:
         self.pvalue = _pvalue
         self.pvalue_corrected = _pvalue
         self.source_terms = _source_terms
-        self.fisher_data = fisher
+        self.fisher_data = _fisher
+        self.leaf = _leaf
 
-        if min(fisher) < 0:
-            print("ERROR: ", self.term.name, self.term.get_term_id(), fisher)
+        if min(_fisher) < 0:
+            print("ERROR: ", self.term.name, self.term.get_term_id(), _fisher)
 
 
 
@@ -75,6 +91,7 @@ class EnrichmentOntology:
         self.lipids = {}
         self.lipid_classes = {}
         self.carbon_chains = {}
+        self.transcripts = {}
         self.proteins = {}
         self.clean_protein_ids = set()
         self.metabolites = {}
@@ -82,7 +99,6 @@ class EnrichmentOntology:
         self.domains = set()
         self.lipid_parser = lipid_parser
         self.metabolite_names = {}
-        self.fooo = 0
 
         try:
             with gzip.open(file_name) as input_stream:
@@ -98,12 +114,16 @@ class EnrichmentOntology:
                     relations = tokens[2]
                     synonyms = tokens[3]
                     domain = tokens[4]
+                    categories = set() if len(tokens) <= 5 else tokens[5]
 
                     is_lipid_species = False
                     is_lipid_class = False
                     is_carbon_chain = False
                     is_protein = False
                     is_metabolite = False
+                    is_stable_transcript = False
+                    is_stable_gene = False
+                    is_stable_protein = False
                     is_any = False
                     relations = relations.split("|")
                     synonyms = synonyms.split("|")
@@ -115,9 +135,12 @@ class EnrichmentOntology:
                                 case "3": is_carbon_chain = True
                                 case "4": is_protein = True
                                 case "5": is_metabolite = True
-                            is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite
+                                case "6": is_stable_transcript = True
+                                case "7": is_stable_gene = True
+                                case "8": is_stable_protein = True
+                            is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite | is_stable_transcript | is_stable_gene | is_stable_protein
 
-                    term = OntologyTerm(term_id, name, relations, domain)
+                    term = OntologyTerm(term_id, name, relations, domain, categories)
                     str_term_id = term.get_term_id()
                     if is_any:
                         if is_lipid_species:
@@ -141,6 +164,9 @@ class EnrichmentOntology:
                         elif is_metabolite:
                             if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
 
+                        elif is_stable_transcript or is_stable_gene or is_stable_protein:
+                            if str_term_id not in self.transcripts: self.transcripts[str_term_id] = term
+
                     for d in domain.split("|"):
                         if len(d) > 0 and d != "external":
                             self.domains.add(d)
@@ -154,6 +180,7 @@ class EnrichmentOntology:
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
+        self.clean_transcripts = set(key.split(".")[0] for key in self.transcripts.keys())
         self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
 
         try:
@@ -168,25 +195,27 @@ class EnrichmentOntology:
             logger.error(e)
 
 
-    def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path):
-        self.fooo += 1
+    def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path, leaf_visited = False):
         term_id = path[-1]
         term = self.ontology_terms[term_id]
 
-        if True or len(term.domain & self.domains) == 0:
+        contains_no_domain = len(term.domain & self.domains) == 0
+        this_is_leaf = not leaf_visited and not contains_no_domain
+        if session_and_molecule_input_name[0].all_domain_terms or contains_no_domain:
             for parent_term_id in term.relations:
                 if parent_term_id not in visited_terms and parent_term_id in self.ontology_terms:
                     visited_terms.add(parent_term_id)
                     path.append(parent_term_id)
                     self.recursive_event_adding(
-                        session_and_molecule_input_name, visited_terms, path,
+                        session_and_molecule_input_name, visited_terms, path, leaf_visited or this_is_leaf
                     )
                     path.pop()
 
         if path[0] != term_id:
             session, molecule_input_name = session_and_molecule_input_name
-            if term_id not in session.search_terms: session.search_terms[term_id] = {molecule_input_name: list(path)}
-            else: session.search_terms[term_id][molecule_input_name] = list(path)
+            if term_id not in session.search_terms:
+                session.search_terms[term_id] = [this_is_leaf, {molecule_input_name: list(path)}]
+            else: session.search_terms[term_id][1][molecule_input_name] = list(path)
 
 
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set()):
@@ -298,11 +327,12 @@ class EnrichmentOntology:
             result_list = [None] * len(session.search_terms)
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
             visited_terms = set()
-            for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
+            for i, (term_id, (is_leaf, term_metabolites)) in enumerate(session.search_terms.items()):
                 if term_id not in self.ontology_terms: continue
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
+                    or (not is_leaf and not session.all_domain_terms)
                     or len(term.domain & enrichment_domains) == 0
                     or term in visited_terms
                 ): continue
@@ -329,11 +359,12 @@ class EnrichmentOntology:
             logger.error("C++ implementation of fisher exact test failed.")
             result_list = [None] * len(session.search_terms)
             visited_terms = set()
-            for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
+            for i, (term_id, (is_leaf, term_metabolites)) in enumerate(session.search_terms.items()):
                 if term_id not in self.ontology_terms: continue
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
+                    or (not is_leaf and not session.all_domain_terms)
                     or len(term.domain & enrichment_domains) == 0
                     or term in visited_terms
                 ): continue

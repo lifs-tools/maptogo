@@ -5,8 +5,8 @@ import gzip
 parser = LipidParser()
 
 species = {
-    'Homo sapiens': "9606",
-    # 'Mus musculus': "10090",
+    #'Homo sapiens': "9606",
+     'Mus musculus': "10090",
     # 'Saccharomyces cerevisiae': "4932",
     # 'Escherichia coli': "562",
     # 'Drosophila melanogaster': "7227",
@@ -18,11 +18,12 @@ species = {
 }
 
 class Term:
-    def __init__(self, _id, _name, _relations = None, _synonyms = None, _namespace = None, _xref = None, upper = False):
+    def __init__(self, _id, _name, _relations = None, _synonyms = None, _namespace = None, _xref = None, upper = False, _categories = None):
         if _relations == None: _relations = set()
         if _synonyms == None: _synonyms = set()
         if _namespace == None: _namespace = set()
         if _xref == None: _xref = set()
+        if _categories == None: _categories = set()
 
         self.id = set(_id) if type(_id) in {list, set} else {_id}
         self.name = _name[0].upper() + _name[1:] if upper else _name
@@ -30,14 +31,15 @@ class Term:
         self.synonyms = set(_synonyms) if type(_synonyms) in {list, set} else {_synonyms}
         self.namespace = set(_namespace) if type(_namespace) in {list, set} else {_namespace}
         self.xref = set(_xref) if type(_xref) in {list, set} else {_xref}
+        self.categories = set(_categories) if type(_categories) in {list, set} else {_categories}
         
 
     def to_string(self):
-        return f"{'|'.join(self.id)}\t{self.name}\t{'|'.join(self.relations)}\t{'|'.join(self.synonyms)}\t{'|'.join(self.namespace)}\n"
+        return f"{'|'.join(self.id)}\t{self.name}\t{'|'.join(self.relations)}\t{'|'.join(self.synonyms)}\t{'|'.join(self.namespace)}\t{'|'.join(self.categories)}\n"
 
 
     def copy(self):
-        return Term(set(self.id), self.name, set(self.relations), set(self.synonyms), set(self.namespace), set(self.xref))
+        return Term(set(self.id), self.name, set(self.relations), set(self.synonyms), set(self.namespace), set(self.xref), _categories = set(self.categories))
 
 
     def merge(self, copy):
@@ -46,6 +48,7 @@ class Term:
         self.synonyms |= copy.synonyms
         self.namespace |= copy.namespace
         self.xref |= copy.xref
+        self.categories |= copy.categories
 
 
 
@@ -68,7 +71,6 @@ def get_terms(term_file, prefix, upper = False):
 
             elif line.startswith("name:"):
                 name = line[5:].strip(" ")
-
 
             elif line.startswith("is_a:"):
                 relation = line[5:].split(" ! ")[0].strip(" ").split(" ")[0]
@@ -111,7 +113,7 @@ def get_lipid_terms():
 
 
     # import LION ontology
-    term_id, name, relations, synonyms, is_class, is_species, namespace = "", "", set(), [], False, False, ""
+    term_id, name, relations, synonyms, is_class, is_species, namespace, category = "", "", set(), [], False, False, "", None
     ontology_terms = {}
     lipid_class_terms = {}
     lipid_species_terms = {}
@@ -124,7 +126,7 @@ def get_lipid_terms():
 
                 if line == "[Term]":
                     if len(term_id) > 0 and len(name) > 0:
-                        term = Term(term_id, name, relations, synonyms, namespace)
+                        term = Term(term_id, name, relations, synonyms, namespace, _categories = category)
                         ontology_terms[term_id] = term
 
                         if is_class:
@@ -138,7 +140,7 @@ def get_lipid_terms():
                             if name not in lipid_species_terms: lipid_species_terms[name] = []
                             lipid_species_terms[name].append(term)
 
-                    term_id, name, relations, synonyms, is_class, is_species, namespace = "", "", set(), [], False, False, ""
+                    term_id, name, relations, synonyms, is_class, is_species, namespace, category = "", "", set(), [], False, False, "", None
 
                 elif line.startswith("id:"):
                     term_id = line[3:].strip(" ")
@@ -154,6 +156,7 @@ def get_lipid_terms():
                             #     lipid.lipid.info.level = LipidLevel.MOLECULAR_SPECIES
                             # lipid.sort_fatty_acyl_chains()
                             name = lipid.get_lipid_string()
+                            category = lipid.get_lipid_string(LipidLevel.CATEGORY)
                             is_species = True
                             relations.add("LS:0000002")
                     except Exception as e:
@@ -174,7 +177,7 @@ def get_lipid_terms():
 
 
     if len(term_id) > 0 and len(name) > 0:
-        term = Term(term_id, name, relations, synonyms, namespace)
+        term = Term(term_id, name, relations, synonyms, namespace, _categories = category)
         ontology_terms[term_id] = term
 
         if is_class:
@@ -203,28 +206,29 @@ def get_lipid_terms():
             lipid_translates = set()
             try:
                 lipid = parser.parse(lipid_name)
-                lipid_translates.add(lipid.get_lipid_string())
+                lipid_category = lipid.get_lipid_string(LipidLevel.CATEGORY)
+                lipid_translates.add((lipid.get_lipid_string(), lipid_category))
                 if lipid.lipid.info.level.value >= LipidLevel.COMPLETE_STRUCTURE.value:
-                    lipid_translates.add(lipid.get_lipid_string(LipidLevel.COMPLETE_STRUCTURE))
+                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.COMPLETE_STRUCTURE), lipid_category))
                 if lipid.lipid.info.level.value >= LipidLevel.FULL_STRUCTURE.value:
-                    lipid_translates.add(lipid.get_lipid_string(LipidLevel.FULL_STRUCTURE))
+                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.FULL_STRUCTURE), lipid_category))
                 if lipid.lipid.info.level.value >= LipidLevel.STRUCTURE_DEFINED.value:
-                    lipid_translates.add(lipid.get_lipid_string(LipidLevel.STRUCTURE_DEFINED))
+                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.STRUCTURE_DEFINED), lipid_category))
                 if lipid.lipid.info.level.value >= LipidLevel.SN_POSITION.value:
-                    lipid_translates.add(lipid.get_lipid_string(LipidLevel.SN_POSITION))
+                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.SN_POSITION), lipid_category))
                 if lipid.lipid.info.level.value >= LipidLevel.MOLECULAR_SPECIES.value:
                     lipid.lipid.sort_fatty_acyl_chains()
-                    lipid_translates.add(lipid.get_lipid_string(LipidLevel.MOLECULAR_SPECIES))
+                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.MOLECULAR_SPECIES), lipid_category))
                 if lipid.lipid.info.level.value >= LipidLevel.SPECIES.value:
-                    lipid_translates.add(lipid.get_lipid_string(LipidLevel.SPECIES))
+                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.SPECIES), lipid_category))
 
             except Exception as e:
-                lipid_translates.add(lipid_name)
+                lipid_translates.add((lipid_name, ""))
 
-            for lipid_translate in lipid_translates:
+            for lipid_translate, lipid_category in lipid_translates:
                 if lipid_translate not in lipid_species_terms:
                     if lipid_translate not in chebi_lipid_terms:
-                        term = Term(f"LS:{ls_id:07}", lipid_translate, {"LS:0000002"})
+                        term = Term(f"LS:{ls_id:07}", lipid_translate, {"LS:0000002"}, _categories = {lipid_category})
                         term.relations.add("CHEBI:" + chebi_id)
                         ls_id += 1
                         chebi_lipid_terms[lipid_translate] = term
@@ -248,6 +252,21 @@ with open("ChEBI/chebi.csv", "rt") as infile:
         chebi_terms_all[tokens[0]] = Term("CHEBI:" + tokens[0], tokens[1], set(["CHEBI:" + t for t in tokens[2:]]) if len(tokens) > 2 else set())
         chebi_terms_all[tokens[0]].relations.add("LS:0000005")
 
+
+chebi_obo = get_terms("ChEBI/chebi_lite.obo", "CHEBI:")
+max_depth = 2
+for chebi_id, c_term in chebi_obo.items():
+    chebi_id = chebi_id.split(":")[1]
+    if chebi_id not in chebi_terms_all: continue
+    chebi_term = chebi_terms_all[chebi_id]
+    queue = [(rel, 1) for rel in c_term.relations]
+    while queue:
+        current_id, depth = queue.pop()
+        current_term = chebi_obo[current_id]
+        chebi_term.categories.add(current_term.name.replace("|", "/"))
+        if depth + 1 > max_depth: continue
+        for relation_id in current_term.relations:
+            queue.append((relation_id, depth + 1))
 
 
 with open("RHEA/rhea_to_chebi.csv", "rt") as infile:
@@ -296,6 +315,14 @@ with open("Uniprot/uniprot_to_go.csv", "rt") as infile:
         uniprot_terms_organisms[tokens[1]][tokens[0]] = term
         uniprot_data[tokens[0]] = term
         uniprot_to_organism[tokens[0]] = tokens[1]
+
+
+with open("Uniprot/uniprot.csv", "rt") as infile:
+    for i, line in enumerate(infile):
+        if i == 0: continue
+        tokens = line.strip().split("\t")
+        if len(tokens) < 8 or tokens[0] not in uniprot_data: continue
+        uniprot_data[tokens[0]].categories = set(tokens[4].split(", "))
 
 
 
@@ -451,9 +478,6 @@ for line in open("HGNC/hgnc_to_uniprot_ncbi.csv").read().split("\n"):
             uniprot_data[protein].relations.add(ncbi_id)
 
 
-
-
-
 go_terms = get_terms("go-basic.obo", "GO:", True)
 ontology_terms, chebi_lipid_terms = get_lipid_terms()
 
@@ -470,6 +494,9 @@ for tax_name, tax_id in species.items():
 
     output.append("LS:0000004\tUniprot protein\t\t\n")
     output.append("LS:0000005\tChEBI metabolite\t\t\n")
+    output.append("LS:0000006\tEnsembl stable transcript\t\t\n") # ENST000...
+    output.append("LS:0000007\tEnsembl stable gene\t\t\n") # ENSG000...
+    output.append("LS:0000008\tEnsembl stable protein\t\t\n") # ENSP000...
 
     # create organism-specific rhea terms
     rhea_terms = {}

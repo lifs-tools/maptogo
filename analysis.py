@@ -19,12 +19,19 @@ import time
 import hashlib
 import threading
 import freetype
+from math import ceil
+
+
+
+def shorten_label(label, max_len = 10):
+    return label if len(label) <= max_len else label[:max_len].rsplit(" ", 1)[0] + "..."
+
 
 
 class SunburstTerm:
-    def __init__(self, _term, _leaf, _pvalue = None):
+    def __init__(self, _term, _entry_point, _pvalue = None):
         self.term = _term
-        self.leaf = _leaf
+        self.entry_point = _entry_point
         self.parent = ""
         self.pvalue = _pvalue
 
@@ -57,11 +64,11 @@ SESSION_DURATION_TIME = 60 * 60 # one hour
 domain_colors = {
     "Biological process": ["#fc7255", "#fc947e"],
     "Cellular component": ["#c86932", "#c87c50"],
+    "Disease": ["#ac754d", "#ac8264"],
     "Metabolic and signalling pathway": ["#4daf4a", "#68af66"],
     "Molecular function": ["#ffeda0", "#fff4c7"],
-    "Physical or chemical properties": ["#377eb8", "#538ab8"],
-    "Disease": ["#ac754d", "#ac8264"],
     "Phenotype": ["#ac754d", "#ac8264"],
+    "Physical or chemical properties": ["#377eb8", "#538ab8"],
 }
 upregulated_color = "#F49E4C"
 downregulated_color = "#87BCDE"
@@ -82,11 +89,20 @@ def annotate_polar(
     distance,
     font_size = 14,
     max_radius = 400,
-    color = "black"
+    color = "black",
+    max_distance = -1,
+    shorten = False,
 ):
-    text_width = sum(char_sizes[font_size][ord(char)] for char in text_to_add)
+    text_space = int(-20 * distance / max_distance + 19) if max_distance > -1 else 0
+    text_width = sum(char_sizes[font_size][ord(char)] for char in text_to_add) + text_space * len(text_to_add)
     if 360 / (2 * max_radius * np.pi) * text_width > angle_width:
-        text_width = angle_width / 360 * (2 * max_radius * np.pi)
+        new_text_width = angle_width / 360 * (2 * max_radius * np.pi)
+        if shorten:
+            text_to_add = shorten_label(text_to_add, int(len(text_to_add) / text_width * new_text_width * 0.9))
+            text_width = sum(char_sizes[font_size][ord(char)] for char in text_to_add) + text_space * len(text_to_add)
+        else:
+            text_width = new_text_width
+
 
     # Calculate positions of each character along the arc
     start_pos = (2 * max_radius * np.pi) / 360 * mid_angle + text_width / 2
@@ -96,7 +112,7 @@ def annotate_polar(
 
         char_size = char_sizes[font_size][ord(char)]
         current_pos = start_pos - char_size / 2
-        start_pos -= char_size
+        start_pos -= char_size + text_space
 
         if char == " ": continue
         rotation_angle = np.mod(360 / (2 * max_radius * np.pi) * current_pos, 360)
@@ -119,7 +135,7 @@ def annotate_polar(
 
 
 
-def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, color, arc_resolution = 50):
+def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, color, arc_resolution = 50, hoverinfo = None):
     theta_outer = np.linspace(start_angle, end_angle, arc_resolution)
     theta_inner = theta_outer[::-1]
 
@@ -129,7 +145,7 @@ def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, 
     r_arc = np.concatenate([r_outer, r_inner])
     theta_arc = np.concatenate([theta_outer, theta_inner])
 
-    figure.add_trace(go.Scatterpolar(
+    scatter_dict = dict(
         r = r_arc,
         theta = theta_arc,
         mode = 'lines',
@@ -139,7 +155,12 @@ def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, 
         opacity = 1.0,
         hoverinfo = 'skip',
         showlegend = False,
-    ))
+    )
+    if hoverinfo != None:
+        scatter_dict["name"] = hoverinfo
+        scatter_dict["hovertemplate"] = "%{name}<extra></extra>"
+
+    figure.add_trace(go.Scatterpolar(**scatter_dict))
 
 
 
@@ -694,6 +715,17 @@ def layout():
                     dmc.Text([
                         "- ",
                         html.A(
+                            "Disease Ontology",
+                            href = "https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/main",
+                            target = "_blank",
+                            style = {"color": LINK_COLOR},
+                        ),
+                        ": ",
+                        CC0_LINK
+                    ]),
+                    dmc.Text([
+                        "- ",
+                        html.A(
                             "LION",
                             href = "https://martijnmolenaar.github.io/lipidontology.com/faq.html",
                             target = "_blank",
@@ -1207,6 +1239,7 @@ def organism_changed(organism, domain_values):
     State("checkbox_use_lipids", "checked"),
     State("checkbox_use_proteins", "checked"),
     State("checkbox_use_metabolites", "checked"),
+    State("enrichment_parent_terms", "checked"),
     prevent_initial_call = True,
 )
 def run_enrichment(
@@ -1227,6 +1260,7 @@ def run_enrichment(
     with_lipids,
     with_proteins,
     with_metabolites,
+    all_domain_terms,
 ):
     do_activate_alert = True
     histogram_disabled = True
@@ -1235,7 +1269,8 @@ def run_enrichment(
         return "", [], [], do_activate_alert, "Your session has expired. Please refresh the website.", "", "", "", "", "", "", histogram_disabled
 
     logger.info(f"Enrichment session: {session_id}")
-    sessions[session_id].time = time.time()
+    session = sessions[session_id]
+    session.time = time.time()
 
     if not with_lipids and not with_proteins and not with_metabolites:
         return "", [], [], do_activate_alert, "No omics data is selected.", "", "", "", "", "", "", histogram_disabled
@@ -1382,21 +1417,15 @@ def run_enrichment(
     if len(domains) == 0:
         return "", [], [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", "", histogram_disabled
 
-    if sessions[session_id].data_loaded == False:
-        a = time.time()
-        ontology.set_background(sessions[session_id], lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome)
-        b = time.time()
-        print("set:", b - a)
-        sessions[session_id].data_loaded = True
-        sessions[session_id].ontology = ontology
+    if session.data_loaded == False:
+        ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome)
+        session.data_loaded = True
+        session.ontology = ontology
 
-    sessions[session_id].domains = set(domains)
-    a = time.time()
-    ontology.enrichment_analysis(sessions[session_id], target_set, domains, term_regulation)
-    b = time.time()
-    print("enrichment:", b - a)
-    print("fooo:", ontology.fooo)
-    results = sessions[session_id].result
+    session.domains = set(domains)
+    session.all_domain_terms = all_domain_terms
+    ontology.enrichment_analysis(session, target_set, domains, term_regulation)
+    results = session.result
 
     if correction_method != "no" and len(results) > 0:
         pvalues = [r.pvalue for r in results]
@@ -1419,10 +1448,10 @@ def run_enrichment(
         )
 
     histogram_disabled = False
-    sessions[session_id].data = {}
+    session.data = {}
     for result in results:
         for term_id in result.term.term_id:
-            sessions[session_id].data[term_id] = result
+            session.data[term_id] = result
 
     return (
         "",
@@ -1939,9 +1968,6 @@ def open_sunburstplot(
     selected_term_ids = [row["termid"] for row in selected_rows]
     terms = ontology.ontology_terms
 
-    def shorten_label(label, max_len = 10):
-        return label if len(label) <= max_len else label[:max_len].rsplit(" ", 1)[0] + "..."
-
     pval_max = -np.log10(pval_max)
     pval_min = -np.log10(pval_min)
 
@@ -1951,6 +1977,9 @@ def open_sunburstplot(
         term = terms[term_id.split("|")[0]]
         term_prefix = [t.split(":")[0] if t.find(":") > -1 else "SNP" for t in term_id.split("|")]
         term_prefix = [t for t in term_prefix if ((t in LIBRARY_TO_DOMAINS) and (len(LIBRARY_TO_DOMAINS[t] & domains) > 0))]
+        if term in sunburst_terms:
+            sunburst_terms[child_term].entry_point = True
+            continue
         if len(term_prefix) == 0: continue
         term_prefix = term_prefix[0]
 
@@ -1974,22 +2003,29 @@ def open_sunburstplot(
                 queue.append(sunburst_terms[child_term].parent)
                 break
 
-
     labels, parents, colors, values, names, custom_data = [], [], [], [], [], []
     num_letters = 10 + int(80 / len(selected_term_ids))
     for term, sunburst_term in sunburst_terms.items():
         labels.append(term.get_term_id())
         parents.append(sunburst_term.parent)
-        values.append(int(sunburst_term.leaf))
+        values.append(int(sunburst_term.entry_point))
         color = "#cccccc"
-        names.append(shorten_label(term.name, num_letters) if sunburst_term.leaf else "")
+        names.append(shorten_label(term.name, num_letters) if sunburst_term.entry_point else "")
         custom_text = f"Id: <b>{labels[-1]}</b><br>Name: {term.name}"
         if sunburst_term.pvalue > 0:
             pvalue = max(min(-np.log10(sunburst_term.pvalue), pval_min), pval_max)
             ratio = (pvalue - pval_max) / (pval_min - pval_max)
-            h, s, l = 0, int(ratio * 100), 75 - int(ratio * 25)
-            color = f"hsl({h}, {s}%, {l}%)"
 
+            fisher_data = session_data[list(term.term_id)[0]].fisher_data
+            n, K, N = fisher_data[0] + fisher_data[2], fisher_data[0] + fisher_data[1], sum(fisher_data)
+            overrepresented = fisher_data[0] >= ceil((n + 1) * (K + 1) / (N + 2))
+            # blue hex: 3a4cc0
+            # red hex: b30d03
+            if overrepresented:
+                h, s, l = 3, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+            else:
+                h, s, l = 207, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+            color = f"hsl({h}, {s}%, {l}%)"
 
             term_session_data = session_data[list(term.term_id)[0]]
             regulated_metabolites = term_session_data.fisher_data[0]
@@ -2061,7 +2097,7 @@ def open_barplot(
     background_proteins,
     background_metabolites,
 ):
-    if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"}:
+    if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"} or type(jaccard_ths) not in {float, int}:
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -2076,6 +2112,7 @@ def open_barplot(
             no_update,
         )
 
+    session = sessions[session_id]
     with_lipids = len(background_lipids) > 0
     with_proteins = len(background_proteins) > 0
     with_metabolites = len(background_metabolites) > 0
@@ -2085,7 +2122,7 @@ def open_barplot(
 
     fig = go.Figure()
     id_position = {row["termid"]: i for i, row in enumerate(row_data)}
-    session_data = sessions[session_id].data
+    session_data = session.data
     selected_term_ids = [t.split("|")[0] for t in sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])]
 
     pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
@@ -2110,15 +2147,24 @@ def open_barplot(
     angle_gap = 360 / n
     angles = [i * angle_gap for i in range(n)]
     bar_width = angle_gap - 1
-    arc_outer_radius = max_height * (1.3 + multiomics * 0.2)
+    arc_outer_radius = max_height * 2 #(1.65 + multiomics * 0.34)
     axis_step_size = int(max(1, 0.7 * np.sqrt(max_axis)))
 
     # Arc settings
-    description_arc_inner_radius = arc_outer_radius * 0.9
-    entities_arc_outer_radius = arc_outer_radius * 0.86
-    entities_arc_inner_radius = arc_outer_radius * 0.80
-    molecules_arc_inner_radius = arc_outer_radius * 0.76
-    molecules_arc_outer_radius = arc_outer_radius * 0.70
+    domains_arc_outer_radius = arc_outer_radius * 1
+    domains_arc_inner_radius = arc_outer_radius * 0.84
+    description_arc_outer_radius = arc_outer_radius * 0.8
+    description_arc_inner_radius = arc_outer_radius * 0.74
+    entities_arc_outer_radius = arc_outer_radius * 0.7
+    entities_arc_inner_radius = arc_outer_radius * 0.64
+    molecules_arc_inner_radius = arc_outer_radius * 0.6
+    molecules_arc_outer_radius = arc_outer_radius * 0.54
+
+    categories_arc_outer_radious = arc_outer_radius * 0.50
+    categories_arc_inner_radious = arc_outer_radius * 0.34
+
+    pvalue_arc_outer_radius = arc_outer_radius * 0.30
+    pvalue_arc_inner_radius = arc_outer_radius * 0.25
 
     #number_entities_sizes = np.log(number_entities + 2)
     #number_regulated_entities_sizes = np.log(number_regulated_entities + 2)
@@ -2133,23 +2179,23 @@ def open_barplot(
     fig = go.Figure(data = go.Bar())
 
     # Add radial bars
-    fig.add_trace(go.Barpolar(
-        r = [max_height] * n,
-        theta = angles,
-        width = [bar_width] * n,
-        marker_color = "#eeeeee",
-        hoverinfo = 'skip',
-        showlegend = False,
-    ))
-
-    fig.add_trace(go.Barpolar(
-        r = pvalues,
-        theta = angles,
-        width = [bar_width] * n,
-        marker_color = "#fc947e", #term_domain_colors_bar,
-        customdata = custom_data,
-        hovertemplate = "Term ID: %{customdata[0]}<br />Term: %{customdata[1]}<br />p-value: %{customdata[2]}<br />Regulated molecules: %{customdata[3]}<br />Associated molecules: %{customdata[4]}<br />Domain: %{customdata[5]}<extra></extra>",
-    ))
+    # fig.add_trace(go.Barpolar(
+    #     r = [max_height] * n,
+    #     theta = angles,
+    #     width = [bar_width] * n,
+    #     marker_color = "#eeeeee",
+    #     hoverinfo = 'skip',
+    #     showlegend = False,
+    # ))
+    #
+    # fig.add_trace(go.Barpolar(
+    #     r = pvalues,
+    #     theta = angles,
+    #     width = [bar_width] * n,
+    #     marker_color = "#fc947e", #term_domain_colors_bar,
+    #     customdata = custom_data,
+    #     hovertemplate = "Term ID: %{customdata[0]}<br />Term: %{customdata[1]}<br />p-value: %{customdata[2]}<br />Regulated molecules: %{customdata[3]}<br />Associated molecules: %{customdata[4]}<br />Domain: %{customdata[5]}<extra></extra>",
+    # ))
 
     if with_lipids:
         background_lipids = set(background_lipids.split("|"))
@@ -2160,9 +2206,20 @@ def open_barplot(
     if with_metabolites:
         background_metabolites = set(background_metabolites.split("|"))
 
+
     # Add thick arcs above bars
     annotation_label = selected_term_ids if bar_label == "id" else term_names
+    ontology = session.ontology
+    sorted_domain_names = sorted(list(domain_colors.keys()))
+
+    max_domain_num = 0
+    max_categories_num = 0
+    remaining_domains_categories = [[0, {dom: 0 for dom in domain_colors.keys()}, {}] for i in range(n)]
+    domain_bar = bar_width * 0.95 / len(sorted_domain_names)
+    category_bar = bar_width * 0.95 / 5
+
     for i in range(n):
+        result = session_data[selected_term_ids[i]]
         center_angle = angles[i]
         description_start_angle = center_angle + bar_width / 2
         description_end_angle = center_angle - bar_width / 2
@@ -2171,17 +2228,39 @@ def open_barplot(
             description_start_angle,
             description_end_angle,
             description_arc_inner_radius,
-            arc_outer_radius,
-            "#fc7255", #term_domain_colors_def[i],
+            description_arc_outer_radius,
+            domain_colors[list(result.term.domain)[0]][0],
+            #"#fc7255", #term_domain_colors_def[i],
         )
-        arc_mid_radius = (description_arc_inner_radius + arc_outer_radius) / 2
-        annotate_polar(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size)
+        arc_mid_radius = (description_arc_inner_radius + description_arc_outer_radius) / 2
+        annotate_polar(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius, shorten = True)
+
+        pvalue_start_angle = description_start_angle
+        pvalue_end_angle = pvalue_start_angle - bar_width / max(pvalues) * pvalues[i]
+        add_arc(
+            fig,
+            description_start_angle,
+            description_end_angle,
+            pvalue_arc_inner_radius,
+            pvalue_arc_outer_radius,
+            "#eeeeee",
+        )
+        add_arc(
+            fig,
+            pvalue_start_angle,
+            pvalue_end_angle,
+            pvalue_arc_inner_radius,
+            pvalue_arc_outer_radius,
+            domain_colors[list(result.term.domain)[0]][1],
+        )
+
+
+
 
         len_lipid_table = 0
         len_protein_table = 0
         len_metabolite_table = 0
 
-        result = session_data[selected_term_ids[i]]
         molecules = set(result.source_terms.keys())
 
         if with_lipids: len_lipid_table = len(molecules & background_lipids)
@@ -2216,7 +2295,7 @@ def open_barplot(
         entities_arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
         arc_angle = (entities_start_angle + entities_end_angle) / 2
         entities_number_text = f"{str(int(number_regulated_entities[i]))} / {str(int(number_entities[i]))}"
-        annotate_polar(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), entities_arc_mid_radius, font_size = font_size)
+        annotate_polar(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), entities_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
 
         molecules_label = ""
         molecule_normalizer = len_lipid_table + len_protein_table + len_metabolite_table
@@ -2266,7 +2345,63 @@ def open_barplot(
                         METABOLITES_COLOR,
                     )
         molecule_arc_mid_radius = (molecules_arc_inner_radius + molecules_arc_outer_radius) / 2
-        annotate_polar(fig, annotations, molecules_label, angles[i], bar_width, molecule_arc_mid_radius, font_size = font_size)
+        annotate_polar(fig, annotations, molecules_label, angles[i], bar_width, molecule_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
+
+        # Add related domain bars
+        len_source_terms = len(molecules)
+        #remaining_domains = {dom: 0 for dom in domain_colors.keys()}
+        for term_id, (is_leaf, term_input_molecules) in session.search_terms.items():
+            if min(len_source_terms, len(term_input_molecules)) / max(len_source_terms, len(term_input_molecules)) < jaccard_ths or term_id not in ontology.ontology_terms: continue
+
+            foreign_term = ontology.ontology_terms[term_id]
+            for dom in foreign_term.domain:
+                remaining_domains_categories[i][1][dom] += 1
+                max_domain_num = max(max_domain_num, remaining_domains_categories[i][1][dom])
+        remaining_domains_categories[i][0] = description_start_angle - bar_width * 0.025
+
+        for molecule in molecules:
+            for term_id in result.source_terms[molecule]:
+                if term_id in ontology.ontology_terms: break
+
+            print(molecule, term_id, ontology.ontology_terms[term_id].categories)
+            for category in ontology.ontology_terms[term_id].categories:
+                if category not in remaining_domains_categories[i][2]:
+                    remaining_domains_categories[i][2][category] = 0
+                remaining_domains_categories[i][2][category] += 1
+                max_categories_num = max(max_categories_num, remaining_domains_categories[i][2][category])
+
+    for i in range(n):
+        domains_position = remaining_domains_categories[i][0]
+        for domain_name in sorted_domain_names:
+            outer_radius = (domains_arc_outer_radius - domains_arc_inner_radius) / max_domain_num * remaining_domains_categories[i][1][domain_name]
+            if remaining_domains_categories[i][1][domain_name] > 0:
+                add_arc(
+                    fig,
+                    domains_position,
+                    domains_position - domain_bar,
+                    domains_arc_inner_radius,
+                    domains_arc_inner_radius + outer_radius,
+                    domain_colors[domain_name][0],
+                    hoverinfo = f"{domain_name}: {remaining_domains_categories[i][1][domain_name]}"
+                )
+            domains_position -= domain_bar
+
+        categories = sorted([(k, v) for k, v in remaining_domains_categories[i][2].items()], key = lambda x: x[1], reverse = True)
+        print(categories)
+        category_position = remaining_domains_categories[i][0]
+        for i, (category, num) in enumerate(categories[:5]):
+            outer_radius = (categories_arc_outer_radious - categories_arc_inner_radious) / max_categories_num * num
+            add_arc(
+                fig,
+                category_position,
+                category_position - category_bar,
+                categories_arc_inner_radious,
+                categories_arc_inner_radious + outer_radius,
+                f"hsl(207, 100%, {int(36 + i * 10)}%)",
+                hoverinfo = f"{category}: {num}",
+            )
+            category_position -= category_bar
+
 
 
     # Add white donut hole
@@ -2562,7 +2697,7 @@ def show_molecule_term_path(
 
     ontology = enrichment_ontologies[organism]
     term_path = []
-    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][molecule]):
+    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][1][molecule]):
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
         href, term_name = ".", ""
         if term_id in ontology.ontology_terms:
