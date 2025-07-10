@@ -2146,7 +2146,6 @@ def open_barplot(
             j_terms = source_terms[j]
             jaccard_values[j, i] = jaccard_values[i, j] = len(i_terms & j_terms) / len(i_terms | j_terms)
 
-
     if bar_sorting == BAR_SORTING_SIMILARITY:
         Z = linkage(jaccard_values**8, method = 'average', metric = "cosine")
         sort_order = leaves_list(Z)
@@ -2179,10 +2178,10 @@ def open_barplot(
     entities_arc_inner_radius = arc_outer_radius * 0.64
     molecules_arc_inner_radius = arc_outer_radius * 0.6
     molecules_arc_outer_radius = arc_outer_radius * 0.54
-    categories_arc_outer_radious = arc_outer_radius * 0.50
-    categories_arc_inner_radious = arc_outer_radius * 0.34
-    pvalue_arc_outer_radius = arc_outer_radius * 0.30
-    pvalue_arc_inner_radius = arc_outer_radius * 0.25
+    categories_arc_outer_radious = arc_outer_radius * (0.50 + (not multiomics) * 0.1)
+    categories_arc_inner_radious = arc_outer_radius * (0.34 + (not multiomics) * 0.1)
+    pvalue_arc_outer_radius = arc_outer_radius * (0.30 + (not multiomics) * 0.1)
+    pvalue_arc_inner_radius = arc_outer_radius * (0.25 + (not multiomics) * 0.1)
 
     number_entities_sizes = number_entities + 5
     number_regulated_entities_sizes = number_regulated_entities + 5
@@ -2254,6 +2253,7 @@ def open_barplot(
         )
 
         # draw the term description as horizontal radial bar
+        custom = custom_data[i]
         add_arc(
             fig,
             description_start_angle,
@@ -2261,6 +2261,7 @@ def open_barplot(
             description_arc_inner_radius,
             description_arc_outer_radius,
             domain_colors[list(result.term.domain)[0]][0],
+            hoverinfo = f"Term ID: {custom[0]}<br />Term: {custom[1]}<br />p-value: {custom[2]}<br />Regulated molecules: {custom[3]}<br />Associated molecules: {custom[4]}<br />Domain: {custom[5]}",
         )
         arc_mid_radius = (description_arc_inner_radius + description_arc_outer_radius) / 2
         annotate_arc(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius, shorten = True)
@@ -2370,7 +2371,6 @@ def open_barplot(
 
         # Add related domain bars
         len_source_terms = len(molecules)
-        #remaining_domains = {dom: 0 for dom in domain_colors.keys()}
         for term_id, (is_leaf, term_input_molecules) in session.search_terms.items():
             if min(len_source_terms, len(term_input_molecules)) / max(len_source_terms, len(term_input_molecules)) < jaccard_ths or term_id not in ontology.ontology_terms: continue
 
@@ -2426,7 +2426,8 @@ def open_barplot(
 
 
     # Add white donut hole
-    add_arc(fig, 0, 360, 0, 25, "#ffffff")
+    outer_inner_radius = 25 + (not multiomics) * 10
+    add_arc(fig, 0, 360, 0, outer_inner_radius, "#ffffff")
 
     if bar_sorting == BAR_SORTING_SIMILARITY:
         if n > 1:
@@ -2441,7 +2442,7 @@ def open_barplot(
                     dendrogram_points[i, 1] = y
                     i += 1
 
-            dendrogram_points[:, 1] = 25 * (1 - dendrogram_points[:,1] / max(dendrogram_points[:,1]))
+            dendrogram_points[:, 1] = outer_inner_radius * (1 - dendrogram_points[:,1] / max(dendrogram_points[:,1]))
 
             min_angle, max_angle = angles[0], angles[-1]
             min_left, max_left = min(dendrogram_points[:,0]), max(dendrogram_points[:,0])
@@ -2462,6 +2463,8 @@ def open_barplot(
                     y = y,
                     mode = 'lines',
                     line = dict(color = 'black', width = 2),
+                    hoverinfo = 'skip',
+                    showlegend = False
                 ))
 
             def draw_line(figure, theta, radius_1, radius_2):
@@ -2481,6 +2484,8 @@ def open_barplot(
                     y = [y1, y2],
                     mode = 'lines',
                     line = dict(color = 'black', width = 2),
+                    hoverinfo = 'skip',
+                    showlegend = False
                 ))
 
             for i in range(n - 1):
@@ -2500,10 +2505,10 @@ def open_barplot(
                 else:
                     jaccard = jaccard_max_saturation
 
-                x0 = 25 * np.cos(np.radians(angles[i]))
-                y0 = 25 * np.sin(np.radians(angles[i]))
-                x2 = 25 * np.cos(np.radians(angles[j]))
-                y2 = 25 * np.sin(np.radians(angles[j]))
+                x0 = outer_inner_radius * np.cos(np.radians(angles[i]))
+                y0 = outer_inner_radius * np.sin(np.radians(angles[i]))
+                x2 = outer_inner_radius * np.cos(np.radians(angles[j]))
+                y2 = outer_inner_radius * np.sin(np.radians(angles[j]))
                 x1 = (x0 + x2) * 0.25
                 y1 = (y0 + y2) * 0.25
 
