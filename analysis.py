@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import io
 import os
+from scipy.cluster.hierarchy import linkage, leaves_list, dendrogram
+from scipy.spatial.distance import squareform
 from statsmodels.stats.multitest import multipletests
 from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
@@ -78,9 +80,11 @@ CIRCLE_WIDTH = 300
 LIPIDS_COLOR = "#f5b935"
 PROTEINS_COLOR = "#3778c2"
 METABOLITES_COLOR = "#4bac35"
+BAR_SORTING_PVALUE = "pvalue"
+BAR_SORTING_SIMILARITY = "sim"
 
 
-def annotate_polar(
+def annotate_arc(
     figure,
     annotations,
     text_to_add,
@@ -103,13 +107,11 @@ def annotate_polar(
         else:
             text_width = new_text_width
 
-
     # Calculate positions of each character along the arc
     start_pos = (2 * max_radius * np.pi) / 360 * mid_angle + text_width / 2
     # Compute the positions (x, y) for each character
     x, y, rotation_angles, text = [], [], [], []
     for i, char in enumerate(text_to_add):
-
         char_size = char_sizes[font_size][ord(char)]
         current_pos = start_pos - char_size / 2
         start_pos -= char_size + text_space
@@ -119,7 +121,6 @@ def annotate_polar(
         # Convert polar coordinates (r, theta) to Cartesian (x, y)
         x = distance * np.cos(np.radians(rotation_angle))
         y = distance * np.sin(np.radians(rotation_angle))
-
 
         annotations.append(
             dict(
@@ -135,32 +136,32 @@ def annotate_polar(
 
 
 
-def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, color, arc_resolution = 50, hoverinfo = None):
-    theta_outer = np.linspace(start_angle, end_angle, arc_resolution)
-    theta_inner = theta_outer[::-1]
+def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, color, hoverinfo = None, degree_factor = 1):
+    theta_deg = np.linspace(start_angle, end_angle, int(abs(end_angle - start_angle) * degree_factor))
+    theta_rad = np.deg2rad(theta_deg)
 
-    r_outer = [arc_outer_radius] * arc_resolution
-    r_inner = [arc_inner_radius] * arc_resolution
-
-    r_arc = np.concatenate([r_outer, r_inner])
-    theta_arc = np.concatenate([theta_outer, theta_inner])
+    x_outer = arc_outer_radius * np.cos(theta_rad)
+    y_outer = arc_outer_radius * np.sin(theta_rad)
+    x_inner = arc_inner_radius * np.cos(theta_rad[::-1])
+    y_inner = arc_inner_radius * np.sin(theta_rad[::-1])
+    x_arc = np.concatenate([x_outer, x_inner])
+    y_arc = np.concatenate([y_outer, y_inner])
 
     scatter_dict = dict(
-        r = r_arc,
-        theta = theta_arc,
-        mode = 'lines',
+        x = x_arc,
+        y = y_arc,
         fill = 'toself',
         fillcolor = color,
-        line = dict(color = color),
-        opacity = 1.0,
-        hoverinfo = 'skip',
+        line = dict(color = 'rgba(0, 0, 0, 0)'),
+        mode = 'lines',
         showlegend = False,
     )
-    if hoverinfo != None:
-        scatter_dict["name"] = hoverinfo
-        scatter_dict["hovertemplate"] = "%{name}<extra></extra>"
-
-    figure.add_trace(go.Scatterpolar(**scatter_dict))
+    if hoverinfo is not None:
+        scatter_dict["text"] = hoverinfo
+        scatter_dict["hoverinfo"] = "text"
+    else:
+        scatter_dict["hoverinfo"] = "skip"
+    figure.add_trace(go.Scatter(**scatter_dict))
 
 
 
@@ -239,7 +240,7 @@ for worksheet_name in xl.sheet_names:
     examples[worksheet_name] = worksheet
 
 plotly_config = {
-    "scrollZoom": True,
+    "scrollZoom": False,
     "modeBarButtonsToRemove": [
         "resetScale",
         "toImage",
@@ -560,6 +561,12 @@ def layout():
                                 label = "Select bar label:",
                                 data = [{"value": "id", "label": "Term ID"}, {"value": "name", "label": "Term name"}],
                                 value = "id",
+                            ),
+                            dmc.Select(
+                                id = "barplot_select_sorting",
+                                label = "Select sorting:",
+                                data = [{"value": BAR_SORTING_PVALUE, "label": "p-value"}, {"value": BAR_SORTING_SIMILARITY, "label": "Molecule similarity in term"}],
+                                value = BAR_SORTING_PVALUE,
                             ),
                         ],
                         cols = 2,
@@ -1152,8 +1159,9 @@ def layout():
                             },
                             {
                                 'field': "pvalue",
-                                "headerName": "pValue",
+                                "headerName": "p-value",
                                 "width": 150,
+                                "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
                             },
                         ],
                         rowData = [],
@@ -1595,7 +1603,7 @@ def download_table(
         counts.append(row["count"])
         pvalues.append(row["pvalue"])
 
-    df = pd.DataFrame({"Domain": domains, "Term ID": term_ids, "Term": terms, "Count": counts, "pValue": pvalues})
+    df = pd.DataFrame({"Domain": domains, "Term ID": term_ids, "Term": terms, "Count": counts, "p-value": pvalues})
     data = sessions[session_id].data
 
     with_lipids = len(background_lipids) > 0 or len(regulated_lipids) > 0
@@ -2073,6 +2081,7 @@ def open_sunburstplot(
     Input("barplot_numberinput_connect_ths", "value"),
     Input("barplot_numberinput_font_size", "value"),
     Input("barplot_select_name", "value"),
+    Input("barplot_select_sorting", "value"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
@@ -2088,6 +2097,7 @@ def open_barplot(
     jaccard_ths,
     font_size,
     bar_label,
+    bar_sorting,
     row_data,
     selected_rows,
     session_id,
@@ -2097,7 +2107,7 @@ def open_barplot(
     background_proteins,
     background_metabolites,
 ):
-    if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"} or type(jaccard_ths) not in {float, int}:
+    if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"} or bar_sorting not in {BAR_SORTING_PVALUE, BAR_SORTING_SIMILARITY} or type(jaccard_ths) not in {float, int}:
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -2123,7 +2133,26 @@ def open_barplot(
     fig = go.Figure()
     id_position = {row["termid"]: i for i, row in enumerate(row_data)}
     session_data = session.data
-    selected_term_ids = [t.split("|")[0] for t in sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])]
+    selected_term_ids = np.array([t.split("|")[0] for t in sorted([row["termid"] for row in selected_rows], key = lambda x: id_position[x])])
+    n = len(selected_term_ids)
+
+    source_terms = [
+        set(session_data[term_id].source_terms.keys()) for term_id in selected_term_ids
+    ]
+    jaccard_values = np.ones((n , n))
+    for i in range(0, n - 1):
+        for j in range(i + 1, n):
+            i_terms = source_terms[i]
+            j_terms = source_terms[j]
+            jaccard_values[j, i] = jaccard_values[i, j] = len(i_terms & j_terms) / len(i_terms | j_terms)
+
+
+    if bar_sorting == BAR_SORTING_SIMILARITY:
+        Z = linkage(jaccard_values**8, method = 'average', metric = "cosine")
+        sort_order = leaves_list(Z)
+        selected_term_ids = selected_term_ids[sort_order]
+        jaccard_values = jaccard_values[sort_order]
+        jaccard_values = jaccard_values[:, sort_order]
 
     pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
     number_entities = np.array([len(session_data[term_id].source_terms) for term_id in selected_term_ids])
@@ -2131,24 +2160,15 @@ def open_barplot(
 
     domains = ["|".join(session_data[term_id].term.domain) for term_id in selected_term_ids]
     term_names = [session_data[term_id].term.name for term_id in selected_term_ids]
-    #term_domain_colors_def = [domain_colors[domain][0] for domain in domains]
-    #term_domain_colors_bar = [domain_colors[domain][1] for domain in domains]
-    #term_domain_colors_def = ["#fc7255" for domain in domains]
-    #term_domain_colors_bar = ["#fc947e" for domain in domains]
-    max_axis = int(max(pvalues) + 1)
     jaccard_ths /= 100
 
-    #custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
     custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
     inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
-    pvalues = pvalues + inner_margin
-    n = len(selected_term_ids)
-    max_height = max(pvalues) * 1.02
+
     angle_gap = 360 / n
     angles = [i * angle_gap for i in range(n)]
     bar_width = angle_gap - 1
-    arc_outer_radius = max_height * 2 #(1.65 + multiomics * 0.34)
-    axis_step_size = int(max(1, 0.7 * np.sqrt(max_axis)))
+    arc_outer_radius = 100
 
     # Arc settings
     domains_arc_outer_radius = arc_outer_radius * 1
@@ -2159,15 +2179,11 @@ def open_barplot(
     entities_arc_inner_radius = arc_outer_radius * 0.64
     molecules_arc_inner_radius = arc_outer_radius * 0.6
     molecules_arc_outer_radius = arc_outer_radius * 0.54
-
     categories_arc_outer_radious = arc_outer_radius * 0.50
     categories_arc_inner_radious = arc_outer_radius * 0.34
-
     pvalue_arc_outer_radius = arc_outer_radius * 0.30
     pvalue_arc_inner_radius = arc_outer_radius * 0.25
 
-    #number_entities_sizes = np.log(number_entities + 2)
-    #number_regulated_entities_sizes = np.log(number_regulated_entities + 2)
     number_entities_sizes = number_entities + 5
     number_regulated_entities_sizes = number_regulated_entities + 5
 
@@ -2176,8 +2192,10 @@ def open_barplot(
     number_entities_sizes = number_entities_sizes / mnes
     number_regulated_entities_sizes = number_regulated_entities_sizes / mnes
 
-    fig = go.Figure(data = go.Bar())
 
+    fig = go.Figure()
+
+    #fig = go.Figure(data = go.Bar())
     # Add radial bars
     # fig.add_trace(go.Barpolar(
     #     r = [max_height] * n,
@@ -2221,8 +2239,21 @@ def open_barplot(
     for i in range(n):
         result = session_data[selected_term_ids[i]]
         center_angle = angles[i]
+
         description_start_angle = center_angle + bar_width / 2
         description_end_angle = center_angle - bar_width / 2
+
+        # draw grey background
+        add_arc(
+            fig,
+            description_start_angle,
+            description_end_angle,
+            0,
+            arc_outer_radius,
+            "#f7f7f7",
+        )
+
+        # draw the term description as horizontal radial bar
         add_arc(
             fig,
             description_start_angle,
@@ -2230,21 +2261,13 @@ def open_barplot(
             description_arc_inner_radius,
             description_arc_outer_radius,
             domain_colors[list(result.term.domain)[0]][0],
-            #"#fc7255", #term_domain_colors_def[i],
         )
         arc_mid_radius = (description_arc_inner_radius + description_arc_outer_radius) / 2
-        annotate_polar(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius, shorten = True)
+        annotate_arc(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius, shorten = True)
 
+        # draw the p value as horizontal radial bar
         pvalue_start_angle = description_start_angle
         pvalue_end_angle = pvalue_start_angle - bar_width / max(pvalues) * pvalues[i]
-        add_arc(
-            fig,
-            description_start_angle,
-            description_end_angle,
-            pvalue_arc_inner_radius,
-            pvalue_arc_outer_radius,
-            "#eeeeee",
-        )
         add_arc(
             fig,
             pvalue_start_angle,
@@ -2252,17 +2275,14 @@ def open_barplot(
             pvalue_arc_inner_radius,
             pvalue_arc_outer_radius,
             domain_colors[list(result.term.domain)[0]][1],
+            hoverinfo = "p-value: {:.6g}".format(result.pvalue_corrected)
         )
-
-
 
 
         len_lipid_table = 0
         len_protein_table = 0
         len_metabolite_table = 0
-
         molecules = set(result.source_terms.keys())
-
         if with_lipids: len_lipid_table = len(molecules & background_lipids)
         if with_proteins: len_protein_table = len(molecules & background_proteins)
         if with_metabolites: len_metabolite_table = len(molecules & background_metabolites)
@@ -2278,6 +2298,7 @@ def open_barplot(
                 entities_arc_inner_radius,
                 entities_arc_outer_radius,
                 upregulated_color,
+                degree_factor = 3,
             )
             entities_mid_angle = entities_end_angle
 
@@ -2295,7 +2316,7 @@ def open_barplot(
         entities_arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
         arc_angle = (entities_start_angle + entities_end_angle) / 2
         entities_number_text = f"{str(int(number_regulated_entities[i]))} / {str(int(number_entities[i]))}"
-        annotate_polar(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), entities_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
+        annotate_arc(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), entities_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
 
         molecules_label = ""
         molecule_normalizer = len_lipid_table + len_protein_table + len_metabolite_table
@@ -2345,7 +2366,7 @@ def open_barplot(
                         METABOLITES_COLOR,
                     )
         molecule_arc_mid_radius = (molecules_arc_inner_radius + molecules_arc_outer_radius) / 2
-        annotate_polar(fig, annotations, molecules_label, angles[i], bar_width, molecule_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
+        annotate_arc(fig, annotations, molecules_label, angles[i], bar_width, molecule_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
 
         # Add related domain bars
         len_source_terms = len(molecules)
@@ -2363,7 +2384,6 @@ def open_barplot(
             for term_id in result.source_terms[molecule]:
                 if term_id in ontology.ontology_terms: break
 
-            print(molecule, term_id, ontology.ontology_terms[term_id].categories)
             for category in ontology.ontology_terms[term_id].categories:
                 if category not in remaining_domains_categories[i][2]:
                     remaining_domains_categories[i][2][category] = 0
@@ -2382,12 +2402,13 @@ def open_barplot(
                     domains_arc_inner_radius,
                     domains_arc_inner_radius + outer_radius,
                     domain_colors[domain_name][0],
-                    hoverinfo = f"{domain_name}: {remaining_domains_categories[i][1][domain_name]}"
+                    hoverinfo = f"{domain_name}: {remaining_domains_categories[i][1][domain_name]}",
+                    degree_factor = 5,
                 )
             domains_position -= domain_bar
 
         categories = sorted([(k, v) for k, v in remaining_domains_categories[i][2].items()], key = lambda x: x[1], reverse = True)
-        print(categories)
+
         category_position = remaining_domains_categories[i][0]
         for i, (category, num) in enumerate(categories[:5]):
             outer_radius = (categories_arc_outer_radious - categories_arc_inner_radious) / max_categories_num * num
@@ -2399,103 +2420,116 @@ def open_barplot(
                 categories_arc_inner_radious + outer_radius,
                 f"hsl(207, 100%, {int(36 + i * 10)}%)",
                 hoverinfo = f"{category}: {num}",
+                degree_factor = 5,
             )
             category_position -= category_bar
 
 
-
     # Add white donut hole
-    theta_circle = np.linspace(0, 360, 100)
-    r_circle = [inner_margin] * 100
+    add_arc(fig, 0, 360, 0, 25, "#ffffff")
 
-    fig.add_trace(go.Scatterpolar(
-        r = r_circle,
-        theta = theta_circle,
-        mode = 'lines',
-        fill = 'toself',
-        fillcolor = 'white',
-        line = dict(color = 'white'),
-        hoverinfo = 'skip',
-        showlegend = False
-    ))
+    if bar_sorting == BAR_SORTING_SIMILARITY:
+        if n > 1:
+            dendrogram_points = np.zeros(((n - 1) * 4, 2))
+            ddata = dendrogram(Z, no_plot = True)
+            icoord = ddata['icoord']  # x-coordinates for each link
+            dcoord = ddata['dcoord']  # y-coordinates (heights) for each link
+            i = 0
+            for xs, ys in zip(icoord, dcoord):
+                for x, y in zip(xs, ys):
+                    dendrogram_points[i, 0] = x
+                    dendrogram_points[i, 1] = y
+                    i += 1
 
-    source_terms = [
-        set(session_data[term_id].source_terms.keys()) for term_id in selected_term_ids
-    ]
+            dendrogram_points[:, 1] = 25 * (1 - dendrogram_points[:,1] / max(dendrogram_points[:,1]))
 
-    for i in range(0, n - 1):
-        for j in range(i + 1, n):
-            i_terms = source_terms[i]
-            j_terms = source_terms[j]
+            min_angle, max_angle = angles[0], angles[-1]
+            min_left, max_left = min(dendrogram_points[:,0]), max(dendrogram_points[:,0])
 
-            jaccard = len(i_terms & j_terms) / len(i_terms | j_terms)
-            if jaccard < jaccard_ths: continue
-            if jaccard_ths < 1:
-                jaccard = int(min(90, 100 - 100 * (jaccard - jaccard_ths) / (1 - jaccard_ths)))
-            else:
-                jaccard = 90
+            dendrogram_points[:, 0] = (dendrogram_points[:, 0] - min_left) / (max_left - min_left) * (max_angle - min_angle) + min_angle
 
+            def draw_arc(figure, theta_start, theta_end, radius):
+                if radius <= 0: return
+                theta = np.linspace(np.radians(theta_start), np.radians(theta_end), int(abs(theta_end - theta_start)))
 
-            x0 = inner_margin * np.cos(np.radians(angles[i]))
-            y0 = inner_margin * np.sin(np.radians(angles[i]))
-            x2 = inner_margin * np.cos(np.radians(angles[j]))
-            y2 = inner_margin * np.sin(np.radians(angles[j]))
-            x1 = (x0 + x2) * 0.25
-            y1 = (y0 + y2) * 0.25
+                # Parametric arc coordinates
+                x = radius * np.cos(theta)
+                y = radius * np.sin(theta)
 
-            P0 = np.array([x0, y0])
-            P1 = np.array([x1, y1])
-            P2 = np.array([x2, y2])
+                # Add the arc as a line
+                figure.add_trace(go.Scatter(
+                    x = x,
+                    y = y,
+                    mode = 'lines',
+                    line = dict(color = 'black', width = 2),
+                ))
 
-            # Generate Bezier curve points
-            t = np.linspace(0, 1, 10)
-            bezier_points = (1 - t)[:, None]**2 * P0 + \
-                            2 * (1 - t)[:, None] * t[:, None] * P1 + \
-                            t[:, None]**2 * P2
+            def draw_line(figure, theta, radius_1, radius_2):
+                if radius_1 < 0 or radius_2 < 0: return
+                theta = np.radians(theta)
 
-            xx, yy = bezier_points[:, 0], bezier_points[:, 1]
-            rr = np.sqrt(xx**2 + yy**2)
-            theta = np.mod(np.arctan2(yy, xx) * (180 / np.pi) + 360, 360)
+                # Parametric arc coordinates
+                ctheta, stheta = np.cos(theta), np.sin(theta)
+                x1 = radius_1 * ctheta
+                y1 = radius_1 * stheta
+                x2 = radius_2 * ctheta
+                y2 = radius_2 * stheta
 
-            fig.add_trace(go.Scatterpolar(
-                r = rr,
-                theta = theta,
-                mode = 'lines',
-                line_shape = 'spline',
-                line = dict(color = f'hsv(0,0,{jaccard})', width = 2),
-                name = 'Curved Line',
-                hoverinfo = 'skip',
-                showlegend = False
-            ))
+                # Add the arc as a line
+                figure.add_trace(go.Scatter(
+                    x = [x1, x2],
+                    y = [y1, y2],
+                    mode = 'lines',
+                    line = dict(color = 'black', width = 2),
+                ))
+
+            for i in range(n - 1):
+                i *= 4
+                draw_line(fig, dendrogram_points[i, 0], dendrogram_points[i, 1], dendrogram_points[i + 1, 1])
+                draw_arc(fig, dendrogram_points[i + 1, 0], dendrogram_points[i + 2, 0], dendrogram_points[i + 1, 1])
+                draw_line(fig, dendrogram_points[i + 2, 0], dendrogram_points[i + 2, 1], dendrogram_points[i + 3, 1])
+
+    else:
+        jaccard_max_saturation = 90
+        for i in range(0, n - 1):
+            for j in range(i + 1, n):
+                jaccard = jaccard_values[i, j]
+                if jaccard < jaccard_ths: continue
+                if jaccard_ths < 1:
+                    jaccard = int(jaccard_max_saturation - jaccard_max_saturation * (jaccard - jaccard_ths) / (1 - jaccard_ths))
+                else:
+                    jaccard = jaccard_max_saturation
+
+                x0 = 25 * np.cos(np.radians(angles[i]))
+                y0 = 25 * np.sin(np.radians(angles[i]))
+                x2 = 25 * np.cos(np.radians(angles[j]))
+                y2 = 25 * np.sin(np.radians(angles[j]))
+                x1 = (x0 + x2) * 0.25
+                y1 = (y0 + y2) * 0.25
+
+                P0 = np.array([x0, y0])
+                P1 = np.array([x1, y1])
+                P2 = np.array([x2, y2])
+
+                # Generate Bezier curve points
+                t = np.linspace(0, 1, 10)
+                bezier_points = (1 - t)[:, None]**2 * P0 + \
+                                2 * (1 - t)[:, None] * t[:, None] * P1 + \
+                                t[:, None]**2 * P2
+
+                fig.add_trace(go.Scatter(
+                    x = bezier_points[:, 0],
+                    y = bezier_points[:, 1],
+                    mode = 'lines',
+                    line_shape = 'spline',
+                    line = dict(color = f'hsv(0,0,{jaccard})', width = 2),
+                    hoverinfo = 'skip',
+                    showlegend = False
+                ))
 
     # Layout settings with visible radial axis (height of bars)
     fig.update_layout(
         annotations = annotations,
-        polar = dict(
-            domain = dict(x = [0, 1], y = [0, 1]),  # same domain as Cartesian
-            barmode = 'overlay',
-            radialaxis = dict(
-                visible = True,
-                tickvals = [i + inner_margin for i in range(0, max_axis, axis_step_size)],
-                ticktext = list(range(0, max_axis, axis_step_size)),
-                showticklabels = True,
-                ticks = 'inside',
-                showline = False,
-                showgrid = True,
-                range = [0, arc_outer_radius],
-            ),
-            angularaxis = dict(
-                visible = False,       # Hide angular axis ticks, labels, and grid
-                showticklabels = False,
-                ticks = '',
-                showline = False,
-                showgrid = False,
-                categoryorder = 'array',
-                categoryarray = selected_term_ids,
-            ),
-            bgcolor = 'white'
-        ),
-
         xaxis = dict(
             domain=[0, 1],
             range = [-arc_outer_radius, arc_outer_radius],
@@ -2503,7 +2537,6 @@ def open_barplot(
             zeroline = True,
             showticklabels = False,  # Hide the tick labels on the x-axis
         ),
-
         yaxis = dict(
             domain = [0, 1],
             range = [-arc_outer_radius, arc_outer_radius],
@@ -2512,8 +2545,9 @@ def open_barplot(
             showticklabels = False,  # Hide the tick labels on the x-axis
         ),
         showlegend = False,
-        paper_bgcolor='white',
-        plot_bgcolor='white',
+        paper_bgcolor = 'white',
+        plot_bgcolor = 'white',
+        dragmode = False,
         width = CIRCLE_WIDTH * 2,
         height = CIRCLE_WIDTH * 2,
         margin = dict(
@@ -2523,7 +2557,6 @@ def open_barplot(
             b = 0
         ),
     )
-
     return True, fig, CIRCLE_WIDTH * 2 + 50, {}, False, "", barplot_controls_style, sunburst_controls_style
 
 
