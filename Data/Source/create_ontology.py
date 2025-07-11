@@ -503,6 +503,14 @@ for line in open("Data/hgnc_to_mondo.csv").read().split("\n"):
 
 
 go_terms = get_terms("Data/go-basic.obo", "GO:", True)
+namespaces = {
+    "biological_process": "Biological process",
+    "cellular_component": "Cellular component",
+    "molecular_function": "Molecular function"
+}
+for go_term_id, go_term in go_terms.items():
+    go_term.namespace = {namespaces[n] if n in namespaces else n for n in go_term.namespace}
+
 ontology_terms, chebi_lipid_terms = get_lipid_terms()
 
 
