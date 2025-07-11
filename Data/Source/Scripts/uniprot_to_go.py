@@ -4,7 +4,7 @@ with open("Data/uniprot_to_go.csv", "wt") as out:
     with gzip.open('Data/uniprot.csv.gz','r') as fin:
         for i, line in enumerate(fin):
             if i == 0: continue
-            if i % 10000 == 0: print("uniprot_to_go: " + i)
+            if i % 10000 == 0: print(f"uniprot_to_go: {i}")
             tokens = line.decode().strip().split("\t")
             if len(tokens) < 4: continue
 
