@@ -2,11 +2,14 @@ from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
 import gzip
 
+
+
+
 parser = LipidParser()
 
 species = {
-    #'Homo sapiens': "9606",
-     'Mus musculus': "10090",
+    'Homo sapiens': "9606",
+    'Mus musculus': "10090",
     # 'Saccharomyces cerevisiae': "4932",
     # 'Escherichia coli': "562",
     # 'Drosophila melanogaster': "7227",
@@ -98,10 +101,10 @@ def get_terms(term_file, prefix, upper = False):
 
 def get_lipid_terms():
     # import chebi to lipid dictionary
-    chebi_to_lipid = {t.split("\t")[0]: {t.split("\t")[1]} for t in open("chebi_to_lipid.csv", "rt").read().split("\n") if t.find("\t") > -1}
+    chebi_to_lipid = {t.split("\t")[0]: {t.split("\t")[1]} for t in open("Data/chebi_to_lipid.csv", "rt").read().split("\n") if t.find("\t") > -1}
 
     for directory in ["ChEBI", "LipidMaps", "SwissLipids"]:
-        for line in open(f"{directory}/chebi_to_lipid.csv", "rt").read().split("\n"):
+        for line in open(f"Data/{directory}_chebi_to_lipid.csv", "rt").read().split("\n"):
             if len(line) < 1: continue
             tokens = line.split("\t")
             if len(tokens) < 2: continue
@@ -118,7 +121,7 @@ def get_lipid_terms():
     lipid_class_terms = {}
     lipid_species_terms = {}
     if True:
-        with open("LION.obo", "rt") as obo:
+        with open("Data/LION.obo", "rt") as obo:
             for i, line in enumerate(obo):
                 line = line.strip()
                 if len(line) == 0: continue
@@ -245,19 +248,18 @@ def get_lipid_terms():
 
 # adding chebi terms with names and relations
 chebi_terms_all = {}
-with open("ChEBI/chebi.csv", "rt") as infile:
+with open("Data/chebi.csv", "rt") as infile:
     for line in infile:
         tokens = line.strip().split("\t")
-        if len(tokens) < 2: continue
         chebi_terms_all[tokens[0]] = Term("CHEBI:" + tokens[0], tokens[1], set(["CHEBI:" + t for t in tokens[2:]]) if len(tokens) > 2 else set())
         chebi_terms_all[tokens[0]].relations.add("LS:0000005")
 
 
-chebi_obo = get_terms("ChEBI/chebi_lite.obo", "CHEBI:")
+chebi_obo = get_terms("Data/chebi_lite.obo", "CHEBI:")
 max_depth = 2
 for chebi_id, c_term in chebi_obo.items():
-    chebi_id = chebi_id.split(":")[1]
-    if chebi_id not in chebi_terms_all: continue
+    if not chebi_id.startswith("CHEBI:"): continue
+    chebi_id = chebi_id.replace("CHEBI:", "")
     chebi_term = chebi_terms_all[chebi_id]
     queue = [(rel, 1) for rel in c_term.relations]
     while queue:
@@ -269,7 +271,7 @@ for chebi_id, c_term in chebi_obo.items():
             queue.append((relation_id, depth + 1))
 
 
-with open("RHEA/rhea_to_chebi.csv", "rt") as infile:
+with open("Data/rhea_to_chebi.csv", "rt") as infile:
     for line in infile:
         tokens = line.strip().split("\t")
         if len(tokens) < 2: continue
@@ -279,9 +281,8 @@ with open("RHEA/rhea_to_chebi.csv", "rt") as infile:
                 chebi_terms_all[chebi_term].relations.add(rhea_id)
 
 
-
 chebi_terms_organisms = {}
-with open("PathBank/chebi_to_pathway.csv", "rt") as infile:
+with open("Data/chebi_to_pathway.csv", "rt") as infile:
     for line in infile:
         tokens = line.strip().split("\t")
         if len(tokens) < 3: continue
@@ -292,13 +293,11 @@ with open("PathBank/chebi_to_pathway.csv", "rt") as infile:
         chebi_terms_organisms[tokens[1]][tokens[0]] |= set(tokens[2:])
 
 
-
-
 # import uniprot accession to gene name
 uniprot_data = {}
 uniprot_terms_organisms = {}
 uniprot_to_organism = {}
-with open("Uniprot/uniprot_to_go.csv", "rt") as infile:
+with open("Data/uniprot_to_go.csv", "rt") as infile:
     for line in infile:
         tokens = line.strip().split("\t")
 
@@ -317,17 +316,50 @@ with open("Uniprot/uniprot_to_go.csv", "rt") as infile:
         uniprot_to_organism[tokens[0]] = tokens[1]
 
 
-with open("Uniprot/uniprot.csv", "rt") as infile:
+
+ensembl_terms_organisms = {}
+with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
     for i, line in enumerate(infile):
         if i == 0: continue
-        tokens = line.strip().split("\t")
+        tokens = line.split("\t")
         if len(tokens) < 8 or tokens[0] not in uniprot_data: continue
         uniprot_data[tokens[0]].categories = set(tokens[4].split(", "))
 
+        if tokens[0] not in uniprot_to_organism: continue
+        organism = uniprot_to_organism[tokens[0]]
+        if organism not in ensembl_terms_organisms: ensembl_terms_organisms[organism] = {}
+
+        ensembls = set()
+        for cc in tokens[7].replace("\"", "").split(";"):
+            ensembls |= set([tok.split(".")[0] for t in cc.split(" ") if ((tok := t.strip("., ")) and tok[:2] == "EN")])
+
+        for ensembl in ensembls:
+            if ensembl not in ensembl_terms_organisms[organism]:
+                term = Term(ensembl, ensembl, {"LS:0000006"}, _categories = set(uniprot_data[tokens[0]].categories))
+                ensembl_terms_organisms[organism][ensembl] = term
+            ensembl_terms_organisms[organism][ensembl].relations.add("UNIPROT:" + tokens[0])
+
+
+
+with gzip.open("Data/Homo_sapiens.uniprot.tsv.gz") as infile:
+    for i, line in enumerate(infile):
+        if i == 0: continue
+        tokens = line.decode("utf8").split("\t")
+        if len(tokens) < 4: continue
+        uniprot = tokens[3].split("-")[0]
+        if uniprot not in uniprot_to_organism: continue
+        organism = uniprot_to_organism[uniprot]
+        if organism not in ensembl_terms_organisms: ensembl_terms_organisms[organism] = {}
+
+        for ensembl in tokens[:3]:
+            if ensembl not in ensembl_terms_organisms[organism]:
+                term = Term(ensembl, ensembl, {"LS:0000006"}, _categories = set(uniprot_data[uniprot].categories))
+                ensembl_terms_organisms[organism][ensembl] = term
+            ensembl_terms_organisms[organism][ensembl].relations.add(f"UNIPROT:{uniprot}")
 
 
 pathway_terms_organisms = {}
-with open("PathBank/pathbank_to_uniprot.csv", "rt") as infile:
+with open("Data/pathbank_to_uniprot.csv", "rt") as infile:
     for line in infile:
         tokens = line.strip().split("\t")
         if len(tokens) < 3: continue
@@ -335,8 +367,8 @@ with open("PathBank/pathbank_to_uniprot.csv", "rt") as infile:
         i = 2
         organism = None
         while i < len(tokens):
-            if tokens[2] in uniprot_to_organism:
-                organism = uniprot_to_organism[tokens[2]]
+            if tokens[i] in uniprot_to_organism:
+                organism = uniprot_to_organism[tokens[i]]
                 break
             i += 1
 
@@ -348,9 +380,8 @@ with open("PathBank/pathbank_to_uniprot.csv", "rt") as infile:
                 uniprot_data[term_id].relations.add(tokens[0])
 
 
-
 rhea_terms_organisms = {tax_id: {} for tax_id in uniprot_terms_organisms}
-with open("RHEA/rhea2uniprot_sprot.tsv", "rt") as infile:
+with open("Data/rhea2uniprot_sprot.tsv", "rt") as infile:
     for line in infile:
         tokens = line.strip().split("\t")
         if len(tokens) != 4: continue
@@ -366,16 +397,16 @@ with open("RHEA/rhea2uniprot_sprot.tsv", "rt") as infile:
 
 
 
-disease_and_phenotype_terms = get_terms("DiseaseOntology/doid-base.obo", "DOID:", True)
+disease_and_phenotype_terms = get_terms("Data/doid-base.obo", "DOID:", True)
 for _, doid_term in disease_and_phenotype_terms.items():
     doid_term.namespace.add("Disease")
-for k, v in {tokens[0]: set(tokens[1:]) for line in open("DiseaseOntology/uniprot_to_doid.csv").read().split("\n") if len(line) > 0 and (tokens := line.split("\t")) and len(tokens[1]) > 0}.items():
+for k, v in {tokens[0]: set(tokens[1:]) for line in open("Data/uniprot_to_doid.csv").read().split("\n") if len(line) > 0 and (tokens := line.split("\t")) and len(tokens[1]) > 0}.items():
     if k in uniprot_data:
         uniprot_data[k].relations |= v
 
 
 
-mondo_terms = get_terms("Mondo/mondo.obo", "MONDO:", True)
+mondo_terms = get_terms("Data/mondo.obo", "MONDO:", True)
 omim_to_mondo = {}
 orphanet_to_mondo = {}
 hpo_to_mondo = {}
@@ -396,7 +427,7 @@ for mondo_id, mondo_term in mondo_terms.items():
 
 
 
-hpo_terms = get_terms("HP/hp.obo", "HP:", True)
+hpo_terms = get_terms("Data/hp.obo", "HP:", True)
 for hpo_term_id, hpo_term in hpo_terms.items():
     hpo_term.namespace.add("Phenotype")
     if hpo_term_id in hpo_to_mondo and hpo_to_mondo[hpo_term_id] in disease_and_phenotype_terms:
@@ -408,7 +439,7 @@ for hpo_term_id, hpo_term in hpo_terms.items():
 
 
 gene_terms = {}
-for line in open("NCBI/genes_to_phenotype.txt").read().split("\n"):
+for line in open("Data/genes_to_phenotype.txt").read().split("\n"):
     if len(line) < 2: continue
     tokens = line.split("\t")
     if len(tokens) < 3 or tokens[1] == "-": continue
@@ -421,7 +452,7 @@ for line in open("NCBI/genes_to_phenotype.txt").read().split("\n"):
 
 
 
-for line in open("NCBI/genes_to_disease.txt").read().split("\n"):
+for line in open("Data/genes_to_disease.txt").read().split("\n"):
     if len(line) < 2: continue
     tokens = line.split("\t")
     if len(tokens) < 3 or tokens[1] == "-": continue
@@ -433,52 +464,45 @@ for line in open("NCBI/genes_to_disease.txt").read().split("\n"):
 
 
 
-for line in open("HGNC/HGNC.csv").read().split("\n"):
-    if len(line) < 2: continue
-    tokens = line.split(",")
-    if len(tokens) < 13: continue
-    hgnc_id = tokens[0].split("/")[-1]
-    hgnc_name = tokens[1] + " (Gene)"
-    xrefs = tokens[12].split("|")
-    uniprots = [ref for xref in xrefs if xref.startswith("UniProtKB:") if (ref := xref.replace("UniProtKB:", "")) and (ref in uniprot_data)]
-    if len(uniprots) == 0: continue
-    for xref in xrefs:
-        if not xref.startswith("NCBI_Gene:"): continue
-        ncbi = xref.replace("NCBI_Gene:", "NCBI:")
-        hgnc_term = Term(hgnc_id, hgnc_name, _xref = ncbi)
-        if ncbi in gene_terms:
-            gene_terms[ncbi].merge(hgnc_term)
-            gene_terms[hgnc_id] = gene_terms[ncbi]
+with open("Data/HGNC.csv") as infile:
+    for i, line in enumerate(infile):
+        if i == 0: continue
+        tokens = line.strip().split(",")
+        if len(tokens) < 5: continue
+        hgnc_id = tokens[0].split("/")[-1]
+        hgnc_name = tokens[1] + " (Gene)"
+        uniprot = tokens[2]
+        hgnc_term = Term(hgnc_id, hgnc_name)
+        ids = {hgnc_id}
+        if uniprot in uniprot_data:
+            uniprot_data[uniprot].relations.add(hgnc_id)
+
+        ncbi_id = "NCBI:" + tokens[3] if len(tokens[3]) > 0 else None
+        if ncbi_id != None: ids.add(ncbi_id)
+
+        hgnc_term = Term(ids, hgnc_name)
+        if ncbi_id in gene_terms:
+            gene_terms[ncbi_id].merge(hgnc_term)
+            gene_terms[hgnc_id] = gene_terms[ncbi_id]
+
         else:
             gene_terms[hgnc_id] = hgnc_term
-
-    for uniprot in uniprots:
-        uniprot_data[uniprot].relations.add(hgnc_id)
+            if ncbi_id != None: gene_terms[ncbi_id] = hgnc_term
 
 
 
-for line in open("Mondo/HGNC_to_MONDO.tsv").read().split("\n"):
+for line in open("Data/hgnc_to_mondo.csv").read().split("\n"):
     if len(line) < 1: continue
     tokens = line.split("\t")
-    if len(tokens) < 8: continue
-    hgnc_id, mondo_id = tokens[0], tokens[7]
-    if hgnc_id in gene_terms: gene_terms[hgnc_id].relations.add(mondo_id)
+    if len(tokens) < 2: continue
+    hgnc_id, mondo_ids = tokens[0], set(tokens[1:])
+    if hgnc_id in gene_terms: gene_terms[hgnc_id].relations |= mondo_ids
 
 
 
 
-for line in open("HGNC/hgnc_to_uniprot_ncbi.csv").read().split("\n"):
-    if len(line) < 2: continue
-    tokens = line.split("\t")
-    if len(tokens) < 3 or len(tokens[1]) == 0 or len(tokens[2]) == 0: continue
-    ncbi_id = "NCBI:" + tokens[1]
-    proteins = tokens[2].split(", ")
-    for protein in proteins:
-        if protein in uniprot_data:
-            uniprot_data[protein].relations.add(ncbi_id)
 
-
-go_terms = get_terms("go-basic.obo", "GO:", True)
+go_terms = get_terms("Data/go-basic.obo", "GO:", True)
 ontology_terms, chebi_lipid_terms = get_lipid_terms()
 
 
@@ -494,9 +518,7 @@ for tax_name, tax_id in species.items():
 
     output.append("LS:0000004\tUniprot protein\t\t\n")
     output.append("LS:0000005\tChEBI metabolite\t\t\n")
-    output.append("LS:0000006\tEnsembl stable transcript\t\t\n") # ENST000...
-    output.append("LS:0000007\tEnsembl stable gene\t\t\n") # ENSG000...
-    output.append("LS:0000008\tEnsembl stable protein\t\t\n") # ENSP000...
+    output.append("LS:0000006\tEnsembl transcript\t\t\n") # ENS
 
     # create organism-specific rhea terms
     rhea_terms = {}
@@ -517,11 +539,17 @@ for tax_name, tax_id in species.items():
 
     if tax_id in pathway_terms_organisms:
         pathway_terms = pathway_terms_organisms[tax_id]
-        for _, pathway_term in pathway_terms.items():
+        for pathway_id, pathway_term in pathway_terms.items():
             output.append(pathway_term.to_string())
 
     for _, protein_term in protein_terms.items():
         output.append(protein_term.to_string())
+
+
+    if tax_id in ensembl_terms_organisms:
+        ensembl_terms = ensembl_terms_organisms[tax_id]
+        for _, ensembl_term in ensembl_terms.items():
+            output.append(ensembl_term.to_string())
 
 
     written_genes = set()

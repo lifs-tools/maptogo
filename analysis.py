@@ -217,6 +217,7 @@ for worksheet_name in xl.sheet_names:
         "bgl": [], "regl": [],
         "bgp": [], "regp": [],
         "bgm": [], "regm": [],
+        "bgt": [], "regt": [],
         "title": "", "desc": "", "comp": "", "doi": "", "org": INIT_ORGANISM
     }
     if "BackgroundLipids" in df: worksheet["bgl"] = list(df["BackgroundLipids"].dropna())
@@ -225,6 +226,8 @@ for worksheet_name in xl.sheet_names:
     if "RegulatedProteins" in df: worksheet["regp"] = list(df["RegulatedProteins"].dropna())
     if "BackgroundMetabolites" in df: worksheet["bgm"] = list(df["BackgroundMetabolites"].dropna())
     if "RegulatedMetabolites" in df: worksheet["regm"] = list(df["RegulatedMetabolites"].dropna())
+    if "BackgroundTranscripts" in df: worksheet["bgt"] = list(df["BackgroundTranscripts"].dropna())
+    if "RegulatedTranscripts" in df: worksheet["regt"] = list(df["RegulatedTranscripts"].dropna())
     if "Title" in df: worksheet["title"] = df.loc[0, "Title"]
     if "Description" in df: worksheet["desc"] = df.loc[0, "Description"]
     if "Comparison" in df: worksheet["comp"] = df.loc[0, "Comparison"]
@@ -415,12 +418,6 @@ def layout():
                 style = {"height": "100%", "display": "flex", "alignItems": "flex-start", "justifyContent": "right"},
             ),
         ], cols = 2),
-        html.Div(id = "background_lipids", style = {"display": "none"}),
-        html.Div(id = "regulated_lipids", style = {"display": "none"}),
-        html.Div(id = "background_proteins", style = {"display": "none"}),
-        html.Div(id = "regulated_proteins", style = {"display": "none"}),
-        html.Div(id = "background_metabolites", style = {"display": "none"}),
-        html.Div(id = "regulated_metabolites", style = {"display": "none"}),
         dmc.Modal(
             title = "Load example datasets",
             id = "load_examples_modal",
@@ -479,6 +476,11 @@ def layout():
                                                 value = "metabolite_tab_modal",
                                                 id = "metabolite_tab_modal_tab",
                                             ),
+                                            dmc.Tab(
+                                                "Transcripts",
+                                                value = "transcript_tab_modal",
+                                                id = "transcript_tab_modal_tab",
+                                            ),
                                         ],
                                         grow = True,
                                     ),
@@ -493,6 +495,10 @@ def layout():
                                     dmc.TabsPanel(
                                         get_aggrid_modal("term_metabolites_modal_grid", "Metabolite"),
                                         value = "metabolite_tab_modal",
+                                    ),
+                                    dmc.TabsPanel(
+                                        get_aggrid_modal("term_transcripts_modal_grid", "Transcript"),
+                                        value = "transcript_tab_modal",
                                     ),
                                 ],
                                 id = "term_molecules_modal_tab",
@@ -823,6 +829,7 @@ def layout():
                                     dmc.Tab("Lipids", value="lipid_tab"),
                                     dmc.Tab("Proteins", value="protein_tab"),
                                     dmc.Tab("Metabolites", value="metabolites_tab"),
+                                    dmc.Tab("Transcripts", value="transcripts_tab"),
                                 ],
                                 grow = True,
                             ),
@@ -972,6 +979,52 @@ def layout():
                                 ], cols = 2)],
                                 value = "metabolites_tab",
                             ),
+                            dmc.TabsPanel([
+                                dmc.SimpleGrid([
+                                    dmc.Title(
+                                        "All ensembl ENS... Ids in experiment (background)",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                    dmc.Title(
+                                        "All regulated ensembl ENS... Ids in experiment",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
+                                    ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Textarea(
+                                        id = "textarea_all_transcripts",
+                                        style = {"height": "100%", "display": "inline"},
+                                        minRows = 15,
+                                    ),
+                                    dmc.Textarea(
+                                        id = "textarea_regulated_transcripts",
+                                        minRows = 15,
+                                    ),
+                                ], cols = 2),
+                                dmc.SimpleGrid([
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_all_transcripts",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
+                                    ),
+                                    dmc.Group(
+                                        dmc.Text(
+                                            "Entries: 0",
+                                            id = "num_regulated_transcripts",
+                                            style = {"color": "#808080"},
+                                            size = "12px",
+                                        ),
+                                        position = "right",
+                                    ),
+                                ], cols = 2)],
+                                value = "transcripts_tab",
+                            ),
                         ],
                         color = "blue", # default is blue
                         orientation = "horizontal", # or "vertical"
@@ -1076,6 +1129,11 @@ def layout():
                                     dmc.Checkbox(
                                         label = "Use metabolites",
                                         id = "checkbox_use_metabolites",
+                                        checked = False,
+                                    ),
+                                    dmc.Checkbox(
+                                        label = "Use transcripts",
+                                        id = "checkbox_use_transcripts",
                                         checked = False,
                                     ),
                                 ]),
@@ -1206,7 +1264,7 @@ app.layout = layout
     Output("select_domains", "value", allow_duplicate = True),
     Output("select_domains", "data", allow_duplicate = True),
     Input("select_organism", "value"),
-    Input("select_domains", "value"),
+    State("select_domains", "value"),
     prevent_initial_call = True,
 )
 def organism_changed(organism, domain_values):
@@ -1223,12 +1281,6 @@ def organism_changed(organism, domain_values):
     Output("graph_enrichment_results", "selectedRows", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
-    Output("background_lipids", "children", allow_duplicate = True),
-    Output("regulated_lipids", "children", allow_duplicate = True),
-    Output("background_proteins", "children", allow_duplicate = True),
-    Output("regulated_proteins", "children", allow_duplicate = True),
-    Output("background_metabolites", "children", allow_duplicate = True),
-    Output("regulated_metabolites", "children", allow_duplicate = True),
     Output("histogram_results", "disabled", allow_duplicate = True),
     Input("button_run_enrichment", "n_clicks"),
     State("textarea_all_lipids", "value"),
@@ -1237,6 +1289,8 @@ def organism_changed(organism, domain_values):
     State("textarea_regulated_proteins", "value"),
     State("textarea_all_metabolites", "value"),
     State("textarea_regulated_metabolites", "value"),
+    State("textarea_all_transcripts", "value"),
+    State("textarea_regulated_transcripts", "value"),
     State("select_organism", "value"),
     State("select_domains", "value"),
     State("switch_ignore_unparsable_lipids", "checked"),
@@ -1247,6 +1301,7 @@ def organism_changed(organism, domain_values):
     State("checkbox_use_lipids", "checked"),
     State("checkbox_use_proteins", "checked"),
     State("checkbox_use_metabolites", "checked"),
+    State("checkbox_use_transcripts", "checked"),
     State("enrichment_parent_terms", "checked"),
     prevent_initial_call = True,
 )
@@ -1258,6 +1313,8 @@ def run_enrichment(
     regulated_proteins_list,
     all_metabolites_list,
     regulated_metabolites_list,
+    all_transcripts_list,
+    regulated_transcripts_list,
     organism,
     domains,
     ignore_unrecognizable_molecules,
@@ -1268,20 +1325,24 @@ def run_enrichment(
     with_lipids,
     with_proteins,
     with_metabolites,
+    with_transcripts,
     all_domain_terms,
 ):
     do_activate_alert = True
     histogram_disabled = True
 
     if session_id not in sessions:
-        return "", [], [], do_activate_alert, "Your session has expired. Please refresh the website.", "", "", "", "", "", "", histogram_disabled
+        return "", [], [], do_activate_alert, "Your session has expired. Please refresh the website.", histogram_disabled
 
     logger.info(f"Enrichment session: {session_id}")
     session = sessions[session_id]
     session.time = time.time()
 
-    if not with_lipids and not with_proteins and not with_metabolites:
-        return "", [], [], do_activate_alert, "No omics data is selected.", "", "", "", "", "", "", histogram_disabled
+    if not with_lipids and not with_proteins and not with_metabolites and not with_transcripts:
+        return "", [], [], do_activate_alert, "No omics data is selected.", histogram_disabled
+
+    if len(domains) == 0:
+        return "", [], [], do_activate_alert, "No domain(s) selected.", histogram_disabled
 
     ontology = enrichment_ontologies[organism]
 
@@ -1289,151 +1350,208 @@ def run_enrichment(
     lipidome, regulated_lipids = {}, set()
     proteome, regulated_proteins = set(), set()
     metabolome, regulated_metabolites = set(), set()
-    if with_lipids:
-        if len(all_lipids_list) == 0:
-            return "", [], [], do_activate_alert, "Please paste lipid names into the first text area.", "", "", "", "", "", "", histogram_disabled
+    transcriptome, regulated_transcripts = set(), set()
 
-        if len(regulated_lipids_list) == 0:
-            return "", [], [], do_activate_alert, "Please paste lipid names into the second text area.", "", "", "", "", "", "", histogram_disabled
+    if not session.data_loaded:
+        if with_lipids:
+            if len(all_lipids_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste lipid names into the first text area.", histogram_disabled
 
-        for lipid_name in all_lipids_list.split("\n"):
-            if len(lipid_name) == 0: continue
-            try:
-                lipid = lipid_parser.parse(lipid_name)
-                lipidome[lipid_name] = lipid
+            if len(regulated_lipids_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste lipid names into the second text area.", histogram_disabled
 
-            except Exception as e:
-                if not ignore_unrecognizable_molecules:
-                    return "", [], [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+            for lipid_name in all_lipids_list.split("\n"):
+                if len(lipid_name) == 0: continue
+                try:
+                    lipid = lipid_parser.parse(lipid_name)
+                    lipidome[lipid_name] = lipid
 
-        for lipid_name in regulated_lipids_list.split("\n"):
-            if len(lipid_name) == 0: continue
-            if lipid_name not in lipidome:
-                if ignore_unknown: continue
-                return "", [], [], do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
-            regulated_lipids.add(lipid_name)
+                except Exception as e:
+                    if not ignore_unrecognizable_molecules:
+                        return "", [], [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
 
-        if len(lipidome) == 0:
-            return "", [], [], do_activate_alert, "No background lipid left after lipid recognition.", "", "", "", "", "", "", histogram_disabled
+            for lipid_name in regulated_lipids_list.split("\n"):
+                if len(lipid_name) == 0: continue
+                if lipid_name not in lipidome:
+                    if ignore_unknown: continue
+                    return "", [], [], do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
+                regulated_lipids.add(lipid_name)
 
-        if len(regulated_lipids) == 0:
-            return "", [], [], do_activate_alert, "No regulated lipid left after lipid recognition.", "", "", "", "", "", "", histogram_disabled
+            if len(lipidome) == 0:
+                return "", [], [], do_activate_alert, "No background lipid left after lipid recognition.", histogram_disabled
 
-        if len(regulated_lipids) > len(lipidome):
-            return "", [], [], do_activate_alert, "Length of regulated lipid list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
+            if len(regulated_lipids) == 0:
+                return "", [], [], do_activate_alert, "No regulated lipid left after lipid recognition.", histogram_disabled
 
-        left_lipids = regulated_lipids - lipidome.keys()
-        if len(left_lipids) > 0:
-            if ignore_unknown:
-                for lipid_name in left_lipids:
-                    del lipidome[lipid_name]
-            else:
-                return "", [], [], do_activate_alert, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
+            if len(regulated_lipids) > len(lipidome):
+                return "", [], [], do_activate_alert, "Length of regulated lipid list must be smaller than background list.", histogram_disabled
 
-        target_set |= regulated_lipids
+            left_lipids = regulated_lipids - lipidome.keys()
+            if len(left_lipids) > 0:
+                if ignore_unknown:
+                    for lipid_name in left_lipids:
+                        del lipidome[lipid_name]
+                else:
+                    return "", [], [], do_activate_alert, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
 
-    if with_proteins:
-        if len(all_proteins_list) == 0:
-            return "", [], [], do_activate_alert, "Please paste protein accession into the first text area.", "", "", "", "", "", "", histogram_disabled
+            target_set |= regulated_lipids
 
-        if len(regulated_proteins_list) == 0:
-            return "", [], [], do_activate_alert, "Please paste protein accessions into the second text area.", "", "", "", "", "", "", histogram_disabled
+        if with_proteins:
+            if len(all_proteins_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste protein accession into the first text area.", histogram_disabled
 
-        proteome = set(protein for protein in all_proteins_list.split("\n") if len(protein) > 0)
-        regulated_proteins = set(protein for protein in regulated_proteins_list.split("\n") if len(protein) > 0)
+            if len(regulated_proteins_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste protein accessions into the second text area.", histogram_disabled
 
-        left_proteins = proteome - ontology.clean_protein_ids
-        if len(left_proteins) > 0:
-            if ignore_unrecognizable_molecules:
-                proteome -= left_proteins
-            else:
-                return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+            proteome = set(protein for protein in all_proteins_list.split("\n") if len(protein) > 0)
+            regulated_proteins = set(protein for protein in regulated_proteins_list.split("\n") if len(protein) > 0)
 
-        left_proteins = regulated_proteins - ontology.clean_protein_ids
-        if len(left_proteins) > 0:
-            if ignore_unrecognizable_molecules:
-                regulated_proteins -= left_proteins
-            else:
-                return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+            left_proteins = proteome - ontology.clean_protein_ids
+            if len(left_proteins) > 0:
+                if ignore_unrecognizable_molecules:
+                    proteome -= left_proteins
+                else:
+                    return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
 
-        left_proteins = regulated_proteins - proteome
-        if len(left_proteins) > 0:
-            if ignore_unknown:
-                proteome -= left_proteins
-            else:
-                return "", [], [], do_activate_alert, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
+            left_proteins = regulated_proteins - ontology.clean_protein_ids
+            if len(left_proteins) > 0:
+                if ignore_unrecognizable_molecules:
+                    regulated_proteins -= left_proteins
+                else:
+                    return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
 
-        if len(proteome) == 0:
-            return "", [], [], do_activate_alert, "No background protein left after protein recognition.", "", "", "", "", "", "", histogram_disabled
+            left_proteins = regulated_proteins - proteome
+            if len(left_proteins) > 0:
+                if ignore_unknown:
+                    proteome -= left_proteins
+                else:
+                    return "", [], [], do_activate_alert, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
 
-        if len(regulated_proteins) == 0:
-            return "", [], [], do_activate_alert, "No regulated protein left after protein recognition.", "", "", "", "", "", "", histogram_disabled
+            if len(proteome) == 0:
+                return "", [], [], do_activate_alert, "No background protein left after protein recognition.", histogram_disabled
 
-        if len(regulated_proteins) > len(proteome):
-            return "", [], [], do_activate_alert, "Length of regulated protein list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
+            if len(regulated_proteins) == 0:
+                return "", [], [], do_activate_alert, "No regulated protein left after protein recognition.", histogram_disabled
 
-        proteome = set([f"UNIPROT:{protein}" for protein in proteome])
-        regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
-        target_set |= regulated_proteins
+            if len(regulated_proteins) > len(proteome):
+                return "", [], [], do_activate_alert, "Length of regulated protein list must be smaller than background list.", histogram_disabled
 
-    if with_metabolites:
-        if len(all_metabolites_list) == 0:
-            return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the first text area.", "", "", "", "", "", "", histogram_disabled
+            proteome = set([f"UNIPROT:{protein}" for protein in proteome])
+            regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
+            target_set |= regulated_proteins
 
-        if len(regulated_metabolites_list) == 0:
-            return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the second text area.", "", "", "", "", "", "", histogram_disabled
+        if with_metabolites:
+            if len(all_metabolites_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the first text area.", histogram_disabled
 
-        metabolome = set(metabolite for metabolite in all_metabolites_list.split("\n") if len(metabolite) > 0)
-        regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list.split("\n") if len(metabolite) > 0)
+            if len(regulated_metabolites_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the second text area.", histogram_disabled
 
-        left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
-        left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
-        if len(left_metabolites) > 0:
-            if ignore_unrecognizable_molecules:
-                metabolome -= left_metabolites
-            else:
-                return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+            metabolome = set(metabolite for metabolite in all_metabolites_list.split("\n") if len(metabolite) > 0)
+            regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list.split("\n") if len(metabolite) > 0)
 
-        left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
-        left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
-        if len(left_metabolites) > 0:
-            if ignore_unrecognizable_molecules:
-                regulated_metabolites -= left_metabolites
-            else:
-                return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", "", "", "", "", "", "", histogram_disabled
+            left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
+            left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
+            if len(left_metabolites) > 0:
+                if ignore_unrecognizable_molecules:
+                    metabolome -= left_metabolites
+                else:
+                    return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
 
-        left_metabolites = regulated_metabolites - metabolome
-        if len(left_metabolites) > 0:
-            if ignore_unknown:
-                metabolome -= left_metabolites
-            else:
-                return "", [], [], do_activate_alert, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", "", "", "", "", "", "", histogram_disabled
+            left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
+            left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
+            if len(left_metabolites) > 0:
+                if ignore_unrecognizable_molecules:
+                    regulated_metabolites -= left_metabolites
+                else:
+                    return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
 
-        if len(metabolome) == 0:
-            return "", [], [], do_activate_alert, "No background metabolite left after metabolite recognition.", "", "", "", "", "", "", histogram_disabled
+            left_metabolites = regulated_metabolites - metabolome
+            if len(left_metabolites) > 0:
+                if ignore_unknown:
+                    metabolome -= left_metabolites
+                else:
+                    return "", [], [], do_activate_alert, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
 
-        if len(regulated_metabolites) == 0:
-            return "", [], [], do_activate_alert, "No regulated metabolite left after metabolite recognition.", "", "", "", "", "", "", histogram_disabled
+            if len(metabolome) == 0:
+                return "", [], [], do_activate_alert, "No background metabolite left after metabolite recognition.", histogram_disabled
 
-        if len(regulated_metabolites) > len(metabolome):
-            return "", [], [], do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", "", "", "", "", "", "", histogram_disabled
+            if len(regulated_metabolites) == 0:
+                return "", [], [], do_activate_alert, "No regulated metabolite left after metabolite recognition.", histogram_disabled
 
-        metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
-        regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
-        target_set |= regulated_metabolites
+            if len(regulated_metabolites) > len(metabolome):
+                return "", [], [], do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", histogram_disabled
 
-    if len(domains) == 0:
-        return "", [], [], do_activate_alert, "No domain(s) selected.", "", "", "", "", "", "", histogram_disabled
+            metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
+            regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
+            target_set |= regulated_metabolites
 
-    if session.data_loaded == False:
-        ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome)
-        session.data_loaded = True
+        if with_transcripts:
+            if len(all_transcripts_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste transcript ensembl Ids into the first text area.", histogram_disabled
+
+            if len(regulated_transcripts_list) == 0:
+                return "", [], [], do_activate_alert, "Please paste transcript ensembl Ids into the second text area.", histogram_disabled
+
+            transcriptome = set(transcript for transcript in all_transcripts_list.split("\n") if len(transcript) > 0)
+            regulated_transcripts = set(transcript for transcript in regulated_transcripts_list.split("\n") if len(transcript) > 0)
+
+            transcript_keys = set(ontology.transcripts.keys())
+            left_transcripts = set(t for t in transcriptome if t.split(".")[0] not in transcript_keys)
+            if len(left_transcripts) > 0:
+                if ignore_unrecognizable_molecules:
+                    transcriptome -= left_transcripts
+                else:
+                    return "", [], [], do_activate_alert, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+
+            left_transcripts = set(t for t in regulated_transcripts if t.split(".")[0] not in transcript_keys)
+            if len(left_transcripts) > 0:
+                if ignore_unrecognizable_molecules:
+                    regulated_transcripts -= left_transcripts
+                else:
+                    return "", [], [], do_activate_alert, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+
+            left_transcripts = regulated_transcripts - transcriptome
+            if len(left_transcripts) > 0:
+                if ignore_unknown:
+                    transcriptome -= left_transcripts
+                else:
+                    return "", [], [], do_activate_alert, "The regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
+
+            if len(transcriptome) == 0:
+                return "", [], [], do_activate_alert, "No background transcript left after transcript recognition.", histogram_disabled
+
+            if len(regulated_transcripts) == 0:
+                return "", [], [], do_activate_alert, "No regulated transcript left after transcript recognition.", histogram_disabled
+
+            if len(regulated_transcripts) > len(transcriptome):
+                return "", [], [], do_activate_alert, "Length of regulated transcript list must be smaller than background list.", histogram_disabled
+
+            target_set |= regulated_transcripts
+
+        ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome, transcript_set = transcriptome)
         session.ontology = ontology
+        session.domains = set(domains)
+        session.data_loaded = True
 
-    session.domains = set(domains)
+        session.background_lipids = lipidome if with_lipids else None
+        session.regulated_lipids = regulated_lipids if with_lipids else None
+        session.background_proteins = proteome if with_proteins else None
+        session.regulated_proteins = regulated_proteins if with_proteins else None
+        session.background_metabolites = metabolome if with_metabolites else None
+        session.regulated_metabolites = regulated_metabolites if with_metabolites else None
+        session.background_transcripts = transcriptome if with_transcripts else None
+        session.regulated_transcripts = regulated_transcripts if with_transcripts else None
+
+    else:
+        if with_lipids: target_set |= session.regulated_lipids
+        if with_proteins: target_set |= session.regulated_proteins
+        if with_metabolites: target_set |= session.regulated_metabolites
+        if with_transcripts: target_set |= session.regulated_transcripts
+
     session.all_domain_terms = all_domain_terms
-    ontology.enrichment_analysis(session, target_set, domains, term_regulation)
-    results = session.result
+    results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
+    session.result = results
 
     if correction_method != "no" and len(results) > 0:
         pvalues = [r.pvalue for r in results]
@@ -1467,12 +1585,6 @@ def run_enrichment(
         [],
         not do_activate_alert,
         "",
-        "|".join(lipidome),
-        "|".join(regulated_lipids),
-        "|".join(proteome) if with_proteins else "",
-        "|".join(regulated_proteins) if with_proteins else "",
-        "|".join(metabolome) if with_metabolites else "",
-        "|".join(regulated_metabolites) if with_metabolites else "",
         histogram_disabled,
     )
 
@@ -1487,15 +1599,22 @@ def run_enrichment(
     Output("num_regulated_proteins", "children", allow_duplicate = True),
     Output("num_all_metabolites", "children", allow_duplicate = True),
     Output("num_regulated_metabolites", "children", allow_duplicate = True),
+    Output("num_all_transcripts", "children", allow_duplicate = True),
+    Output("num_regulated_transcripts", "children", allow_duplicate = True),
     Input("textarea_all_lipids", "value"),
     Input("textarea_regulated_lipids", "value"),
     Input("textarea_all_proteins", "value"),
     Input("textarea_regulated_proteins", "value"),
     Input("textarea_all_metabolites", "value"),
     Input("textarea_regulated_metabolites", "value"),
+    Input("textarea_all_transcripts", "value"),
+    Input("textarea_regulated_transcripts", "value"),
+    Input("use_bounded_fatty_acyls", "checked"),
     Input("checkbox_use_lipids", "checked"),
     Input("checkbox_use_proteins", "checked"),
     Input("checkbox_use_metabolites", "checked"),
+    Input("checkbox_use_transcripts", "checked"),
+    Input("select_organism", "value"),
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
@@ -1506,9 +1625,14 @@ def update_background(
     regulated_proteins_list,
     all_metabolites_list,
     regulated_metabolites_list,
+    all_transcripts_list,
+    regulated_transcripts_list,
+    use_bounded_fatty_acyls,
     with_lipids,
     with_proteins,
     with_metabolites,
+    with_transcripts,
+    select_organism,
     session_id,
 ):
     num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))
@@ -1517,6 +1641,8 @@ def update_background(
     num_regulated_proteins = sum(len(line) > 0 for line in regulated_proteins_list.split("\n"))
     num_all_metabolites = sum(len(line) > 0 for line in all_metabolites_list.split("\n"))
     num_regulated_metabolites = sum(len(line) > 0 for line in regulated_metabolites_list.split("\n"))
+    num_all_transcripts = sum(len(line) > 0 for line in all_transcripts_list.split("\n"))
+    num_regulated_transcripts = sum(len(line) > 0 for line in regulated_transcripts_list.split("\n"))
 
     if session_id not in sessions:
         return (
@@ -1528,6 +1654,8 @@ def update_background(
             f"Entries: {num_regulated_proteins}",
             f"Entries: {num_all_metabolites}",
             f"Entries: {num_regulated_metabolites}",
+            f"Entries: {num_all_transcripts}",
+            f"Entries: {num_regulated_transcripts}",
         )
 
     sessions[session_id].time = time.time()
@@ -1542,6 +1670,8 @@ def update_background(
         f"Entries: {num_regulated_proteins}",
         f"Entries: {num_all_metabolites}",
         f"Entries: {num_regulated_metabolites}",
+        f"Entries: {num_all_transcripts}",
+        f"Entries: {num_regulated_transcripts}",
     )
 
 
@@ -1554,12 +1684,6 @@ def update_background(
     Input("icon_download_results", "n_clicks"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
-    State("background_lipids", "children"),
-    State("regulated_lipids", "children"),
-    State("background_proteins", "children"),
-    State("regulated_proteins", "children"),
-    State("background_metabolites", "children"),
-    State("regulated_metabolites", "children"),
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
@@ -1567,12 +1691,6 @@ def download_table(
     _,
     graph_enrichment_results,
     selected_rows,
-    background_lipids,
-    regulated_lipids,
-    background_proteins,
-    regulated_proteins,
-    background_metabolites,
-    regulated_metabolites,
     session_id,
 ):
     if session_id not in sessions:
@@ -1583,7 +1701,8 @@ def download_table(
             "Your session has expired. Please refresh the website.",
         )
 
-    sessions[session_id].time = time.time()
+    session = sessions[session_id]
+    session.time = time.time()
     domains = []
     term_ids = []
     terms = []
@@ -1604,29 +1723,41 @@ def download_table(
         pvalues.append(row["pvalue"])
 
     df = pd.DataFrame({"Domain": domains, "Term ID": term_ids, "Term": terms, "Count": counts, "p-value": pvalues})
-    data = sessions[session_id].data
+    data = session.data
 
-    with_lipids = len(background_lipids) > 0 or len(regulated_lipids) > 0
-    with_proteins = len(background_proteins) > 0 or len(regulated_proteins) > 0
-    with_metabolites = len(background_metabolites) > 0 or len(regulated_metabolites) > 0
+    background_lipids = session.background_lipids
+    regulated_lipid_set = session.regulated_lipids
+    background_proteins = session.background_proteins
+    regulated_protein_set = session.regulated_proteins
+    background_metabolites = session.background_metabolites
+    regulated_metabolite_set = session.regulated_metabolites
+    background_transcripts = session.background_transcripts
+    regulated_transcript_set = session.regulated_transcripts
+
+    with_lipids = background_lipids != None
+    with_proteins = background_proteins != None
+    with_metabolites = background_metabolites != None
+    with_transcripts = background_transcripts != None
 
     if with_lipids:
-        background_lipids = sorted(background_lipids.split("|"))
-        regulated_lipids = sorted(regulated_lipids.split("|"))
-        regulated_lipid_set = set(regulated_lipids)
+        background_lipids = sorted(list(background_lipids.keys()))
+        regulated_lipids = sorted(list(regulated_lipid_set))
         associated_lipids = {}
 
     if with_proteins:
-        background_proteins = sorted(background_proteins.split("|"))
-        regulated_proteins = sorted(regulated_proteins.split("|"))
-        regulated_protein_set = set(regulated_proteins)
+        background_proteins = sorted(list(background_proteins))
+        regulated_proteins = sorted(list(regulated_protein_set))
         associated_proteins = {}
 
     if with_metabolites:
-        background_metabolites = sorted(background_metabolites.split("|"))
-        regulated_metabolites = sorted(regulated_metabolites.split("|"))
-        regulated_metabolite_set = set(regulated_metabolites)
+        background_metabolites = sorted(list(background_metabolites))
+        regulated_metabolites = sorted(list(regulated_metabolite_set))
         associated_metabolites = {}
+
+    if with_transcripts:
+        background_transcripts = sorted(list(background_transcripts))
+        regulated_transcripts = sorted(list(regulated_transcript_set))
+        associated_transcripts = {}
 
     for term_id, term in zip(term_ids, terms):
         term_id = term_id.split("|")[0]
@@ -1647,6 +1778,11 @@ def download_table(
             metabolites = sorted(list(molecules & set(background_metabolites)))
             associated_metabolites[term] = [metabolite for metabolite in metabolites]
             associated_metabolites[f"{term}, regulated"] = ["X" if metabolite in regulated_metabolite_set else "" for metabolite in metabolites]
+
+        if with_transcripts:
+            transcripts = sorted(list(molecules & set(background_transcripts)))
+            associated_transcripts[term] = [transcript for transcript in transcripts]
+            associated_transcripts[f"{term}, regulated"] = ["X" if transcript in regulated_transcript_set else "" for transcript in transcripts]
 
     output = io.BytesIO()
     writer = pd.ExcelWriter(output, engine = 'xlsxwriter')
@@ -1669,6 +1805,14 @@ def download_table(
         pd.DataFrame.from_dict(associated_metabolites, orient = "index").transpose().to_excel(writer, sheet_name = "Associated metabolites", index = False)
         pd.DataFrame({"ChEBI": background_metabolites}).to_excel(writer, sheet_name = "Background metabolites", index = False)
         pd.DataFrame({"ChEBI": regulated_metabolites}).to_excel(writer, sheet_name = "Regulated metabolites", index = False)
+
+    if with_transcripts:
+        background_transcripts = [transcript for transcript in background_transcripts]
+        regulated_transcripts = [transcript for transcript in regulated_transcripts]
+        pd.DataFrame.from_dict(associated_transcripts, orient = "index").transpose().to_excel(writer, sheet_name = "Associated transcripts", index = False)
+        pd.DataFrame({"ChEBI": background_transcripts}).to_excel(writer, sheet_name = "Background transcripts", index = False)
+        pd.DataFrame({"ChEBI": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
+
     writer._save()
 
     return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), False, ""
@@ -1693,10 +1837,13 @@ def open_load_examples_modal(n_clicks):
     Output("textarea_regulated_proteins", "value", allow_duplicate = True),
     Output("textarea_all_metabolites", "value", allow_duplicate = True),
     Output("textarea_regulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_all_transcripts", "value", allow_duplicate = True),
+    Output("textarea_regulated_transcripts", "value", allow_duplicate = True),
     Output("select_organism", "value", allow_duplicate = True),
     Output("checkbox_use_lipids", "checked", allow_duplicate = True),
     Output("checkbox_use_proteins", "checked", allow_duplicate = True),
     Output("checkbox_use_metabolites", "checked", allow_duplicate = True),
+    Output("checkbox_use_transcripts", "checked", allow_duplicate = True),
     Input("load_examples_modal_submit_button", "n_clicks"),
     State({"type": "checkbox_type", "index": ALL}, "checked"),
     State({"type": "checkbox_type", "index": ALL}, "id"),
@@ -1717,10 +1864,13 @@ def submit_load_examples_modal(n_clicks, checked, checkbox_ids):
         "\n".join(examples[index]["regp"]),
         "\n".join(examples[index]["bgm"]),
         "\n".join(examples[index]["regm"]),
+        "\n".join(examples[index]["bgt"]),
+        "\n".join(examples[index]["regt"]),
         examples[index]["org"],
         len(examples[index]["bgl"]) > 0 or len(examples[index]["regl"]) > 0,
         len(examples[index]["bgp"]) > 0 or len(examples[index]["regp"]) > 0,
         len(examples[index]["bgm"]) > 0 or len(examples[index]["regm"]) > 0,
+        len(examples[index]["bgt"]) > 0 or len(examples[index]["regt"]) > 0,
     )
 
 
@@ -1776,10 +1926,12 @@ def update_action_icons(selected_rows):
     Output("term_lipids_modal_grid", "rowData", allow_duplicate = True),
     Output("term_proteins_modal_grid", "rowData", allow_duplicate = True),
     Output("term_metabolites_modal_grid", "rowData", allow_duplicate = True),
+    Output("term_transcripts_modal_grid", "rowData", allow_duplicate = True),
     Output("term_molecules_modal_id", "children", allow_duplicate = True),
     Output("lipid_tab_modal_tab", "disabled", allow_duplicate = True),
     Output("protein_tab_modal_tab", "disabled", allow_duplicate = True),
     Output("metabolite_tab_modal_tab", "disabled", allow_duplicate = True),
+    Output("transcript_tab_modal_tab", "disabled", allow_duplicate = True),
     Output("term_molecules_modal_tab", "value", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
@@ -1787,26 +1939,15 @@ def update_action_icons(selected_rows):
     Output("contingency_table", "children", allow_duplicate = True),
     Input("graph_enrichment_results", "cellRendererData"),
     State("sessionid", "children"),
-    State("background_lipids", "children"),
-    State("regulated_lipids", "children"),
-    State("background_proteins", "children"),
-    State("regulated_proteins", "children"),
-    State("background_metabolites", "children"),
-    State("regulated_metabolites", "children"),
     prevent_initial_call = True,
 )
 def open_term_window(
     row_data,
     session_id,
-    background_lipids,
-    regulated_lipids,
-    background_proteins,
-    regulated_proteins,
-    background_metabolites,
-    regulated_metabolites,
 ):
     if session_id not in sessions or "rowId" not in row_data:
         return (
+            no_update,
             no_update,
             no_update,
             no_update,
@@ -1822,46 +1963,57 @@ def open_term_window(
             "",
             "",
         )
-
-    sessions[session_id].time = time.time()
+    session = sessions[session_id]
+    session.time = time.time()
     if "rowId" not in row_data:
         raise exceptions.PreventUpdate
 
     term_id = row_data["rowId"].split("|")[0]
-    if term_id not in sessions[session_id].data:
+    if term_id not in session.data:
         raise exceptions.PreventUpdate
 
-    with_lipids = len(background_lipids) > 0 or len(regulated_lipids) > 0
-    with_proteins = len(background_proteins) > 0 or len(regulated_proteins) > 0
-    with_metabolites = len(background_metabolites) > 0 or len(regulated_metabolites) > 0
+    background_lipids = session.background_lipids
+    regulated_lipids = session.regulated_lipids
+    background_proteins = session.background_proteins
+    regulated_proteins = session.regulated_proteins
+    background_metabolites = session.background_metabolites
+    regulated_metabolites = session.regulated_metabolites
+    background_transcripts = session.background_transcripts
+    regulated_transcripts = session.regulated_transcripts
+
+    with_lipids = background_lipids != None
+    with_proteins = background_proteins != None
+    with_metabolites = background_metabolites != None
+    with_transcripts = background_transcripts != None
 
     lipid_table = []
     protein_table = []
     metabolite_table = []
+    transcript_table = []
 
     result = sessions[session_id].data[term_id]
     molecules = sorted(list(result.source_terms))
 
     if with_lipids:
-        background_lipids = set(background_lipids.split("|"))
-        regulated_lipids = set(regulated_lipids.split("|"))
+        background_lipids = set(background_lipids.keys())
         lipid_table = [{"molecule": molecule, "regulated": ("X" if molecule in regulated_lipids else "")} for molecule in molecules if molecule in background_lipids]
 
     if with_proteins:
-        background_proteins = set(background_proteins.split("|"))
-        regulated_proteins = set(regulated_proteins.split("|"))
         protein_table = [{"molecule": molecule.replace("UNIPROT:", ""), "regulated": ("X" if molecule in regulated_proteins else "")} for molecule in molecules if molecule in background_proteins]
 
     if with_metabolites:
-        background_metabolites = set(background_metabolites.split("|"))
-        regulated_metabolites = set(regulated_metabolites.split("|"))
         metabolite_table = [{"molecule": molecule, "regulated": ("X" if molecule in regulated_metabolites else "")} for molecule in molecules if molecule in background_metabolites]
+
+    if with_transcripts:
+        transcript_table = [{"molecule": molecule, "regulated": ("X" if molecule in regulated_transcripts else "")} for molecule in molecules if molecule in background_transcripts]
 
     tab_value = "lipid_tab_modal"
     if not with_lipids:
         tab_value = "protein_tab_modal"
         if not with_proteins:
             tab_value = "metabolite_tab_modal"
+            if not with_metabolites:
+                tab_value = "transcript_tab_modal"
 
     col_1 = ""
     col_2 = "Molecules associated with Term"
@@ -1909,10 +2061,12 @@ def open_term_window(
         lipid_table,
         protein_table,
         metabolite_table,
+        transcript_table,
         list(result.term.term_id)[0],
         not with_lipids,
         not with_proteins,
         not with_metabolites,
+        not with_transcripts,
         tab_value,
         False,
         "",
@@ -2087,9 +2241,6 @@ def open_sunburstplot(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
-    State("background_lipids", "children"),
-    State("background_proteins", "children"),
-    State("background_metabolites", "children"),
     prevent_initial_call = True,
 )
 def open_barplot(
@@ -2103,9 +2254,6 @@ def open_barplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
-    background_lipids,
-    background_proteins,
-    background_metabolites,
 ):
     if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"} or bar_sorting not in {BAR_SORTING_PVALUE, BAR_SORTING_SIMILARITY} or type(jaccard_ths) not in {float, int}:
         raise exceptions.PreventUpdate
@@ -2123,10 +2271,19 @@ def open_barplot(
         )
 
     session = sessions[session_id]
-    with_lipids = len(background_lipids) > 0
-    with_proteins = len(background_proteins) > 0
-    with_metabolites = len(background_metabolites) > 0
-    multiomics = sum([with_lipids + with_proteins + with_metabolites]) > 1
+
+    background_lipids = session.background_lipids
+    background_proteins = session.background_proteins
+    background_metabolites = session.background_metabolites
+    background_transcripts = session.background_transcripts
+
+    with_lipids = background_lipids != None
+    with_proteins = background_proteins != None
+    with_metabolites = background_metabolites != None
+    with_transcripts = background_transcripts != None
+
+
+    multiomics = sum([with_lipids + with_proteins + with_metabolites, with_transcripts]) > 1
     barplot_controls_style["display"] = "block"
     sunburst_controls_style["display"] = "none"
 
@@ -2190,39 +2347,10 @@ def open_barplot(
     mnes = np.max(number_entities_sizes)
     number_entities_sizes = number_entities_sizes / mnes
     number_regulated_entities_sizes = number_regulated_entities_sizes / mnes
-
-
     fig = go.Figure()
 
-    #fig = go.Figure(data = go.Bar())
-    # Add radial bars
-    # fig.add_trace(go.Barpolar(
-    #     r = [max_height] * n,
-    #     theta = angles,
-    #     width = [bar_width] * n,
-    #     marker_color = "#eeeeee",
-    #     hoverinfo = 'skip',
-    #     showlegend = False,
-    # ))
-    #
-    # fig.add_trace(go.Barpolar(
-    #     r = pvalues,
-    #     theta = angles,
-    #     width = [bar_width] * n,
-    #     marker_color = "#fc947e", #term_domain_colors_bar,
-    #     customdata = custom_data,
-    #     hovertemplate = "Term ID: %{customdata[0]}<br />Term: %{customdata[1]}<br />p-value: %{customdata[2]}<br />Regulated molecules: %{customdata[3]}<br />Associated molecules: %{customdata[4]}<br />Domain: %{customdata[5]}<extra></extra>",
-    # ))
-
     if with_lipids:
-        background_lipids = set(background_lipids.split("|"))
-
-    if with_proteins:
-        background_proteins = set(background_proteins.split("|"))
-
-    if with_metabolites:
-        background_metabolites = set(background_metabolites.split("|"))
-
+        background_lipids = set(background_lipids.keys())
 
     # Add thick arcs above bars
     annotation_label = selected_term_ids if bar_label == "id" else term_names
@@ -2689,11 +2817,13 @@ def select_predefined_modal(n_clicks, selected_organism):
     Input("term_lipids_modal_grid", "cellRendererData"),
     Input("term_proteins_modal_grid", "cellRendererData"),
     Input("term_metabolites_modal_grid", "cellRendererData"),
+    Input("term_transcripts_modal_grid", "cellRendererData"),
     State("sessionid", "children"),
     State("term_molecules_modal_id", "children"),
     State("term_lipids_modal_grid", "rowData"),
     State("term_proteins_modal_grid", "rowData"),
     State("term_metabolites_modal_grid", "rowData"),
+    State("term_transcripts_modal_grid", "rowData"),
     State("select_organism", "value"),
     prevent_initial_call = True,
 )
@@ -2701,11 +2831,13 @@ def show_molecule_term_path(
     renderer_data_lipids,
     renderer_data_proteins,
     renderer_data_metabolites,
+    renderer_data_transcripts,
     session_id,
     target_term_id,
     row_data_lipids,
     row_data_proteins,
     row_data_metabolites,
+    row_data_transcripts,
     organism,
 ):
     if session_id not in sessions:
@@ -2732,6 +2864,12 @@ def show_molecule_term_path(
         if len(row_data_metabolites) <= row_index:
             return True, "Your session has expired. Please refresh the website."
         molecule = row_data_metabolites[row_index]["molecule"]
+
+    elif trigger == "term_transcripts_modal_grid":
+        row_index = renderer_data_transcripts["rowIndex"]
+        if len(row_data_transcripts) <= row_index:
+            return True, "Your session has expired. Please refresh the website."
+        molecule = row_data_transcripts[row_index]["molecule"]
 
     ontology = enrichment_ontologies[organism]
     term_path = []
@@ -2773,6 +2911,9 @@ def show_molecule_term_path(
             elif term_id.startswith("NCBI:"):
                 href = f"https://www.ncbi.nlm.nih.gov/gene/{term_id.split(':')[1]}"
 
+            elif term_id.startswith("ENST") or term_id.startswith("ENSG") or term_id.startswith("ENSP"):
+                href = f"https://www.ensembl.org/id/{term_id}"
+
         else:
             term_name = term_id
 
@@ -2798,30 +2939,6 @@ def show_molecule_term_path(
         )
 
     return False, "", term_path
-
-
-@callback(
-    Output("use_bounded_fatty_acyls", "checked", allow_duplicate = True),
-    Output("info_modal", "opened", allow_duplicate = True),
-    Output("info_modal_message", "children", allow_duplicate = True),
-    Input("use_bounded_fatty_acyls", "checked"),
-    State("sessionid", "children"),
-    prevent_initial_call = True,
-)
-def switch_bounded_fatty_acyls(checked, session_id):
-    if checked == None:
-        raise exceptions.PreventUpdate
-
-    if session_id not in sessions:
-        return dash.no_update, do_activate_alert, "Your session has expired. Please refresh the website."
-
-    session = sessions[session_id]
-    session.use_bounded_fatty_acyls = checked
-    session.data_loaded = False
-    session.ontology = None
-    session.domains = None
-
-    raise exceptions.PreventUpdate
 
 
 

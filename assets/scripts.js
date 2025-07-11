@@ -51,6 +51,9 @@ dagcomponentfuncs.TermIDRenderer = function (props) {
         else if (term_id.startsWith("NCBI:")){
             href = "https://www.ncbi.nlm.nih.gov/gene/" + term_id.split(":")[1];
         }
+        else if (term_id.startsWith("ENST") || term_id.startsWith("ENSG") || term_id.startsWith("ENSP")){
+            href = "https://www.ensembl.org/id/" + term_id;
+        }
 
         if (reacts.length > 0){
             reacts.push(

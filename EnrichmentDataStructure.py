@@ -33,6 +33,15 @@ class SessionEntry:
         self.domains = None
         self.all_domain_terms = True
 
+        self.background_lipids = None
+        self.regulated_lipids = None
+        self.background_proteins = None
+        self.regulated_proteins = None
+        self.background_metabolites = None
+        self.regulated_metabolites = None
+        self.background_transcripts = None
+        self.regulated_transcripts = None
+
 
 
 class OntologyTerm:
@@ -180,7 +189,6 @@ class EnrichmentOntology:
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
-        self.clean_transcripts = set(key.split(".")[0] for key in self.transcripts.keys())
         self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
 
         try:
@@ -218,9 +226,9 @@ class EnrichmentOntology:
             else: session.search_terms[term_id][1][molecule_input_name] = list(path)
 
 
-    def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set()):
+    def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
         session.search_terms = {}
-        session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set)
+        session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
 
         def fill_path(lipid_term, lipid_name, lipid_input_name):
             path = []
@@ -317,10 +325,19 @@ class EnrichmentOntology:
                 (session, metabolite_input_name), visited_terms, [term.get_term_id()]
             )
 
+        for transcript_input_name in transcript_set:
+            transcript_name = transcript_input_name.split(".")[0]
+            if transcript_name not in self.transcripts: continue
+            term = self.transcripts[transcript_name]
+            visited_terms = set()
+            visited_terms.add(term.get_term_id())
+            self.recursive_event_adding(
+                (session, transcript_input_name), visited_terms, [term.get_term_id()]
+            )
+
 
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "two-sided"):
-        session.result = []
-        if session.num_background == 0 or len(enrichment_domains) == 0: return
+        if len(target_set) == 0 or session.num_background == 0 or len(enrichment_domains) == 0: return []
 
         enrichment_domains = set(enrichment_domains)
         try: # C++ implementation, just way faster
@@ -388,4 +405,4 @@ class EnrichmentOntology:
                     [a, b, c, d]
                 )
 
-        session.result = [result for result in result_list if result != None]
+        return [result for result in result_list if result != None]
