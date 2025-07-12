@@ -26,10 +26,10 @@ from math import ceil
 
 organisms = {
     'Homo sapiens': '9606',
-    #'Mus musculus': '10090',
+    'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
-    'Drosophila melanogaster': '7227',
+    # 'Drosophila melanogaster': '7227',
     # 'Rattus norvegicus': '10116',
     # 'Bos taurus': '9913',
     # 'Caenorhabditis elegans': '6239',
@@ -83,25 +83,25 @@ hash_function = hashlib.new('sha256')
 LINK_COLOR = "#2980B9"
 SESSION_DURATION_TIME = 60 * 60 # one hour
 domain_colors = {
-    "Biological process": ["#fc7255", "#fc947e"],
-    "Cellular component": ["#c86932", "#c87c50"],
-    "Disease": ["#ac754d", "#ac8264"],
-    "Metabolic and signalling pathway": ["#4daf4a", "#68af66"],
-    "Molecular function": ["#ffeda0", "#fff4c7"],
-    "Phenotype": ["#ac754d", "#ac8264"],
-    "Physical or chemical properties": ["#377eb8", "#538ab8"],
+    "Biological process": ["#F09EA7", "#e5a9b0"],
+    "Cellular component": ["#F6CA94", "#eac9a0"],
+    "Disease": ["#FAFABE", "#f3f3c5"],
+    "Metabolic and signalling pathway": ["#C1EBC0", "#c9e3c8"],
+    "Molecular function": ["#C7CAFF", "#cdcff9"],
+    "Phenotype": ["#CDABEB", "#ccb5e1"],
+    "Physical or chemical properties": ["#F6C2FA", "#f0c9f3"],
 }
-upregulated_color = "#F49E4C"
-downregulated_color = "#87BCDE"
-entities_number_color = "#F49E4C"
+REGULATED_COLOR = "#F49E4C"
+ASSOCIATED_COLOR = "#87BCDE"
 INNER_CIRCLE = 300
 CIRCLE_WIDTH = 300
-LIPIDS_COLOR = "#f5b935"
-PROTEINS_COLOR = "#3778c2"
-METABOLITES_COLOR = "#4bac35"
-TRANSCRIPTS_COLOR = "#F49E4C"
 BAR_SORTING_PVALUE = "pvalue"
 BAR_SORTING_SIMILARITY = "sim"
+
+LIPIDS_COLOR = "#A3DC9A"
+PROTEINS_COLOR = "#DEE791"
+METABOLITES_COLOR = "#FFF9BD"
+TRANSCRIPTS_COLOR = "#FFD6BA"
 
 
 def annotate_arc(
@@ -696,6 +696,27 @@ def layout():
                     dmc.Text([
                         "- ",
                         html.A(
+                            "Disease Ontology",
+                            href = "https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/main",
+                            target = "_blank",
+                            style = {"color": LINK_COLOR},
+                        ),
+                        ": ",
+                        CC0_LINK
+                    ]),
+                    dmc.Text([
+                        "- ",
+                        html.A(
+                            "Ensembl",
+                            href = "https://www.ensembl.org/info/about/legal/disclaimer.html",
+                            target = "_blank",
+                            style = {"color": LINK_COLOR},
+                        ),
+                        ": no restriction (details on clicking link)"
+                    ]),
+                    dmc.Text([
+                        "- ",
+                        html.A(
                             "Gene Ontology (GO)",
                             href = "https://www.geneontology.org/docs/go-citation-policy/",
                             target = "_blank",
@@ -709,28 +730,6 @@ def layout():
                         html.A(
                             "HUGO Gene Nomenclature Committee (HGNC)",
                             href = "https://www.genenames.org/about/license/",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC0_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Mondo Disease Ontology",
-                            href = "https://mondo.monarchinitiative.org/pages/download/",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Disease Ontology",
-                            href = "https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/main",
                             target = "_blank",
                             style = {"color": LINK_COLOR},
                         ),
@@ -759,6 +758,17 @@ def layout():
                         html.A(
                             "LIPID MAPS",
                             href = "https://www.lipidmaps.org/databases/lmsd/download",
+                            target = "_blank",
+                            style = {"color": LINK_COLOR},
+                        ),
+                        ": ",
+                        CC4_LINK
+                    ]),
+                    dmc.Text([
+                        "- ",
+                        html.A(
+                            "Mondo Disease Ontology",
+                            href = "https://mondo.monarchinitiative.org/pages/download/",
                             target = "_blank",
                             style = {"color": LINK_COLOR},
                         ),
@@ -2304,7 +2314,7 @@ def open_barplot(
             j_terms = source_terms[j]
             jaccard_values[j, i] = jaccard_values[i, j] = len(i_terms & j_terms) / len(i_terms | j_terms)
 
-    if bar_sorting == BAR_SORTING_SIMILARITY:
+    if bar_sorting == BAR_SORTING_SIMILARITY and n > 1:
         Z = linkage(jaccard_values**8, method = 'average', metric = "cosine")
         sort_order = leaves_list(Z)
         selected_term_ids = selected_term_ids[sort_order]
@@ -2389,7 +2399,7 @@ def open_barplot(
             description_arc_inner_radius,
             description_arc_outer_radius,
             domain_colors[list(result.term.domain)[0]][0],
-            hoverinfo = f"Term ID: {custom[0]}<br />Term: {custom[1]}<br />p-value: {custom[2]}<br />Regulated molecules: {custom[3]}<br />Associated molecules: {custom[4]}<br />Domain: {custom[5]}",
+            hoverinfo = f"Term ID: {custom[0]}<br />Term: {custom[1]}<br />p-value: {custom[2]}<br />Domain: {custom[5]}",
         )
         arc_mid_radius = (description_arc_inner_radius + description_arc_outer_radius) / 2
         annotate_arc(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius, shorten = True)
@@ -2420,6 +2430,7 @@ def open_barplot(
 
         entities_start_angle = center_angle + bar_width / 2
         entities_mid_angle = entities_start_angle
+        hoverinfo = f"Regulated molecules: {number_regulated_entities[i]}<br />Associated molecules: {number_entities[i]}"
         if number_regulated_entities[i] > 0:
             entities_end_angle = entities_start_angle - number_regulated_entities_sizes[i] * bar_width
             add_arc(
@@ -2428,7 +2439,8 @@ def open_barplot(
                 entities_end_angle,
                 entities_arc_inner_radius,
                 entities_arc_outer_radius,
-                upregulated_color,
+                REGULATED_COLOR,
+                hoverinfo,
                 degree_factor = 3,
             )
             entities_mid_angle = entities_end_angle
@@ -2441,7 +2453,9 @@ def open_barplot(
                 entities_end_angle,
                 entities_arc_inner_radius,
                 entities_arc_outer_radius,
-                downregulated_color,
+                ASSOCIATED_COLOR,
+                hoverinfo,
+                degree_factor = 3,
             )
 
         entities_arc_mid_radius = (entities_arc_inner_radius + entities_arc_outer_radius) / 2
@@ -2452,67 +2466,71 @@ def open_barplot(
         molecules_label = ""
         molecule_normalizer = len_lipid_table + len_protein_table + len_metabolite_table + len_transcript_table
         if multiomics:
+            hoverinfo = ""
             molecules_l_start_angle = center_angle + bar_width / 2
             molecules_p_start_angle = molecules_l_start_angle
             molecules_m_start_angle = molecules_l_start_angle
             molecules_t_start_angle = molecules_l_start_angle
+            arcs = []
             if with_lipids:
                 molecules_label = f"{len_lipid_table}"
+                hoverinfo = f"Lipids: {len_lipid_table}"
                 if len_lipid_table > 0:
                     molecules_l_end_angle = molecules_l_start_angle - len_lipid_table / molecule_normalizer * bar_width
-                    add_arc(
-                        fig,
+                    arcs.append([
                         molecules_l_start_angle,
                         molecules_l_end_angle,
                         molecules_arc_inner_radius,
                         molecules_arc_outer_radius,
                         LIPIDS_COLOR,
-                    )
+                    ])
                     molecules_p_start_angle = molecules_l_end_angle
                     molecules_m_start_angle = molecules_l_end_angle
                     molecules_t_start_angle = molecules_l_end_angle
 
             if with_proteins:
                 molecules_label += (" / " if len(molecules_label) > 0 else "") + f"{len_protein_table}"
+                hoverinfo += ("<br />" if len(hoverinfo) > 0 else "") + f"Proteins: {len_protein_table}"
                 if len_protein_table > 0:
                     molecules_p_end_angle = molecules_p_start_angle - len_protein_table / molecule_normalizer * bar_width
-                    add_arc(
-                        fig,
+                    arcs.append([
                         molecules_p_start_angle,
                         molecules_p_end_angle,
                         molecules_arc_inner_radius,
                         molecules_arc_outer_radius,
                         PROTEINS_COLOR,
-                    )
+                    ])
                     molecules_m_start_angle = molecules_p_end_angle
                     molecules_t_start_angle = molecules_p_end_angle
 
             if with_metabolites:
                 molecules_label += (" / " if len(molecules_label) > 0 else "") + f"{len_metabolite_table}"
+                hoverinfo += ("<br />" if len(hoverinfo) > 0 else "") + f"Metabolites: {len_metabolite_table}"
                 if len_metabolite_table > 0:
                     molecules_m_end_angle = molecules_m_start_angle - len_metabolite_table / molecule_normalizer * bar_width
-                    add_arc(
-                        fig,
+                    arcs.append([
                         molecules_m_start_angle,
                         molecules_m_end_angle,
                         molecules_arc_inner_radius,
                         molecules_arc_outer_radius,
                         METABOLITES_COLOR,
-                    )
+                    ])
                     molecules_t_start_angle = molecules_m_end_angle
 
             if with_transcripts:
                 molecules_label += (" / " if len(molecules_label) > 0 else "") + f"{len_transcript_table}"
+                hoverinfo += ("<br />" if len(hoverinfo) > 0 else "") + f"Transcripts: {len_transcript_table}"
                 if len_transcript_table > 0:
                     molecules_t_end_angle = molecules_t_start_angle - len_transcript_table / molecule_normalizer * bar_width
-                    add_arc(
-                        fig,
+                    arcs.append([
                         molecules_t_start_angle,
                         molecules_t_end_angle,
                         molecules_arc_inner_radius,
                         molecules_arc_outer_radius,
                         TRANSCRIPTS_COLOR,
-                    )
+                    ])
+            for arc in arcs: add_arc(fig, *arc, hoverinfo)
+
         molecule_arc_mid_radius = (molecules_arc_inner_radius + molecules_arc_outer_radius) / 2
         annotate_arc(fig, annotations, molecules_label, angles[i], bar_width, molecule_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
 
@@ -2576,72 +2594,71 @@ def open_barplot(
     outer_inner_radius = 25 + (not multiomics) * 10
     add_arc(fig, 0, 360, 0, outer_inner_radius, "#ffffff")
 
-    if bar_sorting == BAR_SORTING_SIMILARITY:
-        if n > 1:
-            dendrogram_points = np.zeros(((n - 1) * 4, 2))
-            ddata = dendrogram(Z, no_plot = True)
-            icoord = ddata['icoord']  # x-coordinates for each link
-            dcoord = ddata['dcoord']  # y-coordinates (heights) for each link
-            i = 0
-            for xs, ys in zip(icoord, dcoord):
-                for x, y in zip(xs, ys):
-                    dendrogram_points[i, 0] = x
-                    dendrogram_points[i, 1] = y
-                    i += 1
+    if bar_sorting == BAR_SORTING_SIMILARITY and n > 1:
+        dendrogram_points = np.zeros(((n - 1) * 4, 2))
+        ddata = dendrogram(Z, no_plot = True)
+        icoord = ddata['icoord']  # x-coordinates for each link
+        dcoord = ddata['dcoord']  # y-coordinates (heights) for each link
+        i = 0
+        for xs, ys in zip(icoord, dcoord):
+            for x, y in zip(xs, ys):
+                dendrogram_points[i, 0] = x
+                dendrogram_points[i, 1] = y
+                i += 1
 
-            dendrogram_points[:, 1] = outer_inner_radius * (1 - dendrogram_points[:,1] / max(dendrogram_points[:,1]))
+        dendrogram_points[:, 1] = outer_inner_radius * (1 - dendrogram_points[:,1] / max(dendrogram_points[:,1]))
 
-            min_angle, max_angle = angles[0], angles[-1]
-            min_left, max_left = min(dendrogram_points[:,0]), max(dendrogram_points[:,0])
+        min_angle, max_angle = angles[0], angles[-1]
+        min_left, max_left = min(dendrogram_points[:,0]), max(dendrogram_points[:,0])
 
-            dendrogram_points[:, 0] = (dendrogram_points[:, 0] - min_left) / (max_left - min_left) * (max_angle - min_angle) + min_angle
+        dendrogram_points[:, 0] = (dendrogram_points[:, 0] - min_left) / (max_left - min_left) * (max_angle - min_angle) + min_angle
 
-            def draw_arc(figure, theta_start, theta_end, radius):
-                if radius <= 0: return
-                theta = np.linspace(np.radians(theta_start), np.radians(theta_end), int(abs(theta_end - theta_start)))
+        def draw_arc(figure, theta_start, theta_end, radius):
+            if radius <= 0: return
+            theta = np.linspace(np.radians(theta_start), np.radians(theta_end), int(abs(theta_end - theta_start)))
 
-                # Parametric arc coordinates
-                x = radius * np.cos(theta)
-                y = radius * np.sin(theta)
+            # Parametric arc coordinates
+            x = radius * np.cos(theta)
+            y = radius * np.sin(theta)
 
-                # Add the arc as a line
-                figure.add_trace(go.Scatter(
-                    x = x,
-                    y = y,
-                    mode = 'lines',
-                    line = dict(color = 'black', width = 2),
-                    hoverinfo = 'skip',
-                    showlegend = False
-                ))
+            # Add the arc as a line
+            figure.add_trace(go.Scatter(
+                x = x,
+                y = y,
+                mode = 'lines',
+                line = dict(color = 'black', width = 2),
+                hoverinfo = 'skip',
+                showlegend = False
+            ))
 
-            def draw_line(figure, theta, radius_1, radius_2):
-                if radius_1 < 0 or radius_2 < 0: return
-                theta = np.radians(theta)
+        def draw_line(figure, theta, radius_1, radius_2):
+            if radius_1 < 0 or radius_2 < 0: return
+            theta = np.radians(theta)
 
-                # Parametric arc coordinates
-                ctheta, stheta = np.cos(theta), np.sin(theta)
-                x1 = radius_1 * ctheta
-                y1 = radius_1 * stheta
-                x2 = radius_2 * ctheta
-                y2 = radius_2 * stheta
+            # Parametric arc coordinates
+            ctheta, stheta = np.cos(theta), np.sin(theta)
+            x1 = radius_1 * ctheta
+            y1 = radius_1 * stheta
+            x2 = radius_2 * ctheta
+            y2 = radius_2 * stheta
 
-                # Add the arc as a line
-                figure.add_trace(go.Scatter(
-                    x = [x1, x2],
-                    y = [y1, y2],
-                    mode = 'lines',
-                    line = dict(color = 'black', width = 2),
-                    hoverinfo = 'skip',
-                    showlegend = False
-                ))
+            # Add the arc as a line
+            figure.add_trace(go.Scatter(
+                x = [x1, x2],
+                y = [y1, y2],
+                mode = 'lines',
+                line = dict(color = 'black', width = 2),
+                hoverinfo = 'skip',
+                showlegend = False
+            ))
 
-            for i in range(n - 1):
-                i *= 4
-                draw_line(fig, dendrogram_points[i, 0], dendrogram_points[i, 1], dendrogram_points[i + 1, 1])
-                draw_arc(fig, dendrogram_points[i + 1, 0], dendrogram_points[i + 2, 0], dendrogram_points[i + 1, 1])
-                draw_line(fig, dendrogram_points[i + 2, 0], dendrogram_points[i + 2, 1], dendrogram_points[i + 3, 1])
+        for i in range(n - 1):
+            i *= 4
+            draw_line(fig, dendrogram_points[i, 0], dendrogram_points[i, 1], dendrogram_points[i + 1, 1])
+            draw_arc(fig, dendrogram_points[i + 1, 0], dendrogram_points[i + 2, 0], dendrogram_points[i + 1, 1])
+            draw_line(fig, dendrogram_points[i + 2, 0], dendrogram_points[i + 2, 1], dendrogram_points[i + 3, 1])
 
-    else:
+    elif bar_sorting == BAR_SORTING_PVALUE:
         jaccard_max_saturation = 90
         for i in range(0, n - 1):
             for j in range(i + 1, n):
