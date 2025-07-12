@@ -9,6 +9,7 @@ parser = LipidParser()
 
 
 if all_species:
+    print("Creating all ontologies")
     species = {
         'Homo sapiens': "9606",
         'Mus musculus': "10090",
@@ -32,6 +33,7 @@ if all_species:
     ]
 
 else:
+    print("Creating Human & Mouse ontology")
     species = {
         'Homo sapiens': "9606",
         'Mus musculus': "10090",
@@ -493,9 +495,9 @@ for line in open("Data/genes_to_disease.txt").read().split("\n"):
 with open("Data/HGNC.csv") as infile:
     for i, line in enumerate(infile):
         if i == 0: continue
-        tokens = line.strip().split(",")
-        if len(tokens) < 5: continue
-        hgnc_id = tokens[0].split("/")[-1]
+        tokens = line.strip().split("\t")
+        if len(tokens) < 3 or len(tokens[2]) == 0: continue
+        hgnc_id = tokens[0]
         hgnc_name = tokens[1] + " (Gene)"
         uniprot = tokens[2]
         hgnc_term = Term(hgnc_id, hgnc_name)
@@ -503,7 +505,7 @@ with open("Data/HGNC.csv") as infile:
         if uniprot in uniprot_data:
             uniprot_data[uniprot].relations.add(hgnc_id)
 
-        ncbi_id = "NCBI:" + tokens[3] if len(tokens[3]) > 0 else None
+        ncbi_id = "NCBI:" + tokens[3] if len(tokens) > 3 and len(tokens[3]) > 0 else None
         if ncbi_id != None: ids.add(ncbi_id)
 
         hgnc_term = Term(ids, hgnc_name)
@@ -514,7 +516,6 @@ with open("Data/HGNC.csv") as infile:
         else:
             gene_terms[hgnc_id] = hgnc_term
             if ncbi_id != None: gene_terms[ncbi_id] = hgnc_term
-
 
 
 for line in open("Data/hgnc_to_mondo.csv").read().split("\n"):

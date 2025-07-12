@@ -29,7 +29,7 @@ organisms = {
     #'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
-    #'Drosophila melanogaster': '7227',
+    'Drosophila melanogaster': '7227',
     # 'Rattus norvegicus': '10116',
     # 'Bos taurus': '9913',
     # 'Caenorhabditis elegans': '6239',
@@ -99,6 +99,7 @@ CIRCLE_WIDTH = 300
 LIPIDS_COLOR = "#f5b935"
 PROTEINS_COLOR = "#3778c2"
 METABOLITES_COLOR = "#4bac35"
+TRANSCRIPTS_COLOR = "#F49E4C"
 BAR_SORTING_PVALUE = "pvalue"
 BAR_SORTING_SIMILARITY = "sim"
 
@@ -1553,7 +1554,7 @@ def run_enrichment(
     results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
     session.result = results
 
-    if correction_method != "no" and len(results) > 0:
+    if correction_method != "no" and len(results) > 1:
         pvalues = [r.pvalue for r in results]
         pvalues = multipletests(pvalues, method = correction_method)[1]
         for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
@@ -2283,7 +2284,7 @@ def open_barplot(
     with_transcripts = background_transcripts != None
 
 
-    multiomics = sum([with_lipids + with_proteins + with_metabolites, with_transcripts]) > 1
+    multiomics = sum([with_lipids + with_proteins + with_metabolites + with_transcripts]) > 1
     barplot_controls_style["display"] = "block"
     sunburst_controls_style["display"] = "none"
 
@@ -2319,7 +2320,6 @@ def open_barplot(
     jaccard_ths /= 100
 
     custom_data = [[s, row["term"], row["pvalue"], r, n, d] for s, row, r, n, d in zip(selected_term_ids, selected_rows, number_regulated_entities, number_entities, domains)]
-    inner_margin = INNER_CIRCLE / CIRCLE_WIDTH * max(pvalues)
 
     angle_gap = 360 / n
     angles = [i * angle_gap for i in range(n)]
@@ -2394,27 +2394,29 @@ def open_barplot(
         arc_mid_radius = (description_arc_inner_radius + description_arc_outer_radius) / 2
         annotate_arc(fig, annotations, annotation_label[i], angles[i], bar_width, arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius, shorten = True)
 
-        # draw the p value as horizontal radial bar
-        pvalue_start_angle = description_start_angle
-        pvalue_end_angle = pvalue_start_angle - bar_width / max(pvalues) * pvalues[i]
-        add_arc(
-            fig,
-            pvalue_start_angle,
-            pvalue_end_angle,
-            pvalue_arc_inner_radius,
-            pvalue_arc_outer_radius,
-            domain_colors[list(result.term.domain)[0]][1],
-            hoverinfo = "p-value: {:.6g}".format(result.pvalue_corrected)
-        )
-
+        if pvalues[i] > 0:
+            # draw the p value as horizontal radial bar
+            pvalue_start_angle = description_start_angle
+            pvalue_end_angle = pvalue_start_angle - bar_width / max(pvalues) * pvalues[i]
+            add_arc(
+                fig,
+                pvalue_start_angle,
+                pvalue_end_angle,
+                pvalue_arc_inner_radius,
+                pvalue_arc_outer_radius,
+                domain_colors[list(result.term.domain)[0]][1],
+                hoverinfo = "p-value: {:.6g}".format(result.pvalue_corrected)
+            )
 
         len_lipid_table = 0
         len_protein_table = 0
         len_metabolite_table = 0
+        len_transcript_table = 0
         molecules = set(result.source_terms.keys())
         if with_lipids: len_lipid_table = len(molecules & background_lipids)
         if with_proteins: len_protein_table = len(molecules & background_proteins)
         if with_metabolites: len_metabolite_table = len(molecules & background_metabolites)
+        if with_transcripts: len_transcript_table = len(molecules & background_transcripts)
 
         entities_start_angle = center_angle + bar_width / 2
         entities_mid_angle = entities_start_angle
@@ -2448,11 +2450,12 @@ def open_barplot(
         annotate_arc(fig, annotations, entities_number_text, arc_angle, abs(entities_start_angle - entities_end_angle), entities_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)
 
         molecules_label = ""
-        molecule_normalizer = len_lipid_table + len_protein_table + len_metabolite_table
+        molecule_normalizer = len_lipid_table + len_protein_table + len_metabolite_table + len_transcript_table
         if multiomics:
             molecules_l_start_angle = center_angle + bar_width / 2
             molecules_p_start_angle = molecules_l_start_angle
             molecules_m_start_angle = molecules_l_start_angle
+            molecules_t_start_angle = molecules_l_start_angle
             if with_lipids:
                 molecules_label = f"{len_lipid_table}"
                 if len_lipid_table > 0:
@@ -2467,9 +2470,10 @@ def open_barplot(
                     )
                     molecules_p_start_angle = molecules_l_end_angle
                     molecules_m_start_angle = molecules_l_end_angle
+                    molecules_t_start_angle = molecules_l_end_angle
 
             if with_proteins:
-                molecules_label += (" / " if len(molecules_label) > 1 else "") + f"{len_protein_table}"
+                molecules_label += (" / " if len(molecules_label) > 0 else "") + f"{len_protein_table}"
                 if len_protein_table > 0:
                     molecules_p_end_angle = molecules_p_start_angle - len_protein_table / molecule_normalizer * bar_width
                     add_arc(
@@ -2481,9 +2485,10 @@ def open_barplot(
                         PROTEINS_COLOR,
                     )
                     molecules_m_start_angle = molecules_p_end_angle
+                    molecules_t_start_angle = molecules_p_end_angle
 
             if with_metabolites:
-                molecules_label += (" / " if len(molecules_label) > 1 else "") + f"{len_metabolite_table}"
+                molecules_label += (" / " if len(molecules_label) > 0 else "") + f"{len_metabolite_table}"
                 if len_metabolite_table > 0:
                     molecules_m_end_angle = molecules_m_start_angle - len_metabolite_table / molecule_normalizer * bar_width
                     add_arc(
@@ -2493,6 +2498,20 @@ def open_barplot(
                         molecules_arc_inner_radius,
                         molecules_arc_outer_radius,
                         METABOLITES_COLOR,
+                    )
+                    molecules_t_start_angle = molecules_m_end_angle
+
+            if with_transcripts:
+                molecules_label += (" / " if len(molecules_label) > 0 else "") + f"{len_transcript_table}"
+                if len_transcript_table > 0:
+                    molecules_t_end_angle = molecules_t_start_angle - len_transcript_table / molecule_normalizer * bar_width
+                    add_arc(
+                        fig,
+                        molecules_t_start_angle,
+                        molecules_t_end_angle,
+                        molecules_arc_inner_radius,
+                        molecules_arc_outer_radius,
+                        TRANSCRIPTS_COLOR,
                     )
         molecule_arc_mid_radius = (molecules_arc_inner_radius + molecules_arc_outer_radius) / 2
         annotate_arc(fig, annotations, molecules_label, angles[i], bar_width, molecule_arc_mid_radius, font_size = font_size, max_distance = arc_outer_radius)

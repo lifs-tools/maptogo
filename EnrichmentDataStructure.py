@@ -356,6 +356,7 @@ class EnrichmentOntology:
                 visited_terms.add(term)
                 target_number = len(term_metabolites.keys() & target_set)
                 p_hyp = fisher_exact.exact_fisher(target_number, len(term_metabolites), len(target_set), session.num_background, side)
+                if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
                     term,
                     session.num_background,
@@ -395,6 +396,7 @@ class EnrichmentOntology:
                     session.num_background - len(term_metabolites) - len(target_set) + target_number,
                 )
                 p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
+                if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
                     term,
                     session.num_background,
