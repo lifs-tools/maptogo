@@ -1,7 +1,8 @@
-DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/pathbank_all_metabolites.csv Data/pathbank_all_proteins.csv Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz
+DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/pathbank_all_metabolites.csv Data/pathbank_all_proteins.csv Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz
 
 SCRIPT_FILES = Data/uniprot_to_doid.csv Data/uniprot_to_go.csv Data/chebi.csv Data/rhea_to_chebi.csv Data/pathbank_to_uniprot.csv Data/chebi_to_pathway.csv Data/hgnc_to_mondo.csv
 
+ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz
 
 ####### OWN DATA ########
 #Data/LION.obo
@@ -14,6 +15,9 @@ SCRIPT_FILES = Data/uniprot_to_doid.csv Data/uniprot_to_go.csv Data/chebi.csv Da
 ######## CREATE ONTOLOGIES ########
 main: $(DOWNLOAD_FILES) $(SCRIPT_FILES)
 	python3 create_ontology.py
+
+all: $(DOWNLOAD_FILES) $(ALL_SPECIES) $(SCRIPT_FILES)
+	python3 create_ontology.py all
 
 
 
@@ -69,6 +73,24 @@ Data/genes_to_disease.txt:
 # Ensembl
 Data/Homo_sapiens.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Homo_sapiens.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/homo_sapiens/Homo_sapiens.GRCh38.114.uniprot.tsv.gz"
+
+Data/Mus_musculus.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Mus_musculus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/mus_musculus/Mus_musculus.GRCm39.114.uniprot.tsv.gz"
+
+Data/Saccharomyces_cerevisiae.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Saccharomyces_cerevisiae.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.114.uniprot.tsv.gz"
+
+Data/Drosophila_melanogaster.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Drosophila_melanogaster.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.54.114.uniprot.tsv.gz"
+
+Data/Rattus_norvegicus.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Rattus_norvegicus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/rattus_norvegicus/Rattus_norvegicus.GRCr8.114.uniprot.tsv.gz"
+
+Data/Bos_taurus.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Bos_taurus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/bos_taurus/Bos_taurus.ARS-UCD2.0.114.uniprot.tsv.gz"
+
+Data/Caenorhabditis_elegans.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Caenorhabditis_elegans.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.114.uniprot.tsv.gz"
 
 # HGNC
 Data/HGNC.csv:

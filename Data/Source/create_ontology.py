@@ -1,24 +1,45 @@
 from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
 import gzip
+import sys
 
-
-
-
+all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
 
-species = {
-    'Homo sapiens': "9606",
-    'Mus musculus': "10090",
-    # 'Saccharomyces cerevisiae': "4932",
-    # 'Escherichia coli': "562",
-    # 'Drosophila melanogaster': "7227",
-    # 'Rattus norvegicus': "10116",
-    # 'Bos taurus': "9913",
-    # 'Caenorhabditis elegans': "6239",
-    # 'Pseudomonas aeruginosa': "287",
-    # 'Arabidopsis thaliana': "3702",
-}
+
+
+if all_species:
+    species = {
+        'Homo sapiens': "9606",
+        'Mus musculus': "10090",
+        'Saccharomyces cerevisiae': "4932",
+        'Escherichia coli': "562",
+        'Drosophila melanogaster': "7227",
+        'Rattus norvegicus': "10116",
+        'Bos taurus': "9913",
+        'Caenorhabditis elegans': "6239",
+        'Pseudomonas aeruginosa': "287",
+        'Arabidopsis thaliana': "3702",
+    }
+    ensembl_files = [
+        "Data/Homo_sapiens.uniprot.tsv.gz",
+        "Data/Mus_musculus.uniprot.tsv.gz",
+        "Data/Saccharomyces_cerevisiae.uniprot.tsv.gz",
+        "Data/Drosophila_melanogaster.uniprot.tsv.gz",
+        "Data/Rattus_norvegicus.uniprot.tsv.gz",
+        "Data/Bos_taurus.uniprot.tsv.gz",
+        "Data/Caenorhabditis_elegans.uniprot.tsv.gz",
+    ]
+
+else:
+    species = {
+        'Homo sapiens': "9606",
+        'Mus musculus': "10090",
+    }
+    ensembl_files = [
+        "Data/Homo_sapiens.uniprot.tsv.gz",
+        "Data/Mus_musculus.uniprot.tsv.gz",
+    ]
 
 class Term:
     def __init__(self, _id, _name, _relations = None, _synonyms = None, _namespace = None, _xref = None, upper = False, _categories = None):
@@ -341,21 +362,26 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
 
 
 
-with gzip.open("Data/Homo_sapiens.uniprot.tsv.gz") as infile:
-    for i, line in enumerate(infile):
-        if i == 0: continue
-        tokens = line.decode("utf8").split("\t")
-        if len(tokens) < 4: continue
-        uniprot = tokens[3].split("-")[0]
-        if uniprot not in uniprot_to_organism: continue
-        organism = uniprot_to_organism[uniprot]
-        if organism not in ensembl_terms_organisms: ensembl_terms_organisms[organism] = {}
+for ensembl_file in ensembl_files:
+    try:
+        with gzip.open(ensembl_file) as infile:
+            for i, line in enumerate(infile):
+                if i == 0: continue
+                tokens = line.decode("utf8").split("\t")
+                if len(tokens) < 4: continue
+                uniprot = tokens[3].split("-")[0]
+                if uniprot not in uniprot_to_organism: continue
+                organism = uniprot_to_organism[uniprot]
+                if organism not in ensembl_terms_organisms: ensembl_terms_organisms[organism] = {}
 
-        for ensembl in tokens[:3]:
-            if ensembl not in ensembl_terms_organisms[organism]:
-                term = Term(ensembl, ensembl, {"LS:0000006"}, _categories = set(uniprot_data[uniprot].categories))
-                ensembl_terms_organisms[organism][ensembl] = term
-            ensembl_terms_organisms[organism][ensembl].relations.add(f"UNIPROT:{uniprot}")
+                for ensembl in tokens[:3]:
+                    if ensembl not in ensembl_terms_organisms[organism]:
+                        term = Term(ensembl, ensembl, {"LS:0000006"}, _categories = set(uniprot_data[uniprot].categories))
+                        ensembl_terms_organisms[organism][ensembl] = term
+                    ensembl_terms_organisms[organism][ensembl].relations.add(f"UNIPROT:{uniprot}")
+    except Exception as e:
+        continue
+
 
 
 pathway_terms_organisms = {}

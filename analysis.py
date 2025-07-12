@@ -24,6 +24,25 @@ import freetype
 from math import ceil
 
 
+organisms = {
+    'Homo sapiens': '9606',
+    #'Mus musculus': '10090',
+    # 'Saccharomyces cerevisiae': '4932',
+    # 'Escherichia coli': '562',
+    #'Drosophila melanogaster': '7227',
+    # 'Rattus norvegicus': '10116',
+    # 'Bos taurus': '9913',
+    # 'Caenorhabditis elegans': '6239',
+    # 'Pseudomonas aeruginosa': '287',
+    # 'Arabidopsis thaliana': '3702',
+}
+INIT_ORGANISM = "9606"
+
+try:
+    from organisms import organisms
+except Exception as e:
+    pass
+
 
 def shorten_label(label, max_len = 10):
     return label if len(label) <= max_len else label[:max_len].rsplit(" ", 1)[0] + "..."
@@ -188,25 +207,6 @@ CC0_LINK = html.A(
 )
 
 
-
-organisms = {
-    'Homo sapiens': '9606',
-    'Mus musculus': '10090',
-    # 'Saccharomyces cerevisiae': '4932',
-    # 'Escherichia coli': '562',
-    # 'Drosophila melanogaster': '7227',
-    # 'Rattus norvegicus': '10116',
-    # 'Bos taurus': '9913',
-    # 'Caenorhabditis elegans': '6239',
-    # 'Pseudomonas aeruginosa': '287',
-    # 'Arabidopsis thaliana': '3702',
-}
-INIT_ORGANISM = "9606"
-
-try:
-    from organisms import organisms
-except Exception as e:
-    pass
 
 sessions, examples = {}, {}
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
@@ -982,12 +982,12 @@ def layout():
                             dmc.TabsPanel([
                                 dmc.SimpleGrid([
                                     dmc.Title(
-                                        "All ensembl ENS... Ids in experiment (background)",
+                                        "All ensembl Ids in experiment (background)",
                                         order = 5,
                                         style = {"marginTop": "10px"},
                                     ),
                                     dmc.Title(
-                                        "All regulated ensembl ENS... Ids in experiment",
+                                        "All regulated ensembl Ids in experiment",
                                         order = 5,
                                         style = {"marginTop": "10px"},
                                     ),
@@ -2911,7 +2911,7 @@ def show_molecule_term_path(
             elif term_id.startswith("NCBI:"):
                 href = f"https://www.ncbi.nlm.nih.gov/gene/{term_id.split(':')[1]}"
 
-            elif term_id.startswith("ENST") or term_id.startswith("ENSG") or term_id.startswith("ENSP"):
+            elif term_id.startswith("ENS") or term_id.startswith("WBGene") or term_id.startswith("FBgn"):
                 href = f"https://www.ensembl.org/id/{term_id}"
 
         else:
