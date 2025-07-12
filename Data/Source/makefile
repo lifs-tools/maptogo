@@ -1,14 +1,14 @@
 main:
 	####### OWN DATA ########
-	Data/LION.obo
-	Data/chebi_to_lipids.csv
-	Data/ChEBI_chebi_to_lipids.csv
-	Data/LipidMaps_chebi_to_lipids.csv
-	Data/SwissLipids_chebi_to_lipids.csv
+	#Data/LION.obo
+	#Data/chebi_to_lipids.csv
+	#Data/ChEBI_chebi_to_lipids.csv
+	#Data/LipidMaps_chebi_to_lipids.csv
+	#Data/SwissLipids_chebi_to_lipids.csv
 
 
 	####### DOWNLOAD DATA ########
-	Disease Ontology
+	#Disease Ontology
 	wget --tries=10 -O Data/doid-base.obo "https://raw.githubusercontent.com/DiseaseOntology/HumanDiseaseOntology/refs/heads/main/src/ontology/doid-base.obo"
 
 	# Uniprot
@@ -79,7 +79,33 @@ main:
 
 
 
-
-
 	######## CREATE ONTOLOGIES ########
 	python3 create_ontology.py
+
+
+clean:
+	rm Data/causal_gene_to_disease_association.all.tsv.gz
+	rm Data/chebi.csv
+	rm Data/chebi_lite.obo
+	rm Data/chebi_to_pathway.csv
+	rm Data/correlated_gene_to_disease_association.all.tsv.gz
+	rm Data/doid-base.obo
+	rm Data/genes_to_disease.txt
+	rm Data/genes_to_phenotype.txt
+	rm Data/go-basic.obo
+	rm Data/HGNC.csv
+	rm Data/hgnc_to_mondo.csv
+	rm Data/Homo_sapiens.uniprot.tsv.gz
+	rm Data/hp.obo
+	rm Data/mondo.obo
+	rm Data/pathbank_all_metabolites.csv
+	rm Data/pathbank_all_metabolites.csv.zip
+	rm Data/pathbank_all_proteins.csv
+	rm Data/pathbank_all_proteins.csv.zip
+	rm Data/pathbank_to_uniprot.csv
+	rm Data/rhea2uniprot_sprot.tsv
+	rm Data/rhea-reactions.txt.gz
+	rm Data/rhea_to_chebi.csv
+	rm Data/uniprot.csv.gz
+	rm Data/uniprot_to_doid.csv
+	rm Data/uniprot_to_go.csv
