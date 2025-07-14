@@ -320,23 +320,23 @@ with open("Data/chebi_to_pathway.csv", "rt") as infile:
 uniprot_data = {}
 uniprot_terms_organisms = {}
 uniprot_to_organism = {}
-with open("Data/uniprot_to_go.csv", "rt") as infile:
-    for line in infile:
-        tokens = line.strip().split("\t")
-
-        if len(tokens) < 2: continue
-        if len(tokens) == 2: tokens.append(tokens[0])
-        if len(tokens) == 3: tokens.append("")
-
-        # taxonomy check
-        if tokens[1] not in uniprot_terms_organisms: uniprot_terms_organisms[tokens[1]] = {}
-        uniprot_term = "UNIPROT:" + tokens[0]
-
-        term = Term(uniprot_term, (tokens[2] if len(tokens[2]) > 0 else tokens[0]) + " (Protein)", set(tokens[3].split(",")) if len(tokens[3]) > 0 else set())
-        term.relations.add("LS:0000004")
-        uniprot_terms_organisms[tokens[1]][tokens[0]] = term
-        uniprot_data[tokens[0]] = term
-        uniprot_to_organism[tokens[0]] = tokens[1]
+# with open("Data/uniprot_to_go.csv", "rt") as infile:
+#     for line in infile:
+#         tokens = line.strip().split("\t")
+#
+#         if len(tokens) < 2: continue
+#         if len(tokens) == 2: tokens.append(tokens[0])
+#         if len(tokens) == 3: tokens.append("")
+#
+#         # taxonomy check
+#         if tokens[1] not in uniprot_terms_organisms: uniprot_terms_organisms[tokens[1]] = {}
+#         uniprot_term = "UNIPROT:" + tokens[0]
+#
+#         term = Term(uniprot_term, (tokens[2] if len(tokens[2]) > 0 else tokens[0]) + " (Protein)", set(tokens[3].split(",")) if len(tokens[3]) > 0 else set())
+#         term.relations.add("LS:0000004")
+#         uniprot_terms_organisms[tokens[1]][tokens[0]] = term
+#         uniprot_data[tokens[0]] = term
+#         uniprot_to_organism[tokens[0]] = tokens[1]
 
 
 
@@ -345,22 +345,39 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
     for i, line in enumerate(infile):
         if i == 0: continue
         tokens = line.split("\t")
-        if len(tokens) < 8 or tokens[0] not in uniprot_data: continue
-        uniprot_data[tokens[0]].categories = set(tokens[4].split(", "))
 
-        if tokens[0] not in uniprot_to_organism: continue
-        organism = uniprot_to_organism[tokens[0]]
-        if organism not in ensembl_terms_organisms: ensembl_terms_organisms[organism] = {}
+        if len(tokens) < 2: continue
 
+        uniprot = tokens[0]
+        organisms_id = tokens[1]
+        protein_name = tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else f"{uniprot} (Protein)"
+        go_terms = {"LS:0000004"}
+        categories = set(tokens[4].split(", ")) if len(tokens) > 4 and len(tokens[4]) > 0 else set()
+        uniprot_term = "UNIPROT:" + uniprot
+
+        if len(tokens) > 3 and len(tokens[3]) > 0 and tokens[3].find("[") > -1:
+            for entry in tokens[3].split("["):
+                go_term = entry.split("]")[0]
+                if len(go_term) != 10 or go_term[:3] != "GO:": continue
+                go_terms.add(go_term)
+
+        term = Term(uniprot_term, protein_name, go_terms, _categories = categories)
+        if organisms_id not in uniprot_terms_organisms: uniprot_terms_organisms[organisms_id] = {}
+        uniprot_terms_organisms[organisms_id][uniprot] = term
+        uniprot_data[uniprot] = term
+        uniprot_to_organism[uniprot] = tokens[1]
+
+        if len(tokens) < 8 or len(tokens[7]) == 0: continue
         ensembls = set()
         for cc in tokens[7].replace("\"", "").split(";"):
             ensembls |= set([tok.split(".")[0] for t in cc.split(" ") if ((tok := t.strip("., ")) and tok[:2] == "EN")])
 
         for ensembl in ensembls:
-            if ensembl not in ensembl_terms_organisms[organism]:
+            if organisms_id not in ensembl_terms_organisms: ensembl_terms_organisms[organisms_id] = {}
+            if ensembl not in ensembl_terms_organisms[organisms_id]:
                 term = Term(ensembl, ensembl, {"LS:0000006"}, _categories = set(uniprot_data[tokens[0]].categories))
-                ensembl_terms_organisms[organism][ensembl] = term
-            ensembl_terms_organisms[organism][ensembl].relations.add("UNIPROT:" + tokens[0])
+                ensembl_terms_organisms[organisms_id][ensembl] = term
+            ensembl_terms_organisms[organisms_id][ensembl].relations.add(uniprot_term)
 
 
 
