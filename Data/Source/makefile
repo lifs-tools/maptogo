@@ -4,12 +4,12 @@ SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Da
 
 ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz
 
-####### OWN DATA ########
-#Data/LION.obo
-#Data/chebi_to_lipids.csv
-#Data/ChEBI_chebi_to_lipids.csv
-#Data/LipidMaps_chebi_to_lipids.csv
-#Data/SwissLipids_chebi_to_lipids.csv
+######## OWN DATA ########
+# Data/LION.obo
+# Data/chebi_to_lipids.csv
+# Data/ChEBI_chebi_to_lipids.csv
+# Data/LipidMaps_chebi_to_lipids.csv
+# Data/SwissLipids_chebi_to_lipids.csv
 
 
 ######## CREATE ONTOLOGIES ########
@@ -129,7 +129,7 @@ Data/hgnc_to_mondo.csv: Data/causal_gene_to_disease_association.all.tsv.gz Data/
 
 
 
-
+######## CLEAN WORKSPACE ########
 clean:
 	rm -f Data/causal_gene_to_disease_association.all.tsv.gz
 	rm -f Data/chebi.csv
