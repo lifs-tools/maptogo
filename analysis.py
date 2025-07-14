@@ -2154,7 +2154,7 @@ def open_sunburstplot(
         term_prefix = [t.split(":")[0] if t.find(":") > -1 else "SNP" for t in term_id.split("|")]
         term_prefix = [t for t in term_prefix if ((t in LIBRARY_TO_DOMAINS) and (len(LIBRARY_TO_DOMAINS[t] & domains) > 0))]
         if term in sunburst_terms:
-            sunburst_terms[child_term].entry_point = True
+            sunburst_terms[term].entry_point = True
             continue
         if len(term_prefix) == 0: continue
         term_prefix = term_prefix[0]

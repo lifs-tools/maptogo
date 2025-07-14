@@ -88,7 +88,7 @@ class OntologyTerm:
         self.term_ontology_id = -1
         self.term_id = set(_term_id) if type(_term_id) in {list, set} else set(_term_id.split("|"))
         self.name = _name
-        self.relations = list(set(_relations) - {""})
+        self.relations = sorted([r for r in _relations if r != ""])
         self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {"", "external"}
         self.categories = (set(_categories) if type(_categories) in {list, set} else set(_categories.split("|"))) - {""}
 
@@ -248,32 +248,6 @@ class EnrichmentOntology:
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
 
-    def find_search_terms(self, session, paths):
-        for molecule_input_name, path in paths:
-            queue = [(path[-1], self.ontology_terms[path[-1]], len(path), False)]
-            visited_terms = {self.ontology_terms[path[-1]]}
-            graph = TracebackGraph(path)
-
-            while queue:
-                term_id, term, path_len, is_leaf = queue.pop()
-                while graph.current_depth > path_len: graph.step_back()
-                graph.add_node(term_id)
-                contains_no_domain = len(term.domain) == 0
-
-                if not contains_no_domain and graph.root != term_id:
-                    if term_id not in session.search_terms:
-                        if is_leaf: session.term_leaves.add(term)
-                        session.search_terms[term_id] = {}
-                    session.search_terms[term_id][molecule_input_name] = graph
-
-                if session.all_domain_terms or contains_no_domain:
-                    for parent_term_id in term.relations:
-                        parent_term = self.ontology_terms[parent_term_id]
-                        if parent_term not in visited_terms:
-                            visited_terms.add(parent_term)
-                            queue.append((parent_term_id, parent_term, graph.current_depth, contains_no_domain and len(parent_term.domain) > 0))
-
-
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
         session.search_terms = {}
         session.term_leaves = set()
@@ -364,7 +338,28 @@ class EnrichmentOntology:
             term = self.transcripts[transcript_name]
             all_paths.add((transcript_input_name, (term.get_term_id(), )))
 
-        self.find_search_terms(session, all_paths)
+        for molecule_input_name, path in all_paths:
+            queue = [(path[-1], self.ontology_terms[path[-1]], len(path))]
+            visited_terms = {self.ontology_terms[path[-1]]}
+            graph = TracebackGraph(path)
+
+            while queue:
+                term_id, term, path_len = queue.pop()
+                while graph.current_depth > path_len: graph.step_back()
+                graph.add_node(term_id)
+                contains_no_domain = len(term.domain) == 0
+
+                if not contains_no_domain and graph.root != term_id:
+                    if term_id not in session.search_terms: session.search_terms[term_id] = {}
+                    session.search_terms[term_id][molecule_input_name] = graph
+
+                #if session.all_domain_terms or contains_no_domain:
+                for parent_term_id in term.relations:
+                    parent_term = self.ontology_terms[parent_term_id]
+                    if contains_no_domain and len(parent_term.domain) > 0: session.term_leaves.add(parent_term)
+                    if parent_term not in visited_terms:
+                        visited_terms.add(parent_term)
+                        queue.append((parent_term_id, parent_term, graph.current_depth))
 
 
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "two-sided"):
@@ -376,7 +371,6 @@ class EnrichmentOntology:
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
             visited_terms = set()
             for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
-                if term_id not in self.ontology_terms: continue
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
@@ -410,7 +404,6 @@ class EnrichmentOntology:
             result_list = [None] * len(session.search_terms)
             visited_terms = set()
             for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
-                if term_id not in self.ontology_terms: continue
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
