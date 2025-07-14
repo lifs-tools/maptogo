@@ -1544,10 +1544,7 @@ def run_enrichment(
 
             target_set |= regulated_transcripts
 
-        start_time = time.time()
         ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome, transcript_set = transcriptome)
-        end_time = time.time()
-        print(end_time - start_time)
         session.ontology = ontology
         session.domains = set(domains)
         session.data_loaded = True
@@ -2543,7 +2540,7 @@ def open_barplot(
 
         # Add related domain bars
         len_source_terms = len(molecules)
-        for term_id, (is_leaf, term_input_molecules) in session.search_terms.items():
+        for term_id, term_input_molecules in session.search_terms.items():
             if min(len_source_terms, len(term_input_molecules)) / max(len_source_terms, len(term_input_molecules)) < jaccard_ths or term_id not in ontology.ontology_terms: continue
 
             foreign_term = ontology.ontology_terms[term_id]
@@ -2916,7 +2913,7 @@ def show_molecule_term_path(
 
     ontology = enrichment_ontologies[organism]
     term_path = []
-    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][1][molecule].get_path(target_term_id)):
+    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][molecule].get_path(target_term_id)):
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
         href, term_name = ".", ""
         if term_id in ontology.ontology_terms:

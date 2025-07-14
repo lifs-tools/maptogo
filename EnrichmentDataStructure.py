@@ -27,6 +27,7 @@ class SessionEntry:
         self.data = None
         self.data_loaded = False
         self.search_terms = {}
+        self.term_leaves = set()
         self.num_background = 0
         self.use_bounded_fatty_acyls = True
         self.ontology = None
@@ -254,26 +255,28 @@ class EnrichmentOntology:
             graph = TracebackGraph(path)
 
             while queue:
-                term_id, term, path_len, leaf_visited = queue.pop()
+                term_id, term, path_len, is_leaf = queue.pop()
                 while graph.current_depth > path_len: graph.step_back()
                 graph.add_node(term_id)
                 contains_no_domain = len(term.domain) == 0
-                this_is_leaf = not leaf_visited and not contains_no_domain
 
                 if not contains_no_domain and graph.root != term_id:
-                    if term_id not in session.search_terms: session.search_terms[term_id] = [this_is_leaf, {}]
-                    session.search_terms[term_id][1][molecule_input_name] = graph
+                    if term_id not in session.search_terms:
+                        if is_leaf: session.term_leaves.add(term)
+                        session.search_terms[term_id] = {}
+                    session.search_terms[term_id][molecule_input_name] = graph
 
                 if session.all_domain_terms or contains_no_domain:
                     for parent_term_id in term.relations:
                         parent_term = self.ontology_terms[parent_term_id]
                         if parent_term not in visited_terms:
                             visited_terms.add(parent_term)
-                            queue.append((parent_term_id, parent_term, graph.current_depth, leaf_visited or this_is_leaf))
+                            queue.append((parent_term_id, parent_term, graph.current_depth, contains_no_domain and len(parent_term.domain) > 0))
 
 
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
         session.search_terms = {}
+        session.term_leaves = set()
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
         all_paths = set()
 
@@ -372,12 +375,12 @@ class EnrichmentOntology:
             result_list = [None] * len(session.search_terms)
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
             visited_terms = set()
-            for i, (term_id, (is_leaf, term_metabolites)) in enumerate(session.search_terms.items()):
+            for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
                 if term_id not in self.ontology_terms: continue
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
-                    or (not is_leaf and not session.all_domain_terms)
+                    or (term not in session.term_leaves and not session.all_domain_terms)
                     or len(term.domain & enrichment_domains) == 0
                     or term in visited_terms
                 ): continue
@@ -406,12 +409,12 @@ class EnrichmentOntology:
             logger.error("C++ implementation of fisher exact test failed.")
             result_list = [None] * len(session.search_terms)
             visited_terms = set()
-            for i, (term_id, (is_leaf, term_metabolites)) in enumerate(session.search_terms.items()):
+            for i, (term_id, term_metabolites) in enumerate(session.search_terms.items()):
                 if term_id not in self.ontology_terms: continue
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
-                    or (not is_leaf and not session.all_domain_terms)
+                    or (term not in session.term_leaves and not session.all_domain_terms)
                     or len(term.domain & enrichment_domains) == 0
                     or term in visited_terms
                 ): continue
