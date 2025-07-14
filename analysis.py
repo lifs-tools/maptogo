@@ -1,3 +1,14 @@
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level = os.environ.get("LOGLEVEL", "INFO"),
+    format = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+)
+logger.info("Started enrichment server")
+
+
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table
 import dash_mantine_components as dmc
 import plotly.graph_objs as go
@@ -7,7 +18,6 @@ import json
 import numpy as np
 import pandas as pd
 import io
-import os
 from scipy.cluster.hierarchy import linkage, leaves_list, dendrogram
 from scipy.spatial.distance import squareform
 from statsmodels.stats.multitest import multipletests
@@ -15,7 +25,6 @@ from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEnt
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
-import logging
 import pathlib
 import time
 import hashlib
@@ -185,11 +194,6 @@ def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, 
 
 
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level = os.environ.get("LOGLEVEL", "INFO"),
-    format = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
-)
 
 
 
@@ -313,7 +317,7 @@ lipid_parser = LipidParser()
 enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
     logger.info(f"loading {tax_name}")
-    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", lipid_parser = lipid_parser)
+    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", tax_name, lipid_parser = lipid_parser)
 
 
 def get_aggrid_modal(name, molecule):
@@ -1117,7 +1121,7 @@ def layout():
                                         dmc.Switch(
                                             id = "enrichment_parent_terms",
                                             checked = True,
-                                            label = "Include all domain terms",
+                                            label = "Include all hierarchical domain terms",
                                             style = {"paddingBottom": "8px"},
                                         ),
                                         style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
@@ -1540,7 +1544,10 @@ def run_enrichment(
 
             target_set |= regulated_transcripts
 
+        start_time = time.time()
         ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome, transcript_set = transcriptome)
+        end_time = time.time()
+        print(end_time - start_time)
         session.ontology = ontology
         session.domains = set(domains)
         session.data_loaded = True
@@ -2546,7 +2553,7 @@ def open_barplot(
         remaining_domains_categories[i][0] = description_start_angle - bar_width * 0.025
 
         for molecule in molecules:
-            for term_id in result.source_terms[molecule]:
+            for term_id in result.source_terms[molecule].get_path(result.term_id):
                 if term_id in ontology.ontology_terms: break
 
             for category in ontology.ontology_terms[term_id].categories:
@@ -2909,7 +2916,7 @@ def show_molecule_term_path(
 
     ontology = enrichment_ontologies[organism]
     term_path = []
-    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][1][molecule]):
+    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][1][molecule].get_path(target_term_id)):
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
         href, term_name = ".", ""
         if term_id in ontology.ontology_terms:

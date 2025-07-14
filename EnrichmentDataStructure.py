@@ -43,18 +43,52 @@ class SessionEntry:
         self.regulated_transcripts = None
 
 
+class TracebackGraph:
+    def __init__(self, path):
+        self.root = path[0]
+        self.nodes = {}
+        self.current_node = None
+        for p in path:
+            if p in self.nodes:
+                logger.warning("Traceback: got path {path} with '{p}' at least twice inside")
+                continue
+            self.nodes[p] = self.current_node
+            self.current_node = p
+        self.current_depth = len(path)
+
+    def add_node(self, node):
+        if node in self.nodes: return
+        self.nodes[node] = self.current_node
+        self.current_node = node
+        self.current_depth += 1
+
+    def step_back(self):
+        if self.current_node == None: return
+        self.current_node = self.nodes[self.current_node]
+        self.current_depth -= 1
+
+    def get_path(self, node):
+        if node not in self.nodes: return []
+        path = []
+        current_node = node
+        while current_node != None:
+            path.append(current_node)
+            c = current_node
+            current_node = self.nodes[current_node]
+        return path[::-1]
+
+
 
 class OntologyTerm:
     def __init__(self, _term_id, _name, _relations, _domain = None, _categories = None):
-
         if _domain == None: _domain = set()
         if _categories == None: _categories = set()
 
-
+        self.term_ontology_id = -1
         self.term_id = set(_term_id) if type(_term_id) in {list, set} else set(_term_id.split("|"))
         self.name = _name
-        self.relations = list(_relations)
-        self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {""}
+        self.relations = list(set(_relations) - {""})
+        self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {"", "external"}
         self.categories = (set(_categories) if type(_categories) in {list, set} else set(_categories.split("|"))) - {""}
 
     def to_string(self):
@@ -69,6 +103,7 @@ class OntologyTerm:
 class OntologyResult:
     def __init__(
         self,
+        _term_id,
         _term,
         _number_background,
         _number_background_events,
@@ -79,6 +114,7 @@ class OntologyResult:
         _leaf = True,
     ):
         if _fisher == None: _fisher = [0, 0, 0, 0]
+        self.term_id = _term_id
         self.term = _term
         self.number_background = _number_background
         self.number_background_events = _number_background_events
@@ -95,8 +131,9 @@ class OntologyResult:
 
 
 class EnrichmentOntology:
-    def __init__(self, file_name, lipid_parser):
+    def __init__(self, file_name, ontology_name, lipid_parser):
         self.ontology_terms = {}
+        self.ontology_term_list = []
         self.lipids = {}
         self.lipid_classes = {}
         self.carbon_chains = {}
@@ -108,6 +145,7 @@ class EnrichmentOntology:
         self.domains = set()
         self.lipid_parser = lipid_parser
         self.metabolite_names = {}
+        self.ontology_name = ontology_name
 
         try:
             with gzip.open(file_name) as input_stream:
@@ -202,33 +240,42 @@ class EnrichmentOntology:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error(e)
 
+        # clean up ontology
+        for term in self.ontology_terms.values():
+            term.relations = [t for t in term.relations if t in self.ontology_terms]
 
-    def recursive_event_adding(self, session_and_molecule_input_name, visited_terms, path, leaf_visited = False):
-        term_id = path[-1]
-        term = self.ontology_terms[term_id]
+        logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
-        contains_no_domain = len(term.domain & self.domains) == 0
-        this_is_leaf = not leaf_visited and not contains_no_domain
-        if session_and_molecule_input_name[0].all_domain_terms or contains_no_domain:
-            for parent_term_id in term.relations:
-                if parent_term_id not in visited_terms and parent_term_id in self.ontology_terms:
-                    visited_terms.add(parent_term_id)
-                    path.append(parent_term_id)
-                    self.recursive_event_adding(
-                        session_and_molecule_input_name, visited_terms, path, leaf_visited or this_is_leaf
-                    )
-                    path.pop()
 
-        if path[0] != term_id:
-            session, molecule_input_name = session_and_molecule_input_name
-            if term_id not in session.search_terms:
-                session.search_terms[term_id] = [this_is_leaf, {molecule_input_name: list(path)}]
-            else: session.search_terms[term_id][1][molecule_input_name] = list(path)
+    def find_search_terms(self, session, paths):
+        for molecule_input_name, path in paths:
+            queue = [(path[-1], self.ontology_terms[path[-1]], len(path), False)]
+            visited_terms = {self.ontology_terms[path[-1]]}
+            graph = TracebackGraph(path)
+
+            while queue:
+                term_id, term, path_len, leaf_visited = queue.pop()
+                while graph.current_depth > path_len: graph.step_back()
+                graph.add_node(term_id)
+                contains_no_domain = len(term.domain) == 0
+                this_is_leaf = not leaf_visited and not contains_no_domain
+
+                if not contains_no_domain and graph.root != term_id:
+                    if term_id not in session.search_terms: session.search_terms[term_id] = [this_is_leaf, {}]
+                    session.search_terms[term_id][1][molecule_input_name] = graph
+
+                if session.all_domain_terms or contains_no_domain:
+                    for parent_term_id in term.relations:
+                        parent_term = self.ontology_terms[parent_term_id]
+                        if parent_term not in visited_terms:
+                            visited_terms.add(parent_term)
+                            queue.append((parent_term_id, parent_term, graph.current_depth, leaf_visited or this_is_leaf))
 
 
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
         session.search_terms = {}
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
+        all_paths = set()
 
         def fill_path(lipid_term, lipid_name, lipid_input_name):
             path = []
@@ -247,12 +294,11 @@ class EnrichmentOntology:
 
             visited_terms = set()
             lipid_term = self.lipids[lipid_name] if lipid_name in self.lipids else None
+            lipid_term_id = lipid_term.get_term_id() if lipid_term != None else None
             if lipid_term != None:
                 path = fill_path(lipid_term, lipid_name, lipid_input_name)
                 visited_terms.add(lipid_term.get_term_id())
-                self.recursive_event_adding(
-                    (session, lipid_input_name), visited_terms, path,
-                )
+                all_paths.add((lipid_input_name, tuple(path)))
 
             if lipid_name_class in self.lipid_classes:
                 for term in self.lipid_classes[lipid_name_class]:
@@ -260,9 +306,7 @@ class EnrichmentOntology:
                         visited_terms.add(term.get_term_id())
                         path = fill_path(lipid_term, lipid_name, lipid_input_name)
                         path.append(term.get_term_id())
-                        self.recursive_event_adding(
-                            (session, lipid_input_name), visited_terms, path,
-                        )
+                        all_paths.add((lipid_input_name, tuple(path)))
 
             if lipid != None and lipid.lipid != None and session.use_bounded_fatty_acyls:
                 for fa in lipid.lipid.fa_list:
@@ -274,10 +318,8 @@ class EnrichmentOntology:
                             lcb_term_id = self.carbon_chains[lcb_string].get_term_id()
                             visited_terms.add(lcb_term_id)
                             path = fill_path(lipid_term, lipid_name, lipid_input_name)
-                            path.append(lcb_term_id)
-                            self.recursive_event_adding(
-                                (session, lipid_input_name), visited_terms, path,
-                            )
+                            if lipid_term_id != lcb_term_id: path.append(lcb_term_id)
+                            all_paths.add((lipid_input_name, tuple(path)))
 
                     else:
                         fa_string = "FA " + fa.to_string(lipid.lipid.info.level)
@@ -286,32 +328,23 @@ class EnrichmentOntology:
                             fa_term_id = fa_term.get_term_id()
                             visited_terms.add(fa_term_id)
                             path = fill_path(lipid_term, lipid_name, lipid_input_name)
-                            path.append(fa_term_id)
-                            self.recursive_event_adding(
-                                (session, lipid_input_name), visited_terms, path,
-                            )
+                            if lipid_term_id != fa_term_id: path.append(fa_term_id)
+                            all_paths.add((lipid_input_name, tuple(path)))
 
                         fa_string = "C" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
                         if fa_string in self.carbon_chains:
                             fa_term_id = self.carbon_chains[fa_string].get_term_id()
                             visited_terms.add(fa_term_id)
                             path = fill_path(lipid_term, lipid_name, lipid_input_name)
-                            path.append(fa_term_id)
-                            self.recursive_event_adding(
-                                (session, lipid_input_name), visited_terms, path,
-                            )
+                            if lipid_term_id != fa_term_id: path.append(fa_term_id)
+                            all_paths.add((lipid_input_name, tuple(path)))
 
         for protein_input_name in protein_set:
-            visited_terms = set()
             if protein_input_name not in self.proteins: continue
             term = self.proteins[protein_input_name]
-            visited_terms.add(term.get_term_id())
-            self.recursive_event_adding(
-                (session, protein_input_name), visited_terms, [term.get_term_id()]
-            )
+            all_paths.add((protein_input_name, (term.get_term_id(), )))
 
         for metabolite_input_name in metabolite_set:
-            visited_terms = set()
             if metabolite_input_name in self.metabolites:
                 term = self.metabolites[metabolite_input_name]
 
@@ -320,20 +353,15 @@ class EnrichmentOntology:
 
             else: continue
 
-            visited_terms.add(term.get_term_id())
-            self.recursive_event_adding(
-                (session, metabolite_input_name), visited_terms, [term.get_term_id()]
-            )
+            all_paths.add((metabolite_input_name, (term.get_term_id(), )))
 
         for transcript_input_name in transcript_set:
             transcript_name = transcript_input_name.split(".")[0]
             if transcript_name not in self.transcripts: continue
             term = self.transcripts[transcript_name]
-            visited_terms = set()
-            visited_terms.add(term.get_term_id())
-            self.recursive_event_adding(
-                (session, transcript_input_name), visited_terms, [term.get_term_id()]
-            )
+            all_paths.add((transcript_input_name, (term.get_term_id(), )))
+
+        self.find_search_terms(session, all_paths)
 
 
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "two-sided"):
@@ -358,6 +386,7 @@ class EnrichmentOntology:
                 p_hyp = fisher_exact.exact_fisher(target_number, len(term_metabolites), len(target_set), session.num_background, side)
                 if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
+                    term_id,
                     term,
                     session.num_background,
                     len(term_metabolites),
@@ -398,6 +427,7 @@ class EnrichmentOntology:
                 p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
                 if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
+                    term_id,
                     term,
                     session.num_background,
                     len(term_metabolites),
