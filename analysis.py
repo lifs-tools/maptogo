@@ -1546,7 +1546,6 @@ def run_enrichment(
 
         ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome, transcript_set = transcriptome)
         session.ontology = ontology
-        session.domains = set(domains)
         session.data_loaded = True
 
         session.background_lipids = lipidome if with_lipids else None
@@ -1564,6 +1563,7 @@ def run_enrichment(
         if with_metabolites: target_set |= session.regulated_metabolites
         if with_transcripts: target_set |= session.regulated_transcripts
 
+    session.domains = set(domains)
     session.all_domain_terms = all_domain_terms
     results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
     session.result = results
@@ -1922,7 +1922,6 @@ def disclaimer_clicked(n_clicks):
 
 
 
-
 @callback(
     Output("chart_results", "disabled", allow_duplicate = True),
     Output("sunburst_results", "disabled", allow_duplicate = True),
@@ -2182,6 +2181,7 @@ def open_sunburstplot(
 
     labels, parents, colors, values, names, custom_data = [], [], [], [], [], []
     num_letters = 10 + int(80 / len(selected_term_ids))
+
     for term, sunburst_term in sunburst_terms.items():
         labels.append(term.get_term_id())
         parents.append(sunburst_term.parent)
