@@ -634,635 +634,639 @@ def layout():
             title = "Information",
             opened = False,
     ),
-        dmc.Modal(
-            #title = "Description & disclaimer",
-            id = "disclaimer_modal",
-            zIndex = 10000,
-            children = dmc.ScrollArea(html.Div([
-                html.P([
-                    dmc.Title("About GO multiomics", order = 4),
-                    dmc.Text(
-                        "GO multiomics is the first implementation that enables GO term enrichment analysis on lipids. Starting with a list of identified lipids (at least on the species level) as background and a list with only the (differentially) regulated lipids, each lipid is mapped to proteins involved in metabolic reactions. On this base, GO term analysis will then be performed with a statistical test. Depending on the selected domain (biological process, molecular function, cellular compartment, physical or chemical properties, or metabolic and signaling pathways), the analysis provides a sorted list of GO terms with a p-value for each term.",
-                        style = {"textAlign": "justify"},
+    dmc.Modal(
+        #title = "Description & disclaimer",
+        id = "disclaimer_modal",
+        zIndex = 10000,
+        children = dmc.ScrollArea(html.Div([
+            html.P([
+                dmc.Title("About GO multiomics", order = 4),
+                dmc.Text(
+                    "GO multiomics is the first implementation that enables GO term enrichment analysis on lipids. Starting with a list of identified lipids (at least on the species level) as background and a list with only the (differentially) regulated lipids, each lipid is mapped to proteins involved in metabolic reactions. On this base, GO term analysis will then be performed with a statistical test. Depending on the selected domain (biological process, molecular function, cellular compartment, physical or chemical properties, or metabolic and signaling pathways), the analysis provides a sorted list of GO terms with a p-value for each term.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+            dmc.Text("Responsible people for this database are:"),
+            dmc.Text("Dominik Kopczynski: Implementation of both front- and backend"),
+            dmc.Text("Cristina Coman: Method validation"),
+            dmc.Text("Robert Ahrends: Project leader"),
+
+            html.P([
+                dmc.Title("Disclaimer", order = 4),
+                dmc.Title("1. Liability limitation", order = 5),
+                dmc.Text(
+                    "The usage of the downloadable data available on this web page takes place at the users own risk.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Title("2. External links", order = 5),
+                dmc.Text(
+                    "This web page contains links forwarding to external web pages. For all external web pages we disclaim liability. During the linking no statutory violation was evident. As soon as a violation emerges, we delete these links.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Title("3. Copyright", order = 5),
+                dmc.Text(
+                    "The content of this web page is subject to the Austrian copyright law and ancillary copyright. Every inadmissible utilization defined by the Austrian copyright law and ancillary copyright is forbidden. This includes the disposal of the downloadable data. Download and utilization of the available data for researching purposes is explicitly allowed.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Title("4. Privacy", order = 5),
+                dmc.Text(
+                    "For statistical purposes, we record the number of visits to this web page as well as the number of downloads. To ensure an unbiased record, we store a hash value of your IP address for several minutes. Since this method is not reversible, restoring your IP address is not possible, hence this value does not belong to personal-related data. We do not sell or hand out our collected statistical data to third parties.",
+                    style = {"textAlign": "justify"},
+                ),
+            ]),
+
+            html.P([
+                dmc.Text("GO multiomics is using data from third-party databases. All databases are listed with their according licenses or permission:"),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "ChEBI",
+                        href = "https://www.ebi.ac.uk/chebi/aboutChebiForward.do",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC4_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Disease Ontology",
+                        href = "https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/main",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC0_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Ensembl",
+                        href = "https://www.ensembl.org/info/about/legal/disclaimer.html",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": no restriction (details on clicking link)"
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Gene Ontology (GO)",
+                        href = "https://www.geneontology.org/docs/go-citation-policy/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC4_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "HUGO Gene Nomenclature Committee (HGNC)",
+                        href = "https://www.genenames.org/about/license/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC0_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "LION",
+                        href = "https://martijnmolenaar.github.io/lipidontology.com/faq.html",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    " via ",
+                    html.A(
+                        "BioPortal",
+                        href = "https://www.bioontology.org/terms/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": freely available for public use",
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "LIPID MAPS",
+                        href = "https://www.lipidmaps.org/databases/lmsd/download",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC4_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Mondo Disease Ontology",
+                        href = "https://mondo.monarchinitiative.org/pages/download/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    CC4_LINK
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Pathbank",
+                        href = "https://pathbank.org/about",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    html.A(
+                        "Open database license",
+                        href = "https://opendatacommons.org/licenses/odbl/1-0/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
                     ),
                 ]),
-                dmc.Text("Responsible people for this database are:"),
-                dmc.Text("Dominik Kopczynski: Implementation of both front- and backend"),
-                dmc.Text("Cristina Coman: Method validation"),
-                dmc.Text("Robert Ahrends: Project leader"),
-
-                html.P([
-                    dmc.Title("Disclaimer", order = 4),
-                    dmc.Title("1. Liability limitation", order = 5),
-                    dmc.Text(
-                        "The usage of the downloadable data available on this web page takes place at the users own risk.",
-                        style = {"textAlign": "justify"},
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "Rhea",
+                        href = "https://www.rhea-db.org/help/license-disclaimer",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
                     ),
+                    ": ",
+                    CC4_LINK
                 ]),
-
-                html.P([
-                    dmc.Title("2. External links", order = 5),
-                    dmc.Text(
-                        "This web page contains links forwarding to external web pages. For all external web pages we disclaim liability. During the linking no statutory violation was evident. As soon as a violation emerges, we delete these links.",
-                        style = {"textAlign": "justify"},
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "SwissLipids",
+                        href = "https://www.swisslipids.org/#/downloads",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
                     ),
+                    ": ",
+                    CC4_LINK
                 ]),
-
-                html.P([
-                    dmc.Title("3. Copyright", order = 5),
-                    dmc.Text(
-                        "The content of this web page is subject to the Austrian copyright law and ancillary copyright. Every inadmissible utilization defined by the Austrian copyright law and ancillary copyright is forbidden. This includes the disposal of the downloadable data. Download and utilization of the available data for researching purposes is explicitly allowed.",
-                        style = {"textAlign": "justify"},
+                dmc.Text([
+                    "- ",
+                    html.A(
+                        "UniProt",
+                        href = "https://www.uniprot.org/help/license",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
                     ),
+                    ": ",
+                    CC4_LINK
                 ]),
-
-                html.P([
-                    dmc.Title("4. Privacy", order = 5),
-                    dmc.Text(
-                        "For statistical purposes, we record the number of visits to this web page as well as the number of downloads. To ensure an unbiased record, we store a hash value of your IP address for several minutes. Since this method is not reversible, restoring your IP address is not possible, hence this value does not belong to personal-related data. We do not sell or hand out our collected statistical data to third parties.",
-                        style = {"textAlign": "justify"},
-                    ),
-                ]),
-
-                html.P([
-                    dmc.Text("GO multiomics is using data from third-party databases. All databases are listed with their according licenses or permission:"),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "ChEBI",
-                            href = "https://www.ebi.ac.uk/chebi/aboutChebiForward.do",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
+            ]),
+        ], style = {"width": "98%"}), h = 450, offsetScrollbars = True, scrollHideDelay = 0),
+        size = "50%",
+    ),
+    dmc.SimpleGrid(
+        cols = 2,
+        style = {"marginTop": "5px"},
+        children = [
+            html.Div([
+                dmc.Tabs(
+                    [
+                        dmc.TabsList(
+                            [
+                                dmc.Tab("Lipids", value="lipid_tab"),
+                                dmc.Tab("Proteins", value="protein_tab"),
+                                dmc.Tab("Metabolites", value="metabolites_tab"),
+                                dmc.Tab("Transcripts", value="transcripts_tab"),
+                            ],
+                            grow = True,
                         ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Disease Ontology",
-                            href = "https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/main",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
+                        dmc.TabsPanel([
+                            dmc.SimpleGrid([
+                                dmc.Title(
+                                    "All lipid names in experiment (background)",
+                                    order = 5,
+                                    style = {"marginTop": "10px"},
+                                ),
+                                dmc.Title(
+                                    "All regulated lipid names in experiment",
+                                    order = 5,
+                                    style = {"marginTop": "10px"},
+                                ),
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Textarea(
+                                    id = "textarea_all_lipids",
+                                    style = {"height": "100%", "display": "inline"},
+                                    minRows = 15,
+                                ),
+                                dmc.Textarea(
+                                    id = "textarea_regulated_lipids",
+                                    minRows = 15,
+                                ),
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_all_lipids",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
+                                    ),
+                                    position = "right",
+                                ),
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_regulated_lipids",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
+                                    ),
+                                    position = "right",
+                                ),
+                            ], cols = 2)],
+                            value="lipid_tab",
                         ),
-                        ": ",
-                        CC0_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Ensembl",
-                            href = "https://www.ensembl.org/info/about/legal/disclaimer.html",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": no restriction (details on clicking link)"
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Gene Ontology (GO)",
-                            href = "https://www.geneontology.org/docs/go-citation-policy/",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "HUGO Gene Nomenclature Committee (HGNC)",
-                            href = "https://www.genenames.org/about/license/",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC0_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "LION",
-                            href = "https://martijnmolenaar.github.io/lipidontology.com/faq.html",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        " via ",
-                        html.A(
-                            "BioPortal",
-                            href = "https://www.bioontology.org/terms/",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": freely available for public use",
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "LIPID MAPS",
-                            href = "https://www.lipidmaps.org/databases/lmsd/download",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Mondo Disease Ontology",
-                            href = "https://mondo.monarchinitiative.org/pages/download/",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Pathbank",
-                            href = "https://pathbank.org/about",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        html.A(
-                            "Open database license",
-                            href = "https://opendatacommons.org/licenses/odbl/1-0/",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "Rhea",
-                            href = "https://www.rhea-db.org/help/license-disclaimer",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "SwissLipids",
-                            href = "https://www.swisslipids.org/#/downloads",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                    dmc.Text([
-                        "- ",
-                        html.A(
-                            "UniProt",
-                            href = "https://www.uniprot.org/help/license",
-                            target = "_blank",
-                            style = {"color": LINK_COLOR},
-                        ),
-                        ": ",
-                        CC4_LINK
-                    ]),
-                ]),
-            ], style = {"width": "98%"}), h = 450, offsetScrollbars = True, scrollHideDelay = 0),
-            size = "50%",
-        ),
-        dmc.SimpleGrid(
-            cols = 2,
-            style = {"marginTop": "5px"},
-            children = [
-                html.Div([
-                    dmc.Tabs(
-                        [
-                            dmc.TabsList(
-                                [
-                                    dmc.Tab("Lipids", value="lipid_tab"),
-                                    dmc.Tab("Proteins", value="protein_tab"),
-                                    dmc.Tab("Metabolites", value="metabolites_tab"),
-                                    dmc.Tab("Transcripts", value="transcripts_tab"),
-                                ],
-                                grow = True,
-                            ),
-                            dmc.TabsPanel([
-                                dmc.SimpleGrid([
-                                    dmc.Title(
-                                        "All lipid names in experiment (background)",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                    dmc.Title(
-                                        "All regulated lipid names in experiment",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Textarea(
-                                        id = "textarea_all_lipids",
-                                        style = {"height": "100%", "display": "inline"},
-                                        minRows = 15,
-                                    ),
-                                    dmc.Textarea(
-                                        id = "textarea_regulated_lipids",
-                                        minRows = 15,
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_all_lipids",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_regulated_lipids",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                ], cols = 2)],
-                                value="lipid_tab",
-                            ),
-                            dmc.TabsPanel([
-                                dmc.SimpleGrid([
-                                    dmc.Group([
-                                        dmc.Title(
-                                            "All protein accessions in experiment (background)",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
-                                        ),
-                                        dmc.ActionIcon(
-                                            DashIconify(icon = "simple-icons:helix", width = 16),
-                                            id = "predefined_bg_proteome",
-                                            title = "Select predefined background proteome",
-                                            style = {"display": "flex", "alignItems": "flex-end"},
-                                        ),
-                                    ]),
-                                    dmc.Title(
-                                        "All regulated protein accession in experiment",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Textarea(
-                                        id = "textarea_all_proteins",
-                                        style = {"height": "100%", "display": "inline"},
-                                        minRows = 15,
-                                    ),
-                                    dmc.Textarea(
-                                        id = "textarea_regulated_proteins",
-                                        minRows = 15,
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_all_proteins",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_regulated_proteins",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                ], cols = 2)],
-                                value="protein_tab",
-                            ),
-                            dmc.TabsPanel([
-                                dmc.SimpleGrid([
-                                    dmc.Title(
-                                        "All metabolite ChEBI Ids in experiment (background)",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                    dmc.Title(
-                                        "All regulated metabolite ChEBI Ids in experiment",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Textarea(
-                                        id = "textarea_all_metabolites",
-                                        style = {"height": "100%", "display": "inline"},
-                                        minRows = 15,
-                                    ),
-                                    dmc.Textarea(
-                                        id = "textarea_regulated_metabolites",
-                                        minRows = 15,
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_all_metabolites",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_regulated_metabolites",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                ], cols = 2)],
-                                value = "metabolites_tab",
-                            ),
-                            dmc.TabsPanel([
-                                dmc.SimpleGrid([
-                                    dmc.Title(
-                                        "All ensembl Ids in experiment (background)",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                    dmc.Title(
-                                        "All regulated ensembl Ids in experiment",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Textarea(
-                                        id = "textarea_all_transcripts",
-                                        style = {"height": "100%", "display": "inline"},
-                                        minRows = 15,
-                                    ),
-                                    dmc.Textarea(
-                                        id = "textarea_regulated_transcripts",
-                                        minRows = 15,
-                                    ),
-                                ], cols = 2),
-                                dmc.SimpleGrid([
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_all_transcripts",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                    dmc.Group(
-                                        dmc.Text(
-                                            "Entries: 0",
-                                            id = "num_regulated_transcripts",
-                                            style = {"color": "#808080"},
-                                            size = "12px",
-                                        ),
-                                        position = "right",
-                                    ),
-                                ], cols = 2)],
-                                value = "transcripts_tab",
-                            ),
-                        ],
-                        color = "blue", # default is blue
-                        orientation = "horizontal", # or "vertical"
-                        variant = "outline", # or "outline" or "pills"
-                        value = "lipid_tab"
-                    ),
-                    dmc.Title(
-                        "Analysis parameters",
-                        order = 5,
-                        style = {"marginTop": "20px"},
-                    ),
-                    html.Div(
-                        [
-                            dmc.SimpleGrid(
-                                cols = 2,
-                                children = [
-                                    dmc.Select(
-                                        id = "select_organism",
-                                        data = [
-                                            {"value": organisms[key], "label": key} for key in sorted(organisms.keys())
-                                        ],
-                                        value = INIT_ORGANISM,
-                                        label = "Select organism:",
-                                    ),
-                                    dmc.MultiSelect(
-                                        id = "select_domains",
-                                        data = sorted(list(enrichment_ontologies[INIT_ORGANISM].domains)),
-                                        value = ["Biological process"],
-                                        label = "Select domain(s):",
-                                    ),
-                                    dmc.Select(
-                                        id = "select_test_method",
-                                        label = "Select method for p-value correction:",
-                                        data=[
-                                            {"value": "no", "label": "No correction"},
-                                            {"value": "bonferroni", "label": "Bonferroni"},
-                                            {"value": "fdr_bh", "label": "Benjamini Hochberg"},
-                                        ],
-                                        value = "fdr_bh",
-                                    ),
-                                    dmc.Select(
-                                        id = "select_term_representation",
-                                        data = [
-                                            {"value": "two-sided", "label": "Term over/under-represented"},
-                                            {"value": "less", "label": "Term under-represented"},
-                                            {"value": "greater", "label": "Term over-represented"},
-                                        ],
-                                        value = "two-sided",
-                                        label = "Term representation:",
-                                    ),
-                                    html.Div(
-                                        dmc.Switch(
-                                            id = "switch_ignore_unparsable_lipids",
-                                            checked = False,
-                                            label = "Ignore unrecognizable molecules",
-                                            style = {"paddingBottom": "8px"},
-                                        ),
-                                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
-                                    ),
-                                    html.Div(
-                                        dmc.Switch(
-                                            id = "switch_ignore_unknown_regulated_lipids",
-                                            checked = False,
-                                            label = "Ignore regulated molecules that aren't in background",
-                                            style = {"paddingBottom": "8px"},
-                                        ),
-                                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
-                                    ),
-                                    html.Div(
-                                        dmc.Switch(
-                                            id = "use_bounded_fatty_acyls",
-                                            checked = True,
-                                            label = "Use bounded fatty acyls for analysis, too",
-                                            style = {"paddingBottom": "8px"},
-                                        ),
-                                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
-                                    ),
-                                ],
-                            ),
-
-                            html.Div([
+                        dmc.TabsPanel([
+                            dmc.SimpleGrid([
                                 dmc.Group([
-                                    dmc.Checkbox(
-                                        label = "Use lipids",
-                                        id = "checkbox_use_lipids",
-                                        checked = False,
+                                    dmc.Title(
+                                        "All protein accessions in experiment (background)",
+                                        order = 5,
+                                        style = {"marginTop": "10px"},
                                     ),
-                                    dmc.Checkbox(
-                                        label = "Use proteins",
-                                        id = "checkbox_use_proteins",
-                                        checked = False,
-                                    ),
-                                    dmc.Checkbox(
-                                        label = "Use metabolites",
-                                        id = "checkbox_use_metabolites",
-                                        checked = False,
-                                    ),
-                                    dmc.Checkbox(
-                                        label = "Use transcripts",
-                                        id = "checkbox_use_transcripts",
-                                        checked = False,
+                                    dmc.ActionIcon(
+                                        DashIconify(icon = "simple-icons:helix", width = 16),
+                                        id = "predefined_bg_proteome",
+                                        title = "Select predefined background proteome",
+                                        style = {"display": "flex", "alignItems": "flex-end"},
                                     ),
                                 ]),
-                                dmc.Button(
-                                    "Run enrichment analysis",
-                                    id = "button_run_enrichment",
-                                    style = {"margin-left": "auto"},
+                                dmc.Title(
+                                    "All regulated protein accession in experiment",
+                                    order = 5,
+                                    style = {"marginTop": "10px"},
                                 ),
-                            ], style={"display": "flex", "width": "100%", "marginTop": "20px"}),
-                        ],
-                        style = {"border": "1px solid #dddddd", "radius": "10px", "padding": "10px"},
-                    ),
-                ]),
-                html.Div([
-                    dmc.SimpleGrid([
-                        dmc.Title(
-                            "Results",
-                            order = 5,
-                            style = {"marginTop": "10px"},
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Textarea(
+                                    id = "textarea_all_proteins",
+                                    style = {"height": "100%", "display": "inline"},
+                                    minRows = 15,
+                                ),
+                                dmc.Textarea(
+                                    id = "textarea_regulated_proteins",
+                                    minRows = 15,
+                                ),
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_all_proteins",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
+                                    ),
+                                    position = "right",
+                                ),
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_regulated_proteins",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
+                                    ),
+                                    position = "right",
+                                ),
+                            ], cols = 2)],
+                            value="protein_tab",
                         ),
-                        html.Div(
-                            html.Span(
-                                dmc.Group([
-                                    dmc.ActionIcon(
-                                        DashIconify(icon="ion:bar-chart-sharp", width = 20),
-                                        id = "histogram_results",
-                                        title = "Show p-value histogram",
-                                        disabled = True,
-                                        style = {"marginRight": "5px"},
+                        dmc.TabsPanel([
+                            dmc.SimpleGrid([
+                                dmc.Title(
+                                    "All metabolite ChEBI Ids in experiment (background)",
+                                    order = 5,
+                                    style = {"marginTop": "10px"},
+                                ),
+                                dmc.Title(
+                                    "All regulated metabolite ChEBI Ids in experiment",
+                                    order = 5,
+                                    style = {"marginTop": "10px"},
+                                ),
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Textarea(
+                                    id = "textarea_all_metabolites",
+                                    style = {"height": "100%", "display": "inline"},
+                                    minRows = 15,
+                                ),
+                                dmc.Textarea(
+                                    id = "textarea_regulated_metabolites",
+                                    minRows = 15,
+                                ),
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_all_metabolites",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
                                     ),
-                                    dmc.ActionIcon(
-                                        DashIconify(icon="tdesign:chart-column-filled", width = 20),
-                                        id = "chart_results",
-                                        title = "Show p-value chart",
-                                        disabled = True,
-                                        style = {"marginRight": "5px"},
+                                    position = "right",
+                                ),
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_regulated_metabolites",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
                                     ),
-                                    dmc.ActionIcon(
-                                        DashIconify(icon="carbon:chart-sunburst", width = 20),
-                                        id = "sunburst_results",
-                                        title = "Show term hierarchy",
-                                        disabled = True,
-                                        style = {"marginRight": "5px"},
+                                    position = "right",
+                                ),
+                            ], cols = 2)],
+                            value = "metabolites_tab",
+                        ),
+                        dmc.TabsPanel([
+                            dmc.SimpleGrid([
+                                dmc.Title(
+                                    "All ensembl Ids in experiment (background)",
+                                    order = 5,
+                                    style = {"marginTop": "10px"},
+                                ),
+                                dmc.Title(
+                                    "All regulated ensembl Ids in experiment",
+                                    order = 5,
+                                    style = {"marginTop": "10px"},
+                                ),
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Textarea(
+                                    id = "textarea_all_transcripts",
+                                    style = {"height": "100%", "display": "inline"},
+                                    minRows = 15,
+                                ),
+                                dmc.Textarea(
+                                    id = "textarea_regulated_transcripts",
+                                    minRows = 15,
+                                ),
+                            ], cols = 2),
+                            dmc.SimpleGrid([
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_all_transcripts",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
                                     ),
-                                    dmc.ActionIcon(
-                                        DashIconify(icon="material-symbols:download-rounded", width = 20),
-                                        id = "icon_download_results",
-                                        title = "Download table",
-                                        disabled = True,
+                                    position = "right",
+                                ),
+                                dmc.Group(
+                                    dmc.Text(
+                                        "Entries: 0",
+                                        id = "num_regulated_transcripts",
+                                        style = {"color": "#808080"},
+                                        size = "12px",
                                     ),
-                                ], spacing = 0),
+                                    position = "right",
+                                ),
+                            ], cols = 2)],
+                            value = "transcripts_tab",
+                        ),
+                    ],
+                    color = "blue", # default is blue
+                    orientation = "horizontal", # or "vertical"
+                    variant = "outline", # or "outline" or "pills"
+                    value = "lipid_tab"
+                ),
+                dmc.Title(
+                    "Analysis parameters",
+                    order = 5,
+                    style = {"marginTop": "20px"},
+                ),
+                html.Div(
+                    [
+                        dmc.SimpleGrid(
+                            cols = 2,
+                            children = [
+                                dmc.Select(
+                                    id = "select_organism",
+                                    data = [
+                                        {"value": organisms[key], "label": key} for key in sorted(organisms.keys())
+                                    ],
+                                    value = INIT_ORGANISM,
+                                    label = "Select organism:",
+                                ),
+                                dmc.MultiSelect(
+                                    id = "select_domains",
+                                    data = sorted(list(enrichment_ontologies[INIT_ORGANISM].domains)),
+                                    value = ["Biological process"],
+                                    label = "Select domain(s):",
+                                ),
+                                dmc.Select(
+                                    id = "select_test_method",
+                                    label = "Select method for p-value correction:",
+                                    data=[
+                                        {"value": "no", "label": "No correction"},
+                                        {"value": "bonferroni", "label": "Bonferroni"},
+                                        {"value": "fdr_bh", "label": "Benjamini/Hochberg (default)"},
+                                        {"value": "fdr_by", "label": "Benjamini/Yekutieli"},
+                                        {"value": "holm-sidak", "label": "Step down method using Sidak adjustment"},
+                                        {"value": "holm", "label": "Step-down method using Bonferroni adjustments"},
+                                        {"value": "simes-hochberg", "label": "Step-up method (independent)"},
+                                        {"value": "fdr_tsbh", "label": "Two stage fdr correction"},
+                                    ],
+                                    value = "fdr_bh",
+                                ),
+                                dmc.Select(
+                                    id = "select_term_representation",
+                                    data = [
+                                        {"value": "two-sided", "label": "Term over/under-represented"},
+                                        {"value": "less", "label": "Term under-represented"},
+                                        {"value": "greater", "label": "Term over-represented"},
+                                    ],
+                                    value = "greater",
+                                    label = "Term representation:",
+                                ),
+                                html.Div(
+                                    dmc.Switch(
+                                        id = "switch_ignore_unparsable_lipids",
+                                        checked = False,
+                                        label = "Ignore unrecognizable molecules",
+                                        style = {"paddingBottom": "8px"},
+                                    ),
+                                    style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
+                                ),
+                                html.Div(
+                                    dmc.Switch(
+                                        id = "switch_ignore_unknown_regulated_lipids",
+                                        checked = False,
+                                        label = "Ignore regulated molecules that aren't in background",
+                                        style = {"paddingBottom": "8px"},
+                                    ),
+                                    style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
+                                ),
+                                html.Div(
+                                    dmc.Switch(
+                                        id = "use_bounded_fatty_acyls",
+                                        checked = True,
+                                        label = "Use bounded fatty acyls for analysis, too",
+                                        style = {"paddingBottom": "8px"},
+                                    ),
+                                    style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
+                                ),
+                            ],
+                        ),
+
+                        html.Div([
+                            dmc.Group([
+                                dmc.Checkbox(
+                                    label = "Use lipids",
+                                    id = "checkbox_use_lipids",
+                                    checked = False,
+                                ),
+                                dmc.Checkbox(
+                                    label = "Use proteins",
+                                    id = "checkbox_use_proteins",
+                                    checked = False,
+                                ),
+                                dmc.Checkbox(
+                                    label = "Use metabolites",
+                                    id = "checkbox_use_metabolites",
+                                    checked = False,
+                                ),
+                                dmc.Checkbox(
+                                    label = "Use transcripts",
+                                    id = "checkbox_use_transcripts",
+                                    checked = False,
+                                ),
+                            ]),
+                            dmc.Button(
+                                "Run enrichment analysis",
+                                id = "button_run_enrichment",
+                                style = {"margin-left": "auto"},
                             ),
-                            style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "justifyContent": "right"},
-                        ),
-                    ], cols = 2),
-                    dag.AgGrid(
-                        id = "graph_enrichment_results",
-                        columnDefs = [
-                            {
-                                'field': "domain",
-                                "headerName": "Domain",
-                                "maxWidth": 220,
-                                "checkboxSelection": True,
-                            },
-                            {
-                                'field': "termid",
-                                "headerName": "Term ID",
-                                "cellRenderer": "TermIDRenderer",
-                                "maxWidth": 150,
-                            },
-                            {
-                                'field': "term",
-                                "headerName": "Term",
-                                "cellRenderer": "TermRenderer",
-                            },
-                            {
-                                'field': "count",
-                                "headerName": "Count",
-                                "width": 80,
-                                "headerTooltip": "Number of regulated associated molecules / Number of all associated molecules",
-                            },
-                            {
-                                'field': "pvalue",
-                                "headerName": "p-value",
-                                "width": 150,
-                                "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
-                            },
-                        ],
-                        rowData = [],
-                        columnSize = "responsiveSizeToFit",
-                        defaultColDef={
-                            "suppressMovable": True,
-                            "resizable": True,
-                            "sortable": True,
-                            "filter": True,
-                            "headerCheckboxSelection": {
-                                "function": "params.column == params.columnApi.getAllDisplayedColumns()[0]"
-                            },
-                        },
-                        style = {
-                            "height": "100%",
-                        },
-                        getRowId = "params.data.termid",
-                        dashGridOptions={
-                            "rowSelection": "multiple",
-                            "suppressMoveWhenRowDragging": True,
-                            "suppressRowClickSelection": True,
-                            "alwaysShowVerticalScroll": True,
-                            "noRowsOverlayComponent": "CustomNoRowsOverlay",
-                            "noRowsOverlayComponentParams": {
-                                "message": "Run the enrichment analysis to obtain results",
-                                "fontSize": 12,
-                            },
-                        },
+                        ], style={"display": "flex", "width": "100%", "marginTop": "20px"}),
+                    ],
+                    style = {"border": "1px solid #dddddd", "radius": "10px", "padding": "10px"},
+                ),
+            ]),
+            html.Div([
+                dmc.SimpleGrid([
+                    dmc.Title(
+                        "Results",
+                        order = 5,
+                        style = {"marginTop": "10px"},
                     ),
-                ]),
-            ],
-        ),
-        html.Div(style = {"height": "500px"}),
-    ])
+                    html.Div(
+                        html.Span(
+                            dmc.Group([
+                                dmc.ActionIcon(
+                                    DashIconify(icon="ion:bar-chart-sharp", width = 20),
+                                    id = "histogram_results",
+                                    title = "Show p-value histogram",
+                                    disabled = True,
+                                    style = {"marginRight": "5px"},
+                                ),
+                                dmc.ActionIcon(
+                                    DashIconify(icon="tdesign:chart-column-filled", width = 20),
+                                    id = "chart_results",
+                                    title = "Show p-value chart",
+                                    disabled = True,
+                                    style = {"marginRight": "5px"},
+                                ),
+                                dmc.ActionIcon(
+                                    DashIconify(icon="carbon:chart-sunburst", width = 20),
+                                    id = "sunburst_results",
+                                    title = "Show term hierarchy",
+                                    disabled = True,
+                                    style = {"marginRight": "5px"},
+                                ),
+                                dmc.ActionIcon(
+                                    DashIconify(icon="material-symbols:download-rounded", width = 20),
+                                    id = "icon_download_results",
+                                    title = "Download table",
+                                    disabled = True,
+                                ),
+                            ], spacing = 0),
+                        ),
+                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "justifyContent": "right"},
+                    ),
+                ], cols = 2),
+                dag.AgGrid(
+                    id = "graph_enrichment_results",
+                    columnDefs = [
+                        {
+                            'field': "domain",
+                            "headerName": "Domain",
+                            "maxWidth": 220,
+                            "checkboxSelection": True,
+                        },
+                        {
+                            'field': "termid",
+                            "headerName": "Term ID",
+                            "cellRenderer": "TermIDRenderer",
+                            "maxWidth": 150,
+                        },
+                        {
+                            'field': "term",
+                            "headerName": "Term",
+                            "cellRenderer": "TermRenderer",
+                        },
+                        {
+                            'field': "count",
+                            "headerName": "Count",
+                            "width": 80,
+                            "headerTooltip": "Number of regulated associated molecules / Number of all associated molecules",
+                        },
+                        {
+                            'field': "pvalue",
+                            "headerName": "p-value",
+                            "width": 150,
+                            "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
+                        },
+                    ],
+                    rowData = [],
+                    columnSize = "responsiveSizeToFit",
+                    defaultColDef={
+                        "suppressMovable": True,
+                        "resizable": True,
+                        "sortable": True,
+                        "filter": True,
+                        "headerCheckboxSelection": {
+                            "function": "params.column == params.columnApi.getAllDisplayedColumns()[0]"
+                        },
+                    },
+                    style = {
+                        "height": "100%",
+                    },
+                    getRowId = "params.data.termid",
+                    dashGridOptions={
+                        "rowSelection": "multiple",
+                        "suppressMoveWhenRowDragging": True,
+                        "suppressRowClickSelection": True,
+                        "alwaysShowVerticalScroll": True,
+                        "noRowsOverlayComponent": "CustomNoRowsOverlay",
+                        "noRowsOverlayComponentParams": {
+                            "message": "Run the enrichment analysis to obtain results",
+                            "fontSize": 12,
+                        },
+                    },
+                ),
+            ]),
+        ],
+    ),
+    html.Div(style = {"height": "500px"}),
+])
 
 app.layout = layout
-
 
 
 

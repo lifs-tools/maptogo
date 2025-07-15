@@ -10,6 +10,7 @@ import pathlib
 import time
 from collections import defaultdict
 import traceback
+import pickle
 
 
 def time_elapsed(func):
@@ -146,21 +147,47 @@ class OntologyResult:
 
 class EnrichmentOntology:
     def __init__(self, file_name, ontology_name, lipid_parser):
-        self.ontology_terms = {}
-        self.ontology_term_list = []
-        self.lipids = {}
-        self.lipid_classes = {}
-        self.carbon_chains = {}
-        self.transcripts = {}
-        self.proteins = {}
-        self.clean_protein_ids = set()
-        self.metabolites = {}
-        self.clean_metabolite_ids = set()
-        self.domains = set()
         self.lipid_parser = lipid_parser
-        self.metabolite_names = {}
-        self.ontology_name = ontology_name
-        self.molecule_lookup = {}
+
+        dump_loaded = False
+        try:
+            with open(file_name.replace(".gz", ".pkl"), 'rb') as f:
+                load_obj = pickle.load(f)
+                self.ontology_terms = load_obj["ontology_terms"]
+                self.lipids = load_obj["lipids"]
+                self.lipid_classes = load_obj["lipid_classes"]
+                self.carbon_chains = load_obj["carbon_chains"]
+                self.transcripts = load_obj["transcripts"]
+                self.proteins = load_obj["proteins"]
+                self.clean_protein_ids = load_obj["clean_protein_ids"]
+                self.metabolites = load_obj["metabolites"]
+                self.clean_metabolite_ids = load_obj["clean_metabolite_ids"]
+                self.domains = load_obj["domains"]
+                self.metabolite_names = load_obj["metabolite_names"]
+                self.ontology_name = load_obj["ontology_name"]
+                self.molecule_lookup = load_obj["molecule_lookup"]
+                dump_loaded = True
+
+        except Exception as e:
+            self.ontology_terms = {}
+            self.lipids = {}
+            self.lipid_classes = {}
+            self.carbon_chains = {}
+            self.transcripts = {}
+            self.proteins = {}
+            self.clean_protein_ids = set()
+            self.metabolites = {}
+            self.clean_metabolite_ids = set()
+            self.domains = set()
+            self.metabolite_names = {}
+            self.ontology_name = ontology_name
+            self.molecule_lookup = {}
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
+            logger.error(e)
+
+        if dump_loaded:
+            logger.info(f"Dump loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
+            return
 
         try:
             with gzip.open(file_name) as input_stream:
@@ -259,7 +286,7 @@ class EnrichmentOntology:
         for term in self.ontology_terms.values():
             term.relations = [t for t in term.relations if t in self.ontology_terms]
 
-        # creating a lookup table for ontology known molecules
+        # creating lookup table for molecules
         for molecule_dict in [self.proteins, self.metabolites, self.transcripts]:
             for molecule_input_name, input_term in molecule_dict.items():
                 path = (input_term.get_term_id(), )
@@ -283,7 +310,29 @@ class EnrichmentOntology:
                             visited_terms.add(parent_term)
                             queue.append((parent_term_id, parent_term, graph.current_depth))
 
-        logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
+        try:
+            with open(file_name.replace(".gz", ".pkl"), 'wb') as f:
+                dump_obj = {
+                    "ontology_terms": self.ontology_terms,
+                    "lipids": self.lipids,
+                    "lipid_classes": self.lipid_classes,
+                    "carbon_chains": self.carbon_chains,
+                    "transcripts": self.transcripts,
+                    "proteins": self.proteins,
+                    "clean_protein_ids": self.clean_protein_ids,
+                    "metabolites": self.metabolites,
+                    "clean_metabolite_ids": self.clean_metabolite_ids,
+                    "domains": self.domains,
+                    "metabolite_names": self.metabolite_names,
+                    "ontology_name": self.ontology_name,
+                    "molecule_lookup": self.molecule_lookup,
+                }
+                pickle.dump(dump_obj, f)
+                logger.info(f"Stored {file_name.replace(".gz", ".pkl")} dump")
+
+        except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
+            logger.error(e)
 
 
     @time_elapsed
@@ -378,6 +427,7 @@ class EnrichmentOntology:
 
         # run all registered molecules
         search_terms = session.search_terms
+        ii = 0
         for molecule_input_name, path in all_paths:
             if path not in self.molecule_lookup:
                 graph = TracebackGraph(path)
@@ -397,6 +447,7 @@ class EnrichmentOntology:
                 contains_no_domain = len(term.domain) == 0
 
                 if not contains_no_domain:
+                    ii += 1
                     if term_id not in search_terms: search_terms[term_id] = {molecule_input_name: graph}
                     else: search_terms[term_id][molecule_input_name] = graph
 
@@ -405,10 +456,10 @@ class EnrichmentOntology:
                     if parent_term not in visited_terms:
                         visited_terms.add(parent_term)
                         queue.append((parent_term_id, parent_term, graph.current_depth))
-
+        print(ii)
 
     @time_elapsed
-    def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "two-sided"):
+    def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "greater"):
         if len(target_set) == 0 or session.num_background == 0 or len(enrichment_domains) == 0: return []
 
         enrichment_domains = set(enrichment_domains)
