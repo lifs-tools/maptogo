@@ -11,6 +11,16 @@ import time
 from collections import defaultdict
 import traceback
 
+
+def time_elapsed(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
+        return result
+    return wrapper
+
 current_path = pathlib.Path(__file__).parent.resolve()
 logger = logging.getLogger(__name__)
 try:
@@ -27,12 +37,10 @@ class SessionEntry:
         self.data = None
         self.data_loaded = False
         self.search_terms = {}
-        self.term_leaves = set()
         self.num_background = 0
         self.use_bounded_fatty_acyls = True
         self.ontology = None
         self.domains = None
-        self.all_domain_terms = True
 
         self.background_lipids = None
         self.regulated_lipids = None
@@ -78,6 +86,11 @@ class TracebackGraph:
             current_node = self.nodes[current_node]
         return path[::-1]
 
+    def go_back(self, path_len):
+        if self.current_node == None or path_len <= 0: return
+        while self.current_depth > path_len:
+            self.current_node = self.nodes[self.current_node]
+            self.current_depth -= 1
 
 
 class OntologyTerm:
@@ -147,6 +160,7 @@ class EnrichmentOntology:
         self.lipid_parser = lipid_parser
         self.metabolite_names = {}
         self.ontology_name = ontology_name
+        self.molecule_lookup = {}
 
         try:
             with gzip.open(file_name) as input_stream:
@@ -231,7 +245,7 @@ class EnrichmentOntology:
         self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
 
         try:
-            for line in open("Data/additional_links.csv").read().split("\n"):
+            for line in open(f"{current_path}/Data/additional_links.csv").read().split("\n"):
                 if len(line) < 2: continue
                 tokens = line.split("\t")
                 if len(tokens) < 2 or tokens[0] not in self.ontology_terms or tokens[1] not in self.ontology_terms: continue
@@ -245,12 +259,36 @@ class EnrichmentOntology:
         for term in self.ontology_terms.values():
             term.relations = [t for t in term.relations if t in self.ontology_terms]
 
+        # creating a lookup table for ontology known molecules
+        for molecule_dict in [self.proteins, self.metabolites, self.transcripts]:
+            for molecule_input_name, input_term in molecule_dict.items():
+                path = (input_term.get_term_id(), )
+                graph = TracebackGraph(path)
+                self.molecule_lookup[path] = [set(), graph]
+                m_lookup = self.molecule_lookup[path]
+
+                queue = [(path[-1], input_term, len(path))]
+                visited_terms = {input_term}
+                while queue:
+                    term_id, term, path_len = queue.pop()
+                    graph.go_back(path_len)
+                    graph.add_node(term_id)
+                    contains_no_domain = len(term.domain) == 0
+
+                    if not contains_no_domain: m_lookup[0].add(term_id)
+
+                    for parent_term_id in term.relations:
+                        parent_term = self.ontology_terms[parent_term_id]
+                        if parent_term not in visited_terms:
+                            visited_terms.add(parent_term)
+                            queue.append((parent_term_id, parent_term, graph.current_depth))
+
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
 
+    @time_elapsed
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
         session.search_terms = {}
-        session.term_leaves = set()
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
         all_paths = set()
 
@@ -338,30 +376,38 @@ class EnrichmentOntology:
             term = self.transcripts[transcript_name]
             all_paths.add((transcript_input_name, (term.get_term_id(), )))
 
+        # run all registered molecules
+        search_terms = session.search_terms
         for molecule_input_name, path in all_paths:
+            if path not in self.molecule_lookup:
+                graph = TracebackGraph(path)
+            else:
+                g = self.molecule_lookup[path][1]
+                for term_id in self.molecule_lookup[path][0]:
+                    if term_id not in search_terms: search_terms[term_id] = {molecule_input_name: g}
+                    else: search_terms[term_id][molecule_input_name] = g
+                continue
+
             queue = [(path[-1], self.ontology_terms[path[-1]], len(path))]
             visited_terms = {self.ontology_terms[path[-1]]}
-            graph = TracebackGraph(path)
-
             while queue:
                 term_id, term, path_len = queue.pop()
-                while graph.current_depth > path_len: graph.step_back()
+                graph.go_back(path_len)
                 graph.add_node(term_id)
                 contains_no_domain = len(term.domain) == 0
 
-                if not contains_no_domain and graph.root != term_id:
-                    if term_id not in session.search_terms: session.search_terms[term_id] = {}
-                    session.search_terms[term_id][molecule_input_name] = graph
+                if not contains_no_domain:
+                    if term_id not in search_terms: search_terms[term_id] = {molecule_input_name: graph}
+                    else: search_terms[term_id][molecule_input_name] = graph
 
-                #if session.all_domain_terms or contains_no_domain:
                 for parent_term_id in term.relations:
                     parent_term = self.ontology_terms[parent_term_id]
-                    if contains_no_domain and len(parent_term.domain) > 0: session.term_leaves.add(parent_term)
                     if parent_term not in visited_terms:
                         visited_terms.add(parent_term)
                         queue.append((parent_term_id, parent_term, graph.current_depth))
 
 
+    @time_elapsed
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "two-sided"):
         if len(target_set) == 0 or session.num_background == 0 or len(enrichment_domains) == 0: return []
 
@@ -374,7 +420,6 @@ class EnrichmentOntology:
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
-                    or (term not in session.term_leaves and not session.all_domain_terms)
                     or len(term.domain & enrichment_domains) == 0
                     or term in visited_terms
                 ): continue
@@ -407,7 +452,6 @@ class EnrichmentOntology:
                 term = self.ontology_terms[term_id]
                 if (
                     len(term_metabolites) == 0
-                    or (term not in session.term_leaves and not session.all_domain_terms)
                     or len(term.domain & enrichment_domains) == 0
                     or term in visited_terms
                 ): continue

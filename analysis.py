@@ -1117,15 +1117,6 @@ def layout():
                                         ),
                                         style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
                                     ),
-                                    html.Div(
-                                        dmc.Switch(
-                                            id = "enrichment_parent_terms",
-                                            checked = True,
-                                            label = "Include all hierarchical domain terms",
-                                            style = {"paddingBottom": "8px"},
-                                        ),
-                                        style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
-                                    ),
                                 ],
                             ),
 
@@ -1317,7 +1308,6 @@ def organism_changed(organism, domain_values):
     State("checkbox_use_proteins", "checked"),
     State("checkbox_use_metabolites", "checked"),
     State("checkbox_use_transcripts", "checked"),
-    State("enrichment_parent_terms", "checked"),
     prevent_initial_call = True,
 )
 def run_enrichment(
@@ -1341,7 +1331,6 @@ def run_enrichment(
     with_proteins,
     with_metabolites,
     with_transcripts,
-    all_domain_terms,
 ):
     do_activate_alert = True
     histogram_disabled = True
@@ -1564,7 +1553,6 @@ def run_enrichment(
         if with_transcripts: target_set |= session.regulated_transcripts
 
     session.domains = set(domains)
-    session.all_domain_terms = all_domain_terms
     results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
     session.result = results
 
