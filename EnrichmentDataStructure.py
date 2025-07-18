@@ -14,7 +14,7 @@ import pickle
 import os
 
 WITH_LOOKUP = True
-WITH_LOOKUP_STORAGE = False
+WITH_LOOKUP_STORAGE = True
 SKIP_LOADING = False
 
 def time_elapsed(func):
