@@ -1,6 +1,10 @@
 import pandas as pd
+import zipfile
 
-df = pd.read_csv("Data/pathbank_all_proteins.csv")
+with zipfile.ZipFile("Data/pathbank_all_proteins.csv.zip", "r") as zip_ref:
+    with zip_ref.open("pathbank_all_proteins.csv") as f:
+        df = pd.read_csv(f)
+
 df = df[~df["Uniprot ID"].isna()]
 df = df[~df["Pathway Name"].isna()]
 df = df[~df["PathBank ID"].isna()]

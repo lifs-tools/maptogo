@@ -9,7 +9,7 @@ logging.basicConfig(
 logger.info("Started enrichment server")
 
 
-from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table
+from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table, ctx
 import dash_mantine_components as dmc
 import plotly.graph_objs as go
 import dash_ag_grid as dag
@@ -21,7 +21,7 @@ import io
 from scipy.cluster.hierarchy import linkage, leaves_list, dendrogram
 from scipy.spatial.distance import squareform
 from statsmodels.stats.multitest import multipletests
-from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry
+from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry, OntologyTerm
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
@@ -111,6 +111,10 @@ LIPIDS_COLOR = "#A3DC9A"
 PROTEINS_COLOR = "#DEE791"
 METABOLITES_COLOR = "#FFF9BD"
 TRANSCRIPTS_COLOR = "#FFD6BA"
+
+MOLECULE_HANDLING_ERROR = "molecule_handling_error"
+MOLECULE_HANDLING_REMOVE = "molecule_handling_remove"
+MOLECULE_HANDLING_IGNORE = "molecule_handling_ignore"
 
 
 def annotate_arc(
@@ -653,38 +657,58 @@ def layout():
 
             html.P([
                 dmc.Title("Disclaimer", order = 4),
-                dmc.Title("1. Liability limitation", order = 5),
+                dmc.Title("Legal form and governing bodies", order = 5),
                 dmc.Text(
-                    "The usage of the downloadable data available on this web page takes place at the users own risk.",
+                    "The University of Vienna is a legal entity under public law in accordance with section 4 of the 2002 Universities Act. In accordance with section 20 of the 2002 Universities Act, the senior governing bodies of the University of Vienna are the University Board, the Rectorate, the Rector and the Senate.",
                     style = {"textAlign": "justify"},
                 ),
             ]),
 
             html.P([
-                dmc.Title("2. External links", order = 5),
+                dmc.Title("Basic purpose of the website", order = 5),
                 dmc.Text(
-                    "This web page contains links forwarding to external web pages. For all external web pages we disclaim liability. During the linking no statutory violation was evident. As soon as a violation emerges, we delete these links.",
+                    "Providing a web service for multiomics enrichment analyses.",
                     style = {"textAlign": "justify"},
                 ),
             ]),
 
             html.P([
-                dmc.Title("3. Copyright", order = 5),
+                dmc.Title("Copyright", order = 5),
                 dmc.Text(
-                    "The content of this web page is subject to the Austrian copyright law and ancillary copyright. Every inadmissible utilization defined by the Austrian copyright law and ancillary copyright is forbidden. This includes the disposal of the downloadable data. Download and utilization of the available data for researching purposes is explicitly allowed.",
+                    "© The contents of the website are published in the World Wide Web for online access. Copyright for texts, images, graphic design and source code is owned by the Department of Analytical Chemistry, University of Vienna and subject to legal protection. The production, use and non-commercial distribution of copies in electronic or printed form is allowed provided that the contents are not altered and the source is mentioned (Source: Department of Analytical Chemistry, University of Vienna).",
                     style = {"textAlign": "justify"},
                 ),
             ]),
 
             html.P([
-                dmc.Title("4. Privacy", order = 5),
+                dmc.Title("Liability", order = 5),
                 dmc.Text(
-                    "For statistical purposes, we record the number of visits to this web page as well as the number of downloads. To ensure an unbiased record, we store a hash value of your IP address for several minutes. Since this method is not reversible, restoring your IP address is not possible, hence this value does not belong to personal-related data. We do not sell or hand out our collected statistical data to third parties.",
+                    "The text provided on this homepage has been reviewed with great care. However, the Department of Analytical Chemistry or the University of Vienna cannot guarantee the accuracy, completeness or validity of the information provided. Therefore the Department of Analytical Chemistry and the University of Vienna accept no liability for the contents provided. Links to other websites have been carefully selected. However, the Department of Analytical Chemistry and the University of Vienna are not responsible for contents on any other websites.",
                     style = {"textAlign": "justify"},
                 ),
             ]),
 
             html.P([
+                dmc.Title("Responsibility for contents and editing", order = 5),
+                dmc.Text("Department of Analytical Chemistry"),
+                dmc.Text("University of Vienna"),
+                dmc.Text("Sensengasse 8 / TOP 12"),
+                dmc.Text("A-1090 Vienna"),
+                dmc.Text("Austria"),
+                html.Br(),
+                dmc.Text("Tel: +43-1-4277-52307"),
+                dmc.Text([
+                    "Email: ",
+                    html.A(
+                        "dominik.kopczynski@univie.ac.at",
+                        href = "mailto:dominik.kopczynski@univie.ac.at",
+                        style = {"color": LINK_COLOR},
+                    ),
+                ]),
+            ]),
+
+            html.P([
+                dmc.Title("Third-party databeses", order = 5),
                 dmc.Text("GO multiomics is using data from third-party databases. All databases are listed with their according licenses or permission:"),
                 dmc.Text([
                     "- ",
@@ -1096,13 +1120,23 @@ def layout():
                                     label = "Term representation:",
                                 ),
                                 html.Div(
-                                    dmc.Switch(
-                                        id = "switch_ignore_unparsable_lipids",
-                                        checked = False,
-                                        label = "Ignore unrecognizable molecules",
-                                        style = {"paddingBottom": "8px"},
+                                    dmc.Select(
+                                        id = "select_molecule_handling",
+                                        data = [
+                                            {"value": MOLECULE_HANDLING_ERROR, "label": "Halt analysis and report"},
+                                            {"value": MOLECULE_HANDLING_REMOVE, "label": "Remove from input lists"},
+                                            {"value": MOLECULE_HANDLING_IGNORE, "label": "Keep in input lists and continue"},
+                                        ],
+                                        value = MOLECULE_HANDLING_REMOVE,
+                                        label = "Handling of unrecognizable molecules:",
                                     ),
-                                    style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
+                                    # dmc.Switch(
+                                    #     id = "switch_ignore_unparsable_lipids",
+                                    #     checked = False,
+                                    #     label = "Ignore unrecognizable molecules",
+                                    #     style = {"paddingBottom": "8px"},
+                                    # ),
+                                    # style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
                                 ),
                                 html.Div(
                                     dmc.Switch(
@@ -1159,7 +1193,7 @@ def layout():
                 ),
             ]),
             html.Div([
-                dmc.SimpleGrid([
+                html.Div([
                     dmc.Title(
                         "Results",
                         order = 5,
@@ -1168,6 +1202,13 @@ def layout():
                     html.Div(
                         html.Span(
                             dmc.Group([
+                                dmc.MultiSelect(
+                                    id = "multiselect_filter_molecules",
+                                    placeholder = "Filter terms for molecules",
+                                    style = {"marginRight": "15px", "width": "400px", "maxWidth": 400},
+                                    searchable = True,
+                                    className = "truncate-multiselect",
+                                ),
                                 dmc.ActionIcon(
                                     DashIconify(icon="ion:bar-chart-sharp", width = 20),
                                     id = "histogram_results",
@@ -1199,72 +1240,86 @@ def layout():
                         ),
                         style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "justifyContent": "right"},
                     ),
-                ], cols = 2),
-                dag.AgGrid(
-                    id = "graph_enrichment_results",
-                    columnDefs = [
-                        {
-                            'field': "domain",
-                            "headerName": "Domain",
-                            "maxWidth": 220,
-                            "checkboxSelection": True,
+                ], style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    #"width": "100%",  # or set fixed width like "400px"
+                    #"padding": "0 10px",
+                }),
+                html.Div(
+                    dag.AgGrid(
+                        id = "graph_enrichment_results",
+                        columnDefs = [
+                            {
+                                'field': "domain",
+                                "headerName": "Domain",
+                                "maxWidth": 220,
+                                "checkboxSelection": True,
+                            },
+                            {
+                                'field': "termid",
+                                "headerName": "Term ID",
+                                "cellRenderer": "TermIDRenderer",
+                                "maxWidth": 150,
+                            },
+                            {
+                                'field': "term",
+                                "headerName": "Term",
+                                "cellRenderer": "TermRenderer",
+                            },
+                            {
+                                'field': "count",
+                                "headerName": "Count",
+                                "width": 80,
+                                "headerTooltip": "Number of regulated associated molecules / Number of all associated molecules",
+                            },
+                            {
+                                'field': "pvalue",
+                                "headerName": "p-value",
+                                "width": 150,
+                                "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
+                            },
+                        ],
+                        rowData = [],
+                        columnSize = "responsiveSizeToFit",
+                        defaultColDef={
+                            "suppressMovable": True,
+                            "resizable": True,
+                            "sortable": True,
+                            "filter": True,
+                            "headerCheckboxSelection": {
+                                "function": "params.column == params.columnApi.getAllDisplayedColumns()[0]"
+                            },
                         },
-                        {
-                            'field': "termid",
-                            "headerName": "Term ID",
-                            "cellRenderer": "TermIDRenderer",
-                            "maxWidth": 150,
+                        className = "ag-theme-alpine terms-theme",
+                        style = {
+                            "height": "100%",
                         },
-                        {
-                            'field': "term",
-                            "headerName": "Term",
-                            "cellRenderer": "TermRenderer",
+                        getRowId = "params.data.termid",
+                        dashGridOptions={
+                            "rowSelection": "multiple",
+                            "suppressMoveWhenRowDragging": True,
+                            "suppressRowClickSelection": True,
+                            "alwaysShowVerticalScroll": True,
+                            "noRowsOverlayComponent": "CustomNoRowsOverlay",
+                            "noRowsOverlayComponentParams": {
+                                "message": "Run the enrichment analysis to obtain results",
+                                "fontSize": 12,
+                            },
                         },
-                        {
-                            'field': "count",
-                            "headerName": "Count",
-                            "width": 80,
-                            "headerTooltip": "Number of regulated associated molecules / Number of all associated molecules",
-                        },
-                        {
-                            'field': "pvalue",
-                            "headerName": "p-value",
-                            "width": 150,
-                            "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
-                        },
-                    ],
-                    rowData = [],
-                    columnSize = "responsiveSizeToFit",
-                    defaultColDef={
-                        "suppressMovable": True,
-                        "resizable": True,
-                        "sortable": True,
-                        "filter": True,
-                        "headerCheckboxSelection": {
-                            "function": "params.column == params.columnApi.getAllDisplayedColumns()[0]"
-                        },
-                    },
-                    style = {
-                        "height": "100%",
-                    },
-                    getRowId = "params.data.termid",
-                    dashGridOptions={
-                        "rowSelection": "multiple",
-                        "suppressMoveWhenRowDragging": True,
-                        "suppressRowClickSelection": True,
-                        "alwaysShowVerticalScroll": True,
-                        "noRowsOverlayComponent": "CustomNoRowsOverlay",
-                        "noRowsOverlayComponentParams": {
-                            "message": "Run the enrichment analysis to obtain results",
-                            "fontSize": 12,
-                        },
-                    },
+                    ),
+                    className = "terms-overlay",
                 ),
             ]),
         ],
     ),
     html.Div(style = {"height": "500px"}),
-])
+], style={
+    "height": "100vh",
+    #"background": "linear-gradient(to bottom, white 0%, white 0%, #e4eff7 8%, #e4eff7 100%)",
+    "margin": "0",
+    "padding": "0"
+})
 
 app.layout = layout
 
@@ -1289,9 +1344,12 @@ def organism_changed(organism, domain_values):
     Output("loading_output", "children", allow_duplicate = True),
     Output("graph_enrichment_results", "rowData", allow_duplicate = True),
     Output("graph_enrichment_results", "selectedRows", allow_duplicate = True),
+    Output("graph_enrichment_results", "filterModel", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("histogram_results", "disabled", allow_duplicate = True),
+    Output("multiselect_filter_molecules", "data", allow_duplicate = True),
+    Output("multiselect_filter_molecules", "value", allow_duplicate = True),
     Input("button_run_enrichment", "n_clicks"),
     State("textarea_all_lipids", "value"),
     State("textarea_regulated_lipids", "value"),
@@ -1303,7 +1361,7 @@ def organism_changed(organism, domain_values):
     State("textarea_regulated_transcripts", "value"),
     State("select_organism", "value"),
     State("select_domains", "value"),
-    State("switch_ignore_unparsable_lipids", "checked"),
+    State("select_molecule_handling", "value"),
     State("select_test_method", "value"),
     State("switch_ignore_unknown_regulated_lipids", "checked"),
     State("select_term_representation", "value"),
@@ -1340,17 +1398,17 @@ def run_enrichment(
     histogram_disabled = True
 
     if session_id not in sessions:
-        return "", [], [], do_activate_alert, "Your session has expired. Please refresh the website.", histogram_disabled
+        return "", [], [], {}, do_activate_alert, "Your session has expired. Please refresh the website.",  histogram_disabled, [], []
 
     logger.info(f"Enrichment session: {session_id}")
     session = sessions[session_id]
     session.time = time.time()
 
     if not with_lipids and not with_proteins and not with_metabolites and not with_transcripts:
-        return "", [], [], do_activate_alert, "No omics data is selected.", histogram_disabled
+        return "", [], [], {}, do_activate_alert, "No omics data is selected.", histogram_disabled, [], []
 
     if len(domains) == 0:
-        return "", [], [], do_activate_alert, "No domain(s) selected.", histogram_disabled
+        return "", [], [], {}, do_activate_alert, "No domain(s) selected.", histogram_disabled, [], []
 
     ontology = enrichment_ontologies[organism]
 
@@ -1359,40 +1417,46 @@ def run_enrichment(
     proteome, regulated_proteins = set(), set()
     metabolome, regulated_metabolites = set(), set()
     transcriptome, regulated_transcripts = set(), set()
+    background_list = []
 
     if not session.data_loaded:
         if with_lipids:
             if len(all_lipids_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste lipid names into the first text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste lipid names into the first text area.", histogram_disabled, [], []
 
             if len(regulated_lipids_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste lipid names into the second text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste lipid names into the second text area.", histogram_disabled, [], []
 
             for lipid_name in all_lipids_list.split("\n"):
                 if len(lipid_name) == 0: continue
                 try:
                     lipid = lipid_parser.parse(lipid_name)
-                    lipidome[lipid_name] = lipid
 
                 except Exception as e:
-                    if not ignore_unrecognizable_molecules:
-                        return "", [], [], do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+                    if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                        lipid = None
+                    elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
+                        continue
+                    else:
+                        return "", [], [], {}, do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
+
+                lipidome[lipid_name] = lipid
 
             for lipid_name in regulated_lipids_list.split("\n"):
                 if len(lipid_name) == 0: continue
                 if lipid_name not in lipidome:
                     if ignore_unknown: continue
-                    return "", [], [], do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
                 regulated_lipids.add(lipid_name)
 
             if len(lipidome) == 0:
-                return "", [], [], do_activate_alert, "No background lipid left after lipid recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No background lipid left after lipid recognition.", histogram_disabled, [], []
 
             if len(regulated_lipids) == 0:
-                return "", [], [], do_activate_alert, "No regulated lipid left after lipid recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No regulated lipid left after lipid recognition.", histogram_disabled, [], []
 
             if len(regulated_lipids) > len(lipidome):
-                return "", [], [], do_activate_alert, "Length of regulated lipid list must be smaller than background list.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Length of regulated lipid list must be smaller than background list.", histogram_disabled, [], []
 
             left_lipids = regulated_lipids - lipidome.keys()
             if len(left_lipids) > 0:
@@ -1400,49 +1464,57 @@ def run_enrichment(
                     for lipid_name in left_lipids:
                         del lipidome[lipid_name]
                 else:
-                    return "", [], [], do_activate_alert, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
 
             target_set |= regulated_lipids
+            background_list += list(lipidome.keys())
 
         if with_proteins:
             if len(all_proteins_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste protein accession into the first text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste protein accession into the first text area.", histogram_disabled, [], []
 
             if len(regulated_proteins_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste protein accessions into the second text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste protein accessions into the second text area.", histogram_disabled, [], []
 
             proteome = set(protein for protein in all_proteins_list.split("\n") if len(protein) > 0)
             regulated_proteins = set(protein for protein in regulated_proteins_list.split("\n") if len(protein) > 0)
 
+            background_list += list(proteome)
+            proteome = set(p.split("-")[0] for p in proteome)
+            regulated_proteins = set(rp.split("-")[0] for rp in regulated_proteins)
             left_proteins = proteome - ontology.clean_protein_ids
             if len(left_proteins) > 0:
-                if ignore_unrecognizable_molecules:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                     proteome -= left_proteins
                 else:
-                    return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
 
             left_proteins = regulated_proteins - ontology.clean_protein_ids
             if len(left_proteins) > 0:
-                if ignore_unrecognizable_molecules:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                     regulated_proteins -= left_proteins
                 else:
-                    return "", [], [], do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
 
             left_proteins = regulated_proteins - proteome
             if len(left_proteins) > 0:
                 if ignore_unknown:
                     proteome -= left_proteins
                 else:
-                    return "", [], [], do_activate_alert, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
 
             if len(proteome) == 0:
-                return "", [], [], do_activate_alert, "No background protein left after protein recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No background protein left after protein recognition.", histogram_disabled, [], []
 
             if len(regulated_proteins) == 0:
-                return "", [], [], do_activate_alert, "No regulated protein left after protein recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No regulated protein left after protein recognition.", histogram_disabled, [], []
 
             if len(regulated_proteins) > len(proteome):
-                return "", [], [], do_activate_alert, "Length of regulated protein list must be smaller than background list.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Length of regulated protein list must be smaller than background list.", histogram_disabled, [], []
 
             proteome = set([f"UNIPROT:{protein}" for protein in proteome])
             regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
@@ -1450,45 +1522,50 @@ def run_enrichment(
 
         if with_metabolites:
             if len(all_metabolites_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the first text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste metabolite ChEBI Ids into the first text area.", histogram_disabled, [], []
 
             if len(regulated_metabolites_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste metabolite ChEBI Ids into the second text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste metabolite ChEBI Ids into the second text area.", histogram_disabled, [], []
 
             metabolome = set(metabolite for metabolite in all_metabolites_list.split("\n") if len(metabolite) > 0)
             regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list.split("\n") if len(metabolite) > 0)
 
+            background_list += list(metabolome)
             left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
             left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
             if len(left_metabolites) > 0:
-                if ignore_unrecognizable_molecules:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                     metabolome -= left_metabolites
                 else:
-                    return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
 
             left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
             left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
             if len(left_metabolites) > 0:
-                if ignore_unrecognizable_molecules:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                     regulated_metabolites -= left_metabolites
                 else:
-                    return "", [], [], do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
 
             left_metabolites = regulated_metabolites - metabolome
             if len(left_metabolites) > 0:
                 if ignore_unknown:
                     metabolome -= left_metabolites
                 else:
-                    return "", [], [], do_activate_alert, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
 
             if len(metabolome) == 0:
-                return "", [], [], do_activate_alert, "No background metabolite left after metabolite recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No background metabolite left after metabolite recognition.", histogram_disabled, [], []
 
             if len(regulated_metabolites) == 0:
-                return "", [], [], do_activate_alert, "No regulated metabolite left after metabolite recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No regulated metabolite left after metabolite recognition.", histogram_disabled, [], []
 
             if len(regulated_metabolites) > len(metabolome):
-                return "", [], [], do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", histogram_disabled, [], []
 
             metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
             regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
@@ -1496,44 +1573,49 @@ def run_enrichment(
 
         if with_transcripts:
             if len(all_transcripts_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste transcript ensembl Ids into the first text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste transcript ensembl Ids into the first text area.", histogram_disabled, [], []
 
             if len(regulated_transcripts_list) == 0:
-                return "", [], [], do_activate_alert, "Please paste transcript ensembl Ids into the second text area.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Please paste transcript ensembl Ids into the second text area.", histogram_disabled, [], []
 
             transcriptome = set(transcript for transcript in all_transcripts_list.split("\n") if len(transcript) > 0)
             regulated_transcripts = set(transcript for transcript in regulated_transcripts_list.split("\n") if len(transcript) > 0)
 
+            background_list += list(transcriptome)
             transcript_keys = set(ontology.transcripts.keys())
             left_transcripts = set(t for t in transcriptome if t.split(".")[0] not in transcript_keys)
             if len(left_transcripts) > 0:
-                if ignore_unrecognizable_molecules:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                     transcriptome -= left_transcripts
                 else:
-                    return "", [], [], do_activate_alert, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
 
             left_transcripts = set(t for t in regulated_transcripts if t.split(".")[0] not in transcript_keys)
             if len(left_transcripts) > 0:
-                if ignore_unrecognizable_molecules:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                     regulated_transcripts -= left_transcripts
                 else:
-                    return "", [], [], do_activate_alert, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
 
             left_transcripts = regulated_transcripts - transcriptome
             if len(left_transcripts) > 0:
                 if ignore_unknown:
                     transcriptome -= left_transcripts
                 else:
-                    return "", [], [], do_activate_alert, "The regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled
+                    return "", [], [], {}, do_activate_alert, "The regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
 
             if len(transcriptome) == 0:
-                return "", [], [], do_activate_alert, "No background transcript left after transcript recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No background transcript left after transcript recognition.", histogram_disabled, [], []
 
             if len(regulated_transcripts) == 0:
-                return "", [], [], do_activate_alert, "No regulated transcript left after transcript recognition.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "No regulated transcript left after transcript recognition.", histogram_disabled, [], []
 
             if len(regulated_transcripts) > len(transcriptome):
-                return "", [], [], do_activate_alert, "Length of regulated transcript list must be smaller than background list.", histogram_disabled
+                return "", [], [], {}, do_activate_alert, "Length of regulated transcript list must be smaller than background list.", histogram_disabled, [], []
 
             target_set |= regulated_transcripts
 
@@ -1549,12 +1631,15 @@ def run_enrichment(
         session.regulated_metabolites = regulated_metabolites if with_metabolites else None
         session.background_transcripts = transcriptome if with_transcripts else None
         session.regulated_transcripts = regulated_transcripts if with_transcripts else None
+        background_list.sort()
+        session.background_list = background_list
 
     else:
         if with_lipids: target_set |= session.regulated_lipids
         if with_proteins: target_set |= session.regulated_proteins
         if with_metabolites: target_set |= session.regulated_metabolites
         if with_transcripts: target_set |= session.regulated_transcripts
+        background_list = session.background_list
 
     session.domains = set(domains)
     results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
@@ -1565,23 +1650,23 @@ def run_enrichment(
         pvalues = multipletests(pvalues, method = correction_method)[1]
         for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
 
-    results.sort(key = lambda row: row.pvalue_corrected)
-
+    results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
 
     data = []
+    session.data = {}
+    session.results = []
     for result in results:
-        data.append(
-            {
-                "domain": " | ".join(result.term.domain),
-                "term": result.term.name,
-                "termid": result.term.get_term_id(),
-                "count": f"{result.fisher_data[0]} / {len(set(result.source_terms))}",
-                "pvalue": "{:.6g}".format(result.pvalue_corrected)
-            }
-        )
+        row = {
+            "domain": " | ".join(result.term.domain),
+            "term": result.term.name,
+            "termid": result.term.get_term_id(),
+            "count": f"{result.fisher_data[0]} / {len(set(result.source_terms))}",
+            "pvalue": "{:.6g}".format(result.pvalue_corrected)
+        }
+        data.append(row)
+        session.results.append((result, row))
 
     histogram_disabled = False
-    session.data = {}
     for result in results:
         for term_id in result.term.term_id:
             session.data[term_id] = result
@@ -1590,10 +1675,52 @@ def run_enrichment(
         "",
         data,
         [],
+        {},
         not do_activate_alert,
         "",
         histogram_disabled,
+        background_list,
+        [],
     )
+
+
+
+@callback(
+    Output("graph_enrichment_results", "rowData", allow_duplicate = True),
+    Output("graph_enrichment_results", "selectedRows", allow_duplicate = True),
+    Output("graph_enrichment_results", "filterModel", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Input("multiselect_filter_molecules", "value"),
+    State("multiselect_filter_molecules", "data"),
+    State("sessionid", "children"),
+    prevent_initial_call = True,
+)
+def filter_result_table(multiselect_values, multiselect_data, session_id):
+    if multiselect_data == None or len(multiselect_data) == 0 or multiselect_values == None or session_id == None:
+        raise exceptions.PreventUpdate
+
+    if session_id not in sessions:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website.",
+        )
+
+    session = sessions[session_id]
+    session.time = time.time()
+
+    if session.results is None or len(session.results) == 0:
+        raise exceptions.PreventUpdate
+
+    if len(multiselect_values) > 0:
+        multiselect_values = set(multiselect_values)
+        data = [row for result, row in session.results if len(set(result.source_terms.keys()) & multiselect_values) > 0]
+    else:
+        data = [row for _, row in session.results]
+    return data, [], {}, False, ""
 
 
 
@@ -1622,6 +1749,7 @@ def run_enrichment(
     Input("checkbox_use_metabolites", "checked"),
     Input("checkbox_use_transcripts", "checked"),
     Input("select_organism", "value"),
+    Input("select_molecule_handling", "value"),
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
@@ -1640,6 +1768,7 @@ def update_background(
     with_metabolites,
     with_transcripts,
     select_organism,
+    select_molecule_handling,
     session_id,
 ):
     num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))
@@ -2532,20 +2661,19 @@ def open_barplot(
 
         # Add related domain bars
         len_source_terms = len(molecules)
-        for term_id, term_input_molecules in session.search_terms.items():
-            if min(len_source_terms, len(term_input_molecules)) / max(len_source_terms, len(term_input_molecules)) < jaccard_ths or term_id not in ontology.ontology_terms: continue
+        for foreign_term, term_input_molecules in session.search_terms.items():
+            if min(len_source_terms, len(term_input_molecules)) / max(len_source_terms, len(term_input_molecules)) < jaccard_ths: continue
 
-            foreign_term = ontology.ontology_terms[term_id]
             for dom in foreign_term.domain:
                 remaining_domains_categories[i][1][dom] += 1
                 max_domain_num = max(max_domain_num, remaining_domains_categories[i][1][dom])
         remaining_domains_categories[i][0] = description_start_angle - bar_width * 0.025
 
         for molecule in molecules:
-            for term_id in result.source_terms[molecule].get_path(result.term_id):
-                if term_id in ontology.ontology_terms: break
+            for term in result.source_terms[molecule].get_path(result.term):
+                if type(term) == OntologyTerm: break
 
-            for category in ontology.ontology_terms[term_id].categories:
+            for category in term.categories:
                 if category not in remaining_domains_categories[i][2]:
                     remaining_domains_categories[i][2][category] = 0
                 remaining_domains_categories[i][2][category] += 1
@@ -2873,43 +3001,49 @@ def show_molecule_term_path(
     organism,
 ):
     if session_id not in sessions:
-        return True, "Your session has expired. Please refresh the website."
+        return True, "Your session has expired. Please refresh the website.", ""
 
-    if target_term_id not in sessions[session_id].search_terms:
-        return True, "Your session has expired. Please refresh the website."
+    ontology = enrichment_ontologies[organism]
+    if target_term_id not in ontology.ontology_terms:
+        return True, "Your session has expired. Please refresh the website.", ""
+
+    target_term = ontology.ontology_terms[target_term_id]
+    if target_term not in sessions[session_id].search_terms:
+        return True, "Your session has expired. Please refresh the website.", ""
 
     trigger = callback_context.triggered[0]["prop_id"].split(".")[0]
     if trigger == "term_lipids_modal_grid":
         row_index = renderer_data_lipids["rowIndex"]
         if len(row_data_lipids) <= row_index:
-            return True, "Your session has expired. Please refresh the website."
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = row_data_lipids[row_index]["molecule"]
 
     elif trigger == "term_proteins_modal_grid":
         row_index = renderer_data_proteins["rowIndex"]
         if len(row_data_proteins) <= row_index:
-            return True, "Your session has expired. Please refresh the website."
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = "UNIPROT:" + row_data_proteins[row_index]["molecule"]
 
     elif trigger == "term_metabolites_modal_grid":
         row_index = renderer_data_metabolites["rowIndex"]
         if len(row_data_metabolites) <= row_index:
-            return True, "Your session has expired. Please refresh the website."
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = row_data_metabolites[row_index]["molecule"]
 
     elif trigger == "term_transcripts_modal_grid":
         row_index = renderer_data_transcripts["rowIndex"]
         if len(row_data_transcripts) <= row_index:
-            return True, "Your session has expired. Please refresh the website."
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = row_data_transcripts[row_index]["molecule"]
 
-    ontology = enrichment_ontologies[organism]
     term_path = []
-    for i, term_id in enumerate(sessions[session_id].search_terms[target_term_id][molecule].get_path(target_term_id)):
+    for i, term in enumerate(sessions[session_id].search_terms[target_term][molecule].get_path(target_term)):
+        if type(term) == str: term_id = term
+        else: term_id = list(term.term_id)[0]
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
         href, term_name = ".", ""
         if term_id in ontology.ontology_terms:
-            term_name = ontology.ontology_terms[term_id].name
+            term_name = term.name if type(term) == OntologyTerm else ontology.ontology_terms[term_id].name
             if term_id.startswith("GO:"):
                 href = "https://amigo.geneontology.org/amigo/term/" + term_id
 

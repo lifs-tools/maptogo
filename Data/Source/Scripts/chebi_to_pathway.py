@@ -1,4 +1,6 @@
 import pandas as pd
+import zipfile
+
 
 def a(x):
     return '\t'.join(x)
@@ -24,7 +26,9 @@ species = {
 # 'Phosphatidylethanolamine Biosynthesis PE'
 # 'Phosphatidylcholine Biosynthesis PC'
 
-df = pd.read_csv("Data/pathbank_all_metabolites.csv", dtype = {"ChEBI ID": str})
+with zipfile.ZipFile("Data/pathbank_all_metabolites.csv.zip", "r") as zip_ref:
+    with zip_ref.open("pathbank_all_metabolites.csv") as f:
+        df = pd.read_csv(f, dtype = {"ChEBI ID": str})
 df = df[df["ChEBI ID"].notna() & (df["ChEBI ID"] != "")]
 
 df = df[~df["Pathway Name"].str.startswith('De Novo Triacylglycerol Biosynthesis TG')]

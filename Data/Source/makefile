@@ -1,8 +1,8 @@
-DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/pathbank_all_metabolites.csv Data/pathbank_all_proteins.csv Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz
+DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/rhea2uniprot_trembl.tsv.gz Data/pathbank_all_metabolites.csv.zip Data/pathbank_all_proteins.csv.zip Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Homo_sapiens.all.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/Mus_musculus.all.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz
 
 SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Data/pathbank_to_uniprot.csv Data/chebi_to_pathway.csv Data/hgnc_to_mondo.csv
 
-ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz
+ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz Data/Saccharomyces_cerevisiae.all.tsv.gz Data/Drosophila_melanogaster.all.tsv.gz Data/Rattus_norvegicus.all.tsv.gz Data/Bos_taurus.all.tsv.gz Data/Caenorhabditis_elegans.all.tsv.gz
 
 ######## OWN DATA ########
 # Data/LION.obo
@@ -41,14 +41,15 @@ Data/rhea-reactions.txt.gz:
 Data/rhea2uniprot_sprot.tsv:
 	wget --tries=10 -O Data/rhea2uniprot_sprot.tsv https://ftp.expasy.org/databases/rhea/tsv/rhea2uniprot%5Fsprot.tsv
 
-# PathBank
-Data/pathbank_all_metabolites.csv:
-	wget --tries=10 -O Data/pathbank_all_metabolites.csv.zip https://pathbank.org/downloads/pathbank_all_metabolites.csv.zip
-	unzip -d Data Data/pathbank_all_metabolites.csv.zip
+Data/rhea2uniprot_trembl.tsv.gz:
+	wget --tries=10 -O Data/rhea2uniprot_trembl.tsv.gz https://ftp.expasy.org/databases/rhea/tsv/rhea2uniprot_trembl.tsv.gz
 
-Data/pathbank_all_proteins.csv:
+# PathBank
+Data/pathbank_all_metabolites.csv.zip:
+	wget --tries=10 -O Data/pathbank_all_metabolites.csv.zip https://pathbank.org/downloads/pathbank_all_metabolites.csv.zip
+
+Data/pathbank_all_proteins.csv.zip:
 	wget --tries=10 -O Data/pathbank_all_proteins.csv.zip https://pathbank.org/downloads/pathbank_all_proteins.csv.zip
-	unzip -d Data Data/pathbank_all_proteins.csv.zip
 
 # Mondo
 Data/mondo.obo:
@@ -74,31 +75,54 @@ Data/genes_to_disease.txt:
 Data/Homo_sapiens.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Homo_sapiens.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/homo_sapiens/Homo_sapiens.GRCh38.114.uniprot.tsv.gz"
 
+Data/Homo_sapiens.all.tsv.gz:
+	wget --tries=10 -O Data/Homo_sapiens.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/homo_sapiens/Homo_sapiens.GRCh38.114.ena.tsv.gz"
+
 Data/Mus_musculus.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Mus_musculus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/mus_musculus/Mus_musculus.GRCm39.114.uniprot.tsv.gz"
+
+Data/Mus_musculus.all.tsv.gz:
+	wget --tries=10 -O Data/Mus_musculus.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/mus_musculus/Mus_musculus.GRCm39.114.ena.tsv.gz"
 
 Data/Saccharomyces_cerevisiae.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Saccharomyces_cerevisiae.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.114.uniprot.tsv.gz"
 
+Data/Saccharomyces_cerevisiae.all.tsv.gz:
+	wget --tries=10 -O Data/Saccharomyces_cerevisiae.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.114.ena.tsv.gz"
+
 Data/Drosophila_melanogaster.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Drosophila_melanogaster.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.54.114.uniprot.tsv.gz"
+
+Data/Drosophila_melanogaster.all.tsv.gz:
+	wget --tries=10 -O Data/Drosophila_melanogaster.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.54.114.ena.tsv.gz"
 
 Data/Rattus_norvegicus.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Rattus_norvegicus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/rattus_norvegicus/Rattus_norvegicus.GRCr8.114.uniprot.tsv.gz"
 
+Data/Rattus_norvegicus.all.tsv.gz:
+	wget --tries=10 -O Data/Rattus_norvegicus.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/rattus_norvegicus/Rattus_norvegicus.GRCr8.114.ena.tsv.gz"
+
 Data/Bos_taurus.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Bos_taurus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/bos_taurus/Bos_taurus.ARS-UCD2.0.114.uniprot.tsv.gz"
+
+Data/Bos_taurus.all.tsv.gz:
+	wget --tries=10 -O Data/Bos_taurus.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/bos_taurus/Bos_taurus.ARS-UCD2.0.114.ena.tsv.gz"
 
 Data/Caenorhabditis_elegans.uniprot.tsv.gz:
 	wget --tries=10 -O Data/Caenorhabditis_elegans.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.114.uniprot.tsv.gz"
 
+Data/Caenorhabditis_elegans.all.tsv.gz:
+	wget --tries=10 -O Data/Caenorhabditis_elegans.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.114.ena.tsv.gz"
+
 # HGNC
 Data/HGNC.csv:
-	wget --tries=10 -O Data/HGNC.csv "https://www.genenames.org/cgi-bin/download/custom?col=gd_hgnc_id&col=gd_app_sym&col=md_prot_id&col=gd_pub_eg_id&status=Approved&status=Entry%20Withdrawn&hgnc_dbtag=on&order_by=gd_app_sym_sort&format=text&submit=submit"
+	wget --tries=10 -O Data/HGNC.csv "https://www.genenames.org/cgi-bin/download/custom?col=gd_hgnc_id&col=gd_app_sym&col=md_prot_id&col=gd_pub_eg_id&col=gd_pub_ensembl_id&status=Approved&status=Entry%20Withdrawn&hgnc_dbtag=on&order_by=gd_app_sym_sort&format=text&submit=submit"
 
 # Uniprot
 Data/uniprot.csv.gz:
-	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full&format=tsv&query=%28reviewed%3Atrue%29"
+	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A3702%29%29"
+	# revieved = True
+	#wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full&format=tsv&query=%28reviewed%3Atrue%29+AND+%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A3702%29%29"
 
 
 
@@ -116,10 +140,10 @@ Data/rhea_to_chebi.csv: Data/rhea-reactions.txt.gz
 	python3 Scripts/rhea_to_chebi.py
 
 # Pathbank
-Data/pathbank_to_uniprot.csv: Data/pathbank_all_proteins.csv
+Data/pathbank_to_uniprot.csv: Data/pathbank_all_proteins.csv.zip
 	python3 Scripts/pathbank_to_uniprot.py
 
-Data/chebi_to_pathway.csv: Data/pathbank_all_metabolites.csv
+Data/chebi_to_pathway.csv: Data/pathbank_all_metabolites.csv.zip
 	python3 Scripts/chebi_to_pathway.py
 
 # MONDO
@@ -145,9 +169,7 @@ clean:
 	rm -f Data/Homo_sapiens.uniprot.tsv.gz
 	rm -f Data/hp.obo
 	rm -f Data/mondo.obo
-	rm -f Data/pathbank_all_metabolites.csv
 	rm -f Data/pathbank_all_metabolites.csv.zip
-	rm -f Data/pathbank_all_proteins.csv
 	rm -f Data/pathbank_all_proteins.csv.zip
 	rm -f Data/pathbank_to_uniprot.csv
 	rm -f Data/rhea2uniprot_sprot.tsv

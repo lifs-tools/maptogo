@@ -6,8 +6,6 @@ import sys
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
 
-
-
 if all_species:
     print("Creating all ontologies")
     species = {
@@ -23,13 +21,13 @@ if all_species:
         'Arabidopsis thaliana': "3702",
     }
     ensembl_files = [
-        "Data/Homo_sapiens.uniprot.tsv.gz",
-        "Data/Mus_musculus.uniprot.tsv.gz",
-        "Data/Saccharomyces_cerevisiae.uniprot.tsv.gz",
-        "Data/Drosophila_melanogaster.uniprot.tsv.gz",
-        "Data/Rattus_norvegicus.uniprot.tsv.gz",
-        "Data/Bos_taurus.uniprot.tsv.gz",
-        "Data/Caenorhabditis_elegans.uniprot.tsv.gz",
+        ("Data/Homo_sapiens.uniprot.tsv.gz", "9606"),
+        ("Data/Mus_musculus.uniprot.tsv.gz", "10090"),
+        ("Data/Saccharomyces_cerevisiae.uniprot.tsv.gz", "4932"),
+        ("Data/Drosophila_melanogaster.uniprot.tsv.gz", "7227"),
+        ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116"),
+        ("Data/Bos_taurus.uniprot.tsv.gz", "9913"),
+        ("Data/Caenorhabditis_elegans.uniprot.tsv.gz", "6239"),
     ]
 
 else:
@@ -39,8 +37,8 @@ else:
         'Mus musculus': "10090",
     }
     ensembl_files = [
-        "Data/Homo_sapiens.uniprot.tsv.gz",
-        "Data/Mus_musculus.uniprot.tsv.gz",
+        ("Data/Homo_sapiens.uniprot.tsv.gz", "9606"),
+        ("Data/Mus_musculus.uniprot.tsv.gz", "10090"),
     ]
 
 class Term:
@@ -272,6 +270,7 @@ def get_lipid_terms():
 # adding chebi terms with names and relations
 chebi_terms_all = {}
 with open("Data/chebi.csv", "rt") as infile:
+    print("reading chebi")
     for line in infile:
         tokens = line.strip().split("\t")
         chebi_terms_all[tokens[0]] = Term("CHEBI:" + tokens[0], tokens[1], set(["CHEBI:" + t for t in tokens[2:]]) if len(tokens) > 2 else set())
@@ -306,6 +305,7 @@ with open("Data/rhea_to_chebi.csv", "rt") as infile:
 
 chebi_terms_organisms = {}
 with open("Data/chebi_to_pathway.csv", "rt") as infile:
+    print("Readin chebi_to_pathway")
     for line in infile:
         tokens = line.strip().split("\t")
         if len(tokens) < 3: continue
@@ -320,28 +320,9 @@ with open("Data/chebi_to_pathway.csv", "rt") as infile:
 uniprot_data = {}
 uniprot_terms_organisms = {}
 uniprot_to_organism = {}
-# with open("Data/uniprot_to_go.csv", "rt") as infile:
-#     for line in infile:
-#         tokens = line.strip().split("\t")
-#
-#         if len(tokens) < 2: continue
-#         if len(tokens) == 2: tokens.append(tokens[0])
-#         if len(tokens) == 3: tokens.append("")
-#
-#         # taxonomy check
-#         if tokens[1] not in uniprot_terms_organisms: uniprot_terms_organisms[tokens[1]] = {}
-#         uniprot_term = "UNIPROT:" + tokens[0]
-#
-#         term = Term(uniprot_term, (tokens[2] if len(tokens[2]) > 0 else tokens[0]) + " (Protein)", set(tokens[3].split(",")) if len(tokens[3]) > 0 else set())
-#         term.relations.add("LS:0000004")
-#         uniprot_terms_organisms[tokens[1]][tokens[0]] = term
-#         uniprot_data[tokens[0]] = term
-#         uniprot_to_organism[tokens[0]] = tokens[1]
-
-
-
-ensembl_terms_organisms = {}
+ensembl_terms_organisms = {organism: {} for _, organism in ensembl_files}
 with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
+    print("Readin uniprot")
     for i, line in enumerate(infile):
         if i == 0: continue
         tokens = line.split("\t")
@@ -380,8 +361,9 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
             ensembl_terms_organisms[organisms_id][ensembl].relations.add(uniprot_term)
 
 
-
-for ensembl_file in ensembl_files:
+for ensembl_file, organism in ensembl_files:
+    ensembl_organism = ensembl_terms_organisms[organism]
+    print(f"Readin Ensembl {organism}")
     try:
         with gzip.open(ensembl_file) as infile:
             for i, line in enumerate(infile):
@@ -389,22 +371,48 @@ for ensembl_file in ensembl_files:
                 tokens = line.decode("utf8").split("\t")
                 if len(tokens) < 4: continue
                 uniprot = tokens[3].split("-")[0]
-                if uniprot not in uniprot_to_organism: continue
-                organism = uniprot_to_organism[uniprot]
-                if organism not in ensembl_terms_organisms: ensembl_terms_organisms[organism] = {}
+                ENG, ENT, ENP = tokens[:3]
 
-                for ensembl in tokens[:3]:
-                    if ensembl not in ensembl_terms_organisms[organism]:
-                        term = Term(ensembl, ensembl, {"LS:0000006"}, _categories = set(uniprot_data[uniprot].categories))
-                        ensembl_terms_organisms[organism][ensembl] = term
-                    ensembl_terms_organisms[organism][ensembl].relations.add(f"UNIPROT:{uniprot}")
+                relations = {"LS:0000006", ENG}
+                uniprot_known = uniprot in uniprot_data
+                if uniprot_known: relations.add(f"UNIPROT:{uniprot}")
+
+                if ENG not in ensembl_organism:
+                    ensembl_organism[ENG] = Term(ENG, ENG, {"LS:0000006"})
+                    if uniprot_known: uniprot_data[uniprot].relations.add(ENG)
+
+                if ENT not in ensembl_organism:
+                    ensembl_organism[ENT] = Term(ENT, ENT, relations)
+
+                if ENP != ENG and ENP not in ensembl_organism:
+                    ensembl_organism[ENP] = Term(ENP, ENP, relations)
+
+
+        with gzip.open(ensembl_file.replace(".uniprot.", ".all.")) as infile:
+            for i, line in enumerate(infile):
+                if i == 0: continue
+                tokens = line.decode("utf8").split("\t")
+                if len(tokens) < 4: continue
+
+                ENG, ENT = tokens[2], tokens[3]
+                if ENG not in ensembl_organism: continue
+
+                if ENT not in ensembl_organism:
+                    ensembl_organism[ENT] = Term(ENT, ENT, {"LS:0000006", ENG})
+
+                if len(tokens) > 4 and len(tokens[4]) > 0:
+                    ENP = tokens[4]
+                    if ENP != ENG and ENP not in ensembl_organism:
+                        ensembl_organism[ENP] = Term(ENP, ENP, {"LS:0000006", ENG})
+
     except Exception as e:
-        continue
-
+        print(e)
+        exit(-1)
 
 
 pathway_terms_organisms = {}
 with open("Data/pathbank_to_uniprot.csv", "rt") as infile:
+    print("Readin pathbank_to_uniprot")
     for line in infile:
         tokens = line.strip().split("\t")
         if len(tokens) < 3: continue
@@ -427,6 +435,22 @@ with open("Data/pathbank_to_uniprot.csv", "rt") as infile:
 
 rhea_terms_organisms = {tax_id: {} for tax_id in uniprot_terms_organisms}
 with open("Data/rhea2uniprot_sprot.tsv", "rt") as infile:
+    print("Readin rhea2 sprot")
+    for line in infile:
+        tokens = line.strip().split("\t")
+        if len(tokens) != 4: continue
+
+        if tokens[3] not in uniprot_to_organism: continue
+        organism = uniprot_to_organism[tokens[3]]
+
+        if tokens[0] not in rhea_terms_organisms[organism]: rhea_terms_organisms[organism][tokens[0]] = set()
+        rhea_terms_organisms[organism][tokens[0]].add(tokens[3])
+        if tokens[2] not in rhea_terms_organisms[organism]: rhea_terms_organisms[organism][tokens[2]] = set()
+        rhea_terms_organisms[organism][tokens[2]].add(tokens[3])
+
+
+with gzip.open("Data/rhea2uniprot_trembl.tsv.gz", "rt") as infile:
+    print("Readin rhea2 trembl")
     for line in infile:
         tokens = line.strip().split("\t")
         if len(tokens) != 4: continue
@@ -484,6 +508,7 @@ for hpo_term_id, hpo_term in hpo_terms.items():
 
 
 gene_terms = {}
+print("Readin genes_to_phenotype")
 for line in open("Data/genes_to_phenotype.txt").read().split("\n"):
     if len(line) < 2: continue
     tokens = line.split("\t")
@@ -497,6 +522,7 @@ for line in open("Data/genes_to_phenotype.txt").read().split("\n"):
 
 
 
+print("Readin genes_to_disease")
 for line in open("Data/genes_to_disease.txt").read().split("\n"):
     if len(line) < 2: continue
     tokens = line.split("\t")
@@ -510,31 +536,41 @@ for line in open("Data/genes_to_disease.txt").read().split("\n"):
 
 
 with open("Data/HGNC.csv") as infile:
+    ensembl_organism = ensembl_terms_organisms["9606"]
+    print("Readin HGNC")
     for i, line in enumerate(infile):
         if i == 0: continue
         tokens = line.strip().split("\t")
-        if len(tokens) < 3 or len(tokens[2]) == 0: continue
+        if len(tokens) < 2: continue
         hgnc_id = tokens[0]
         hgnc_name = tokens[1] + " (Gene)"
-        uniprot = tokens[2]
         hgnc_term = Term(hgnc_id, hgnc_name)
-        ids = {hgnc_id}
-        if uniprot in uniprot_data:
+
+        uniprot = tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else None
+        ncbi_id = "NCBI:" + tokens[3] if len(tokens) > 3 and len(tokens[3]) > 0 else None
+        ENG = tokens[4] if len(tokens) > 4 and len(tokens[4]) > 0 else None
+
+        if uniprot != None and uniprot in uniprot_data:
             uniprot_data[uniprot].relations.add(hgnc_id)
 
-        ncbi_id = "NCBI:" + tokens[3] if len(tokens) > 3 and len(tokens[3]) > 0 else None
-        if ncbi_id != None: ids.add(ncbi_id)
-
-        hgnc_term = Term(ids, hgnc_name)
-        if ncbi_id in gene_terms:
+        if ncbi_id != None and ncbi_id in gene_terms:
             gene_terms[ncbi_id].merge(hgnc_term)
             gene_terms[hgnc_id] = gene_terms[ncbi_id]
 
         else:
             gene_terms[hgnc_id] = hgnc_term
-            if ncbi_id != None: gene_terms[ncbi_id] = hgnc_term
+            if ncbi_id != None:
+                hgnc_term.id.add(ncbi_id)
+                gene_terms[ncbi_id] = hgnc_term
+
+        if ENG != None:
+            if ENG in ensembl_organism: ensembl_organism[ENG].relations.add(hgnc_id)
+
+            else:
+                ensembl_organism[ENG] = Term(ENG, ENG, {"LS:0000006", hgnc_id})
 
 
+print("Readin hgnc_to_mondo")
 for line in open("Data/hgnc_to_mondo.csv").read().split("\n"):
     if len(line) < 1: continue
     tokens = line.split("\t")
@@ -637,10 +673,10 @@ for tax_name, tax_id in species.items():
         output.append(term.to_string())
 
 
-    with open(f"../ontology_{tax_id}.gz", "wb") as gz_output:
+    with gzip.open(f"../ontology_{tax_id}.gz", "wb") as gz_output:
         gzip_out = "".join(output).encode("utf8")
         print("writing", len(gzip_out))
-        gz_output.write(gzip.compress(gzip_out))
+        gz_output.write(gzip_out)
 
 
 
