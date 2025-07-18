@@ -41,6 +41,8 @@ else:
         ("Data/Mus_musculus.uniprot.tsv.gz", "10090"),
     ]
 
+species_set = set(species.values())
+
 class Term:
     def __init__(self, _id, _name, _relations = None, _synonyms = None, _namespace = None, _xref = None, upper = False, _categories = None):
         if _relations == None: _relations = set()
@@ -321,6 +323,8 @@ uniprot_data = {}
 uniprot_terms_organisms = {}
 uniprot_to_organism = {}
 ensembl_terms_organisms = {organism: {} for _, organism in ensembl_files}
+gene_terms = {}
+gene_term_organisms = {organism: {} for _, organism in ensembl_files}
 with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
     print("Readin uniprot")
     for i, line in enumerate(infile):
@@ -331,7 +335,9 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
 
         uniprot = tokens[0]
         organisms_id = tokens[1]
-        protein_name = tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else f"{uniprot} (Protein)"
+        if organisms_id not in species_set: continue
+
+        protein_name = f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Protein)"
         go_terms = {"LS:0000004"}
         categories = set(tokens[4].split(", ")) if len(tokens) > 4 and len(tokens[4]) > 0 else set()
         uniprot_term = "UNIPROT:" + uniprot
@@ -342,23 +348,52 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                 if len(go_term) != 10 or go_term[:3] != "GO:": continue
                 go_terms.add(go_term)
 
-        term = Term(uniprot_term, protein_name, go_terms, _categories = categories)
+
+        gene_ids = set()
+        if len(tokens) > 6 and len(tokens[6]) > 1:
+            gene_ids.add(tokens[6].strip('";').split(";")[0])
+
+        if len(tokens) > 8 and len(tokens[8]) > 1:
+            for ncbi_id in tokens[8].strip('\n;').split(";"):
+                gene_ids.add(f"NCBI:{ncbi_id}")
+
+        term = Term(uniprot_term, protein_name, _relations = go_terms | gene_ids, _categories = categories)
         if organisms_id not in uniprot_terms_organisms: uniprot_terms_organisms[organisms_id] = {}
         uniprot_terms_organisms[organisms_id][uniprot] = term
         uniprot_data[uniprot] = term
         uniprot_to_organism[uniprot] = tokens[1]
 
-        if len(tokens) < 8 or len(tokens[7]) == 0: continue
-        ensembls = set()
-        for cc in tokens[7].replace("\"", "").split(";"):
-            ensembls |= set([tok.split(".")[0] for t in cc.split(" ") if ((tok := t.strip("., ")) and tok[:2] == "EN")])
+        if len(gene_ids) > 0:
+            gene_term = Term(gene_ids, f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Gene)")
+            for gene_id in gene_ids:
+                gene_terms[gene_id] = gene_term
+                gene_term_organisms[organisms_id][gene_id] = gene_term
 
-        for ensembl in ensembls:
-            if organisms_id not in ensembl_terms_organisms: ensembl_terms_organisms[organisms_id] = {}
-            if ensembl not in ensembl_terms_organisms[organisms_id]:
-                term = Term(ensembl, ensembl, {"LS:0000006"}, _categories = set(uniprot_data[tokens[0]].categories))
-                ensembl_terms_organisms[organisms_id][ensembl] = term
-            ensembl_terms_organisms[organisms_id][ensembl].relations.add(uniprot_term)
+        if len(tokens) > 7 and len(tokens[7]) > 0:
+            ensembl_organism = ensembl_terms_organisms[organisms_id]
+            for ensembl_sets in tokens[7].strip(";").split("\";\""):
+                ensembls = ensembl_sets.split(" ")
+                if len(ensembls) < 3: continue
+                ENT = ensembls[0].strip('" ;.').split(".")[0]
+                ENP = ensembls[1].strip('" ;.').split(".")[0]
+                ENG = ensembls[2].strip('" ;.').split(".")[0]
+
+                if ENG in ensembl_organism:
+                    ensembl_organism[ENG].relations |= {uniprot_term} | gene_ids
+                else:
+                    ensembl_organism[ENG] = Term(ENG, ENG, {"LS:0000006", uniprot_term} | gene_ids)
+
+                if ENP in ensembl_organism:
+                    ensembl_organism[ENP].relations |= {uniprot_term, ENG}
+                else:
+                    ensembl_organism[ENP] = Term(ENP, ENP, {"LS:0000006", uniprot_term, ENG})
+
+                if ENT in ensembl_organism:
+                    ensembl_organism[ENT].relations |= {ENP, ENG}
+                else:
+                    ensembl_organism[ENT] = Term(ENT, ENT, {"LS:0000006", ENP, ENG})
+
+
 
 
 for ensembl_file, organism in ensembl_files:
@@ -373,19 +408,25 @@ for ensembl_file, organism in ensembl_files:
                 uniprot = tokens[3].split("-")[0]
                 ENG, ENT, ENP = tokens[:3]
 
-                relations = {"LS:0000006", ENG}
+                uniprot_term = "UNIPROT:" + uniprot
                 uniprot_known = uniprot in uniprot_data
-                if uniprot_known: relations.add(f"UNIPROT:{uniprot}")
 
                 if ENG not in ensembl_organism:
-                    ensembl_organism[ENG] = Term(ENG, ENG, {"LS:0000006"})
-                    if uniprot_known: uniprot_data[uniprot].relations.add(ENG)
+                    ensembl_organism[ENG] = Term(ENG, ENG, {"LS:0000006"} | ({uniprot_term} if uniprot_known else set()))
+                elif uniprot_known:
+                    ensembl_organism[ENG].relations.add(uniprot_term)
+
+                if ENP != ENG:
+                    if ENP not in ensembl_organism:
+                        ensembl_organism[ENP] = Term(ENP, ENP, {"LS:0000006", ENG} | ({uniprot_term} if uniprot_known else set()))
+                    else:
+                        ensembl_organism[ENP].relations |= {ENG} | ({uniprot_term} if uniprot_known else set())
 
                 if ENT not in ensembl_organism:
-                    ensembl_organism[ENT] = Term(ENT, ENT, relations)
+                    ensembl_organism[ENT] = Term(ENT, ENT, {"LS:0000006", ENG, ENP})
+                else:
+                    ensembl_organism[ENT].relations |= {ENG, ENP}
 
-                if ENP != ENG and ENP not in ensembl_organism:
-                    ensembl_organism[ENP] = Term(ENP, ENP, relations)
 
 
         with gzip.open(ensembl_file.replace(".uniprot.", ".all.")) as infile:
@@ -397,13 +438,17 @@ for ensembl_file, organism in ensembl_files:
                 ENG, ENT = tokens[2], tokens[3]
                 if ENG not in ensembl_organism: continue
 
+                ENT_term = None
                 if ENT not in ensembl_organism:
-                    ensembl_organism[ENT] = Term(ENT, ENT, {"LS:0000006", ENG})
+                    ENT_term = Term(ENT, ENT, {"LS:0000006", ENG})
+                    ensembl_organism[ENT] = ENT_term
 
                 if len(tokens) > 4 and len(tokens[4]) > 0:
                     ENP = tokens[4]
                     if ENP != ENG and ENP not in ensembl_organism:
                         ensembl_organism[ENP] = Term(ENP, ENP, {"LS:0000006", ENG})
+                        if ENT_term != None:
+                            ENT_term.relations.add(ENP)
 
     except Exception as e:
         print(e)
@@ -507,7 +552,6 @@ for hpo_term_id, hpo_term in hpo_terms.items():
 
 
 
-gene_terms = {}
 print("Readin genes_to_phenotype")
 for line in open("Data/genes_to_phenotype.txt").read().split("\n"):
     if len(line) < 2: continue
@@ -515,8 +559,14 @@ for line in open("Data/genes_to_phenotype.txt").read().split("\n"):
     if len(tokens) < 3 or tokens[1] == "-": continue
     ncbi_id, ncbi_name, hpo_id, orphanet_id = tokens[0], tokens[1], tokens[2], tokens[5].replace("ORPHA:", "Orphanet:")
     ncbi_id = "NCBI:" + ncbi_id
-    if ncbi_id not in gene_terms: gene_terms[ncbi_id] = Term(ncbi_id, ncbi_name + " (Gene)", {hpo_id})
-    else: gene_terms[ncbi_id].relations.add(hpo_id)
+    gene_name = ncbi_name + " (Gene)"
+    if ncbi_id not in gene_terms:
+        term = Term(ncbi_id, gene_name, {hpo_id})
+        gene_terms[ncbi_id] = term
+        gene_term_organisms["9606"][ncbi_id] = term
+    else:
+        gene_terms[ncbi_id].name = gene_name
+        gene_terms[ncbi_id].relations.add(hpo_id)
     if orphanet_id in orphanet_to_mondo: gene_terms[ncbi_id].relations.add(orphanet_to_mondo[orphanet_id])
 
 
@@ -530,8 +580,15 @@ for line in open("Data/genes_to_disease.txt").read().split("\n"):
     ncbi_id, ncbi_name, omim_id = tokens[0], tokens[1], tokens[3]
     if omim_id not in omim_to_mondo: continue
     ncbi_id = ncbi_id.replace("NCBIGene:", "NCBI:")
-    if ncbi_id not in gene_terms: gene_terms[ncbi_id] = Term(ncbi_id, ncbi_name + " (Gene)", {omim_to_mondo[omim_id]})
-    else: gene_terms[ncbi_id].relations.add(omim_to_mondo[omim_id])
+    gene_name = ncbi_name + " (Gene)"
+    if ncbi_id not in gene_terms:
+        term = Term(ncbi_id, gene_name, {omim_to_mondo[omim_id]})
+        gene_terms[ncbi_id] = term
+        gene_term_organisms["9606"][ncbi_id] = term
+
+    else:
+        gene_terms[ncbi_id].name = gene_name
+        gene_terms[ncbi_id].relations.add(omim_to_mondo[omim_id])
 
 
 
@@ -641,7 +698,7 @@ for tax_name, tax_id in species.items():
 
 
     written_genes = set()
-    for _, gene_term in gene_terms.items():
+    for _, gene_term in gene_term_organisms[tax_id].items():
         if gene_term in written_genes: continue
         written_genes.add(gene_term)
         output.append(gene_term.to_string())

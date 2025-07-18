@@ -14,7 +14,7 @@ import pickle
 import os
 
 WITH_LOOKUP = True
-WITH_LOOKUP_STORAGE = True
+WITH_LOOKUP_STORAGE = False
 SKIP_LOADING = False
 
 def time_elapsed(func):
@@ -105,15 +105,11 @@ class OntologyTerm:
         if _domain == None: _domain = set()
         if _categories == None: _categories = set()
 
-        self.term_ontology_id = -1
         self.term_id = sorted(list(_term_id) if type(_term_id) in {list, set} else list(_term_id.split("|")))
         self.name = _name
         self.relations = sorted([r for r in _relations if r != ""])
         self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {"", "external"}
         self.categories = (set(_categories) if type(_categories) in {list, set} else set(_categories.split("|"))) - {""}
-
-    def to_string(self):
-        return f"{'|'.join(self.term_id)}\t{self.name}\t{'|'.join(self.relations)}\t{'|'.join(self.domain)}\n"
 
     def get_term_id(self, space = False):
         if space: " | ".join(sorted(list(self.term_id)))
@@ -219,8 +215,6 @@ class EnrichmentOntology:
                     is_protein = False
                     is_metabolite = False
                     is_stable_transcript = False
-                    is_stable_gene = False
-                    is_stable_protein = False
                     is_any = False
                     relations = relations.split("|")
                     synonyms = synonyms.split("|")
@@ -233,9 +227,7 @@ class EnrichmentOntology:
                                 case "4": is_protein = True
                                 case "5": is_metabolite = True
                                 case "6": is_stable_transcript = True
-                                case "7": is_stable_gene = True
-                                case "8": is_stable_protein = True
-                            is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite | is_stable_transcript | is_stable_gene | is_stable_protein
+                            is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite | is_stable_transcript
 
                     term = OntologyTerm(term_id, name, relations, domain, categories)
                     str_term_id = term.get_term_id()
@@ -261,7 +253,7 @@ class EnrichmentOntology:
                         elif is_metabolite:
                             if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
 
-                        elif is_stable_transcript or is_stable_gene or is_stable_protein:
+                        elif is_stable_transcript:
                             if str_term_id not in self.transcripts: self.transcripts[str_term_id] = term
 
                     for d in domain.split("|"):
@@ -291,8 +283,8 @@ class EnrichmentOntology:
             logger.error(e)
 
         # clean up ontology
-        for term in self.ontology_terms.values():
-            term.relations = [t for t in term.relations if t in self.ontology_terms]
+        for term_id, term in self.ontology_terms.items():
+            term.relations = list({self.ontology_terms[t] for t in term.relations if t in self.ontology_terms})
 
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
@@ -316,8 +308,7 @@ class EnrichmentOntology:
 
                             if not contains_no_domain: m_lookup[0].add(term)
 
-                            for parent_term_id in term.relations:
-                                parent_term = self.ontology_terms[parent_term_id]
+                            for parent_term in term.relations:
                                 if parent_term not in visited_terms:
                                     visited_terms.add(parent_term)
                                     queue.append((parent_term, graph.current_depth))
@@ -461,8 +452,7 @@ class EnrichmentOntology:
                     if term not in search_terms: search_terms[term] = {molecule_input_name: graph}
                     else: search_terms[term][molecule_input_name] = graph
 
-                for parent_term_id in term.relations:
-                    parent_term = self.ontology_terms[parent_term_id]
+                for parent_term in term.relations:
                     if parent_term not in visited_terms:
                         visited_terms.add(parent_term)
                         queue.append((parent_term, graph.current_depth))

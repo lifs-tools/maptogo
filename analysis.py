@@ -35,7 +35,7 @@ from math import ceil
 
 organisms = {
     'Homo sapiens': '9606',
-    'Mus musculus': '10090',
+    # 'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
@@ -2288,17 +2288,18 @@ def open_sunburstplot(
             pvalue = session_data[child_term_id].pvalue_corrected if child_term_id in session_data else -1
             sunburst_terms[child_term] = SunburstTerm(child_term, term == child_term, pvalue)
 
-            for parent_term_id in child_term.relations:
-                parent_prefix = parent_term_id.split(":")[0] if parent_term_id.find(":") > -1 else "SNP"
-                if parent_prefix not in LIBRARY_TO_DOMAINS \
-                    or len(LIBRARY_TO_DOMAINS[parent_prefix] & domains) == 0 \
-                    or term_prefix != parent_prefix \
-                    or parent_term_id not in terms: continue
+            for parent_term in child_term.relations:
+                for parent_term_id in parent_term.term_id:
+                    parent_prefix = parent_term_id.split(":")[0] if parent_term_id.find(":") > -1 else "SNP"
+                    if parent_prefix not in LIBRARY_TO_DOMAINS \
+                        or len(LIBRARY_TO_DOMAINS[parent_prefix] & domains) == 0 \
+                        or term_prefix != parent_prefix \
+                        or parent_term_id not in terms: continue
 
-                parent_term = terms[parent_term_id]
-                sunburst_terms[child_term].parent = parent_term.get_term_id()
-                queue.append(sunburst_terms[child_term].parent)
-                break
+                    parent_term = terms[parent_term_id]
+                    sunburst_terms[child_term].parent = parent_term.get_term_id()
+                    queue.append(sunburst_terms[child_term].parent)
+                    break
 
     labels, parents, colors, values, names, custom_data = [], [], [], [], [], []
     num_letters = 10 + int(80 / len(selected_term_ids))
