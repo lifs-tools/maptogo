@@ -249,7 +249,7 @@ class EnrichmentOntology:
                 # creating lookup table for molecules
                 for molecule_dict in [self.proteins, self.metabolites, self.transcripts]:
                     for molecule_input_name, input_term in molecule_dict.items():
-                        path, parent_nodes = (input_term, ), {input_term: None}
+                        path, parent_nodes = (input_term, ), {input_term: None, -1: input_term}
                         self.molecule_lookup[path] = [[], parent_nodes]
                         m_lookup = self.molecule_lookup[path]
 
@@ -387,14 +387,14 @@ class EnrichmentOntology:
                         else: search_terms[term][molecule_input_name] = parent_nodes
                     continue
 
-                queue, parent_nodes = [path[-1]], {}
+                queue, parent_nodes = [path[-1]], {-1: molecule_input_name}
                 for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
                 while queue:
                     term = queue.pop()
 
                     if term.domain:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
-                        else: search_terms[term][molecule_input_name] = parent_nodes
+                        if term not in search_terms: search_terms[term] = [parent_nodes]
+                        else: search_terms[term].append(parent_nodes)
 
                     for relation_term in term.relations:
                         if relation_term not in parent_nodes:
@@ -403,16 +403,14 @@ class EnrichmentOntology:
 
         else:
             for molecule_input_name, path in all_paths:
-                parent_nodes = {}
+                parent_nodes, queue = {-1: molecule_input_name}, [path[-1]]
                 for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
 
-                queue = [path[-1]]
                 while queue:
                     term = queue.pop()
-
                     if term.domain:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
-                        else: search_terms[term][molecule_input_name] = parent_nodes
+                        if term not in search_terms: search_terms[term] = [parent_nodes]
+                        else: search_terms[term].append(parent_nodes)
 
                     for relation_term in term.relations:
                         if relation_term not in parent_nodes:
@@ -424,12 +422,15 @@ class EnrichmentOntology:
     @time_elapsed
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "greater"):
         if len(target_set) == 0 or session.num_background == 0 or len(enrichment_domains) == 0: return []
+        search_terms = session.search_terms
+        for term, term_molecules in search_terms.items():
+            search_terms[term] = {tm[-1]: tm for tm in term_molecules}
 
         enrichment_domains = set(enrichment_domains)
         try: # C++ implementation, just way faster
-            result_list = [None] * len(session.search_terms)
+            result_list = [None] * len(search_terms)
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
-            for i, (term, term_molecules) in enumerate(session.search_terms.items()):
+            for i, (term, term_molecules) in enumerate(search_terms.items()):
                 if (
                     len(term_molecules) == 0
                     or len(term.domain & enrichment_domains) == 0
@@ -452,15 +453,14 @@ class EnrichmentOntology:
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error("C++ implementation of fisher exact test failed.")
-            result_list = [None] * len(session.search_terms)
+            result_list = [None] * len(search_terms)
             visited_terms = set()
-            for i, (term, term_molecules) in enumerate(session.search_terms.items()):
+            for i, (term, term_molecules) in enumerate(search_terms.items()):
                 if (
                     len(term_molecules) == 0
                     or len(term.domain & enrichment_domains) == 0
                 ): continue
                 target_number = len(term_molecules.keys() & target_set)
-
                 a, b, c, d = (
                     target_number,
                     len(term_molecules) - target_number,
