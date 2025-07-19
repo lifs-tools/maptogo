@@ -17,15 +17,6 @@ WITH_LOOKUP = False
 WITH_STORAGE = False
 SKIP_LOADING = False
 
-def time_elapsed(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        print(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
-        return result
-    return wrapper
-
 current_path = pathlib.Path(__file__).parent.resolve()
 logger = logging.getLogger(__name__)
 try:
@@ -33,6 +24,17 @@ try:
     fisher_exact.exact_fisher.restype = ctypes.c_double
 except Exception as e:
     logger.error("Unable to load c++ library file(s)")
+
+
+
+def time_elapsed(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        logger.info(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
+        return result
+    return wrapper
 
 
 
@@ -47,7 +49,6 @@ class SessionEntry:
         self.use_bounded_fatty_acyls = True
         self.ontology = None
         self.domains = None
-
         self.background_lipids = None
         self.regulated_lipids = None
         self.background_proteins = None
@@ -57,40 +58,6 @@ class SessionEntry:
         self.background_transcripts = None
         self.regulated_transcripts = None
         self.background_list = []
-
-
-class TracebackGraph:
-    def __init__(self, path):
-        self.root = path[0]
-        self.nodes = {}
-        self.current_node = None
-        for p in path:
-            if p in self.nodes:
-                logger.warning("Traceback: got path {path} with '{p}' at least twice inside")
-                continue
-            self.nodes[p] = self.current_node
-            self.current_node = p
-
-
-    def get_path(self, node):
-        if node not in self.nodes: return []
-        path = []
-        current_node = node
-        while current_node != None:
-            path.append(current_node)
-            c = current_node
-            current_node = self.nodes[current_node]
-        return path[::-1]
-
-
-    def go_back_and_add_note(self, parent_node, node):
-        if parent_node not in self.nodes: return
-        self.current_node = parent_node
-
-        if node in self.nodes: return
-        self.nodes[node] = self.current_node
-        self.current_node = node
-
 
 
 
@@ -127,7 +94,7 @@ class OntologyResult:
         self.fisher_data = _fisher
 
         if min(_fisher) < 0:
-            print("ERROR: ", self.term.name, self.term.get_term_id(), _fisher)
+            logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher}")
 
 
 
@@ -282,23 +249,21 @@ class EnrichmentOntology:
                 # creating lookup table for molecules
                 for molecule_dict in [self.proteins, self.metabolites, self.transcripts]:
                     for molecule_input_name, input_term in molecule_dict.items():
-                        path, graph = (input_term, ), TracebackGraph(path)
-                        self.molecule_lookup[path] = [[], graph]
+                        path, parent_nodes = (input_term, ), {input_term: None}
+                        self.molecule_lookup[path] = [[], parent_nodes]
                         m_lookup = self.molecule_lookup[path]
 
-                        queuevisited_terms,visited_terms  = [(input_term, None)], {input_term}
+                        queue = [input_term]
                         while queue:
-                            term, parent_term = queue.pop()
-                            graph.go_back_and_add_note(parent_term, term)
-                            if not term.domain: m_lookup[0].add(term)
+                            term = queue.pop()
+                            if not term.domain: m_lookup[0].append(term)
                             for relation_term in term.relations:
-                                if relation_term not in visited_terms:
-                                    visited_terms.add(parent_term)
-                                    queue.append((relation_term, term))
+                                if relation_term not in parent_nodes:
+                                    parent_nodes[relation_term] = term
+                                    queue.append(relation_term)
             except Exception as e:
                 logger.error("".join(traceback.format_tb(e.__traceback__)))
                 logger.error(e)
-
 
         if WITH_STORAGE and not pickle_file_exists:
             try:
@@ -416,43 +381,43 @@ class EnrichmentOntology:
         if WITH_LOOKUP:
             for molecule_input_name, path in all_paths:
                 if path in self.molecule_lookup:
-                    g = self.molecule_lookup[path][1]
+                    parent_nodes = self.molecule_lookup[path][1]
                     for term in self.molecule_lookup[path][0]:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: g}
-                        else: search_terms[term][molecule_input_name] = g
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
+                        else: search_terms[term][molecule_input_name] = parent_nodes
                     continue
-                else:
-                    graph = TracebackGraph(path)
 
-                queue, visited_terms = [(path[-1], None)], {path[-1]}
+                queue, parent_nodes = [path[-1]], {}
+                for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
                 while queue:
-                    term, parent_term = queue.pop()
-                    graph.go_back_and_add_note(parent_term, term)
+                    term = queue.pop()
 
-                    if trem.domain:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: graph}
-                        else: search_terms[term][molecule_input_name] = graph
+                    if term.domain:
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
+                        else: search_terms[term][molecule_input_name] = parent_nodes
 
                     for relation_term in term.relations:
-                        if relation_term not in visited_terms:
-                            visited_terms.add(relation_term)
-                            queue.append((relation_term, term))
+                        if relation_term not in parent_nodes:
+                            parent_nodes[relation_term] = term
+                            queue.append(relation_term)
 
         else:
             for molecule_input_name, path in all_paths:
-                graph, queue, visited_terms = TracebackGraph(path), [(path[-1], None)], {path[-1]}
+                parent_nodes = {}
+                for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
+
+                queue = [path[-1]]
                 while queue:
-                    term, parent_term = queue.pop()
-                    graph.go_back_and_add_note(parent_term, term)
+                    term = queue.pop()
 
                     if term.domain:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: graph}
-                        else: search_terms[term][molecule_input_name] = graph
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
+                        else: search_terms[term][molecule_input_name] = parent_nodes
 
                     for relation_term in term.relations:
-                        if relation_term not in visited_terms:
-                            visited_terms.add(relation_term)
-                            queue.append((relation_term, term))
+                        if relation_term not in parent_nodes:
+                            parent_nodes[relation_term] = term
+                            queue.append(relation_term)
 
 
 

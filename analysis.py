@@ -118,6 +118,17 @@ MOLECULE_HANDLING_REMOVE = "molecule_handling_remove"
 MOLECULE_HANDLING_IGNORE = "molecule_handling_ignore"
 
 
+def get_path(nodes, node):
+    if node not in nodes: return []
+    path = []
+    current_node = node
+    while current_node != None:
+        path.append(current_node)
+        current_node = nodes[current_node]
+    return path[::-1]
+
+
+
 def annotate_arc(
     figure,
     annotations,
@@ -2672,7 +2683,7 @@ def open_barplot(
         remaining_domains_categories[i][0] = description_start_angle - bar_width * 0.025
 
         for molecule in molecules:
-            for term in result.source_terms[molecule].get_path(result.term):
+            for term in get_path(result.source_terms[molecule], result.term):
                 if type(term) == OntologyTerm: break
 
             for category in term.categories:
@@ -3039,7 +3050,7 @@ def show_molecule_term_path(
         molecule = row_data_transcripts[row_index]["molecule"]
 
     term_path = []
-    for i, term in enumerate(sessions[session_id].search_terms[target_term][molecule].get_path(target_term)):
+    for i, term in enumerate(get_path(sessions[session_id].search_terms[target_term][molecule], target_term)):
         if type(term) == str: term_id = term
         else: term_id = list(term.term_id)[0]
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
