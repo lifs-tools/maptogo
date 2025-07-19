@@ -54,6 +54,9 @@ dagcomponentfuncs.TermIDRenderer = function (props) {
         else if (term_id.startsWith("ENS") || term_id.startsWith("WBGene") || term_id.startsWith("FBgn")){
             href = "https://www.ensembl.org/id/" + term_id;
         }
+        else if (term_id.startsWith("R-")){
+            href = "https://reactome.org/content/detail/" + term_id;
+        }
 
         if (reacts.length > 0){
             reacts.push(

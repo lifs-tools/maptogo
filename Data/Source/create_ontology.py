@@ -6,6 +6,7 @@ import sys
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
 
+
 if all_species:
     print("Creating all ontologies")
     species = {
@@ -305,17 +306,36 @@ with open("Data/rhea_to_chebi.csv", "rt") as infile:
                 chebi_terms_all[chebi_term].relations.add(rhea_id)
 
 
-chebi_terms_organisms = {}
-with open("Data/chebi_to_pathway.csv", "rt") as infile:
-    print("Readin chebi_to_pathway")
+chebi_terms_organisms = {org: {} for _, org in species.items()}
+pathway_terms_organisms = {org: {} for _, org in species.items()}
+## PATHBANK
+# with open("Data/chebi_to_pathway.csv", "rt") as infile:
+#     print("Readin chebi_to_pathway")
+#     for line in infile:
+#         tokens = line.strip().split("\t")
+#         if len(tokens) < 3: continue
+#
+#         if tokens[0] not in chebi_terms_all: continue
+#         if tokens[1] not in chebi_terms_organisms: chebi_terms_organisms[tokens[1]] = {}
+#         if tokens[0] not in chebi_terms_organisms[tokens[1]]: chebi_terms_organisms[tokens[1]][tokens[0]] = set()
+#         chebi_terms_organisms[tokens[1]][tokens[0]] |= set(tokens[2:])
+
+## REACTOME
+with gzip.open("Data/ChEBI2Reactome_All_Levels.txt.gz", "rt") as infile:
+    print("Readin ChEBI2Reactome")
     for line in infile:
         tokens = line.strip().split("\t")
-        if len(tokens) < 3: continue
-
-        if tokens[0] not in chebi_terms_all: continue
-        if tokens[1] not in chebi_terms_organisms: chebi_terms_organisms[tokens[1]] = {}
-        if tokens[0] not in chebi_terms_organisms[tokens[1]]: chebi_terms_organisms[tokens[1]][tokens[0]] = set()
-        chebi_terms_organisms[tokens[1]][tokens[0]] |= set(tokens[2:])
+        if len(tokens) < 6: continue
+        organism = tokens[5]
+        if organism not in species: continue
+        organism = species[organism]
+        chebi_id = tokens[0]
+        reactome_id = tokens[1]
+        reactome_name = tokens[3]
+        if chebi_id not in chebi_terms_organisms[organism]: chebi_terms_organisms[organism][chebi_id] = set()
+        chebi_terms_organisms[organism][chebi_id].add(reactome_id)
+        if reactome_id not in pathway_terms_organisms[organism]:
+            pathway_terms_organisms[organism][reactome_id] = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
 
 
 # import uniprot accession to gene name
@@ -454,28 +474,61 @@ for ensembl_file, organism in ensembl_files:
         print(e)
         exit(-1)
 
+## PATHBANK
+# with open("Data/pathbank_to_uniprot.csv", "rt") as infile:
+#     print("Readin pathbank_to_uniprot")
+#     for line in infile:
+#         tokens = line.strip().split("\t")
+#         if len(tokens) < 3: continue
+#
+#         i = 2
+#         organism = None
+#         while i < len(tokens):
+#             if tokens[i] in uniprot_to_organism:
+#                 organism = uniprot_to_organism[tokens[i]]
+#                 break
+#             i += 1
+#
+#         if organism == None: continue
+#         if organism not in pathway_terms_organisms: pathway_terms_organisms[organism] = {}
+#         pathway_terms_organisms[organism][tokens[0]] = Term(tokens[0], tokens[1], _namespace = "Metabolic and signalling pathway")
+#         for term_id in tokens[2:]:
+#             if term_id in uniprot_data:
+#                 uniprot_data[term_id].relations.add(tokens[0])
 
-pathway_terms_organisms = {}
-with open("Data/pathbank_to_uniprot.csv", "rt") as infile:
-    print("Readin pathbank_to_uniprot")
+## REACTOME
+with gzip.open("Data/UniProt2Reactome_All_Levels.txt.gz", "rt") as infile:
+    print("Readin UniProt2Reactome")
     for line in infile:
         tokens = line.strip().split("\t")
-        if len(tokens) < 3: continue
+        if len(tokens) < 6: continue
+        organism = tokens[5]
+        uniprot = tokens[0]
+        if organism not in species or uniprot not in uniprot_data: continue
+        organism = species[organism]
+        reactome_id = tokens[1]
+        reactome_name = tokens[3]
+        uniprot_data[uniprot].relations.add(reactome_id)
+        if reactome_id not in pathway_terms_organisms[organism]:
+            pathway_terms_organisms[organism][reactome_id] = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
 
-        i = 2
-        organism = None
-        while i < len(tokens):
-            if tokens[i] in uniprot_to_organism:
-                organism = uniprot_to_organism[tokens[i]]
-                break
-            i += 1
 
-        if organism == None: continue
-        if organism not in pathway_terms_organisms: pathway_terms_organisms[organism] = {}
-        pathway_terms_organisms[organism][tokens[0]] = Term(tokens[0], tokens[1], _namespace = "Metabolic and signalling pathway")
-        for term_id in tokens[2:]:
-            if term_id in uniprot_data:
-                uniprot_data[term_id].relations.add(tokens[0])
+with gzip.open("Data/Ensembl2Reactome_All_Levels.txt.gz", "rt") as infile:
+    print("Readin Ensembl2Reactome")
+    for line in infile:
+        tokens = line.strip().split("\t")
+        if len(tokens) < 6: continue
+        organism = tokens[5]
+        if organism not in species: continue
+        organism = species[organism]
+        ensembl = tokens[0]
+        if ensembl not in ensembl_terms_organisms[organism]: continue
+        reactome_id = tokens[1]
+        reactome_name = tokens[3]
+        ensembl_terms_organisms[organism][ensembl].relations.add(reactome_id)
+        if reactome_id not in pathway_terms_organisms[organism]:
+            pathway_terms_organisms[organism][reactome_id] = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+
 
 
 rhea_terms_organisms = {tax_id: {} for tax_id in uniprot_terms_organisms}

@@ -69,6 +69,7 @@ class SunburstTerm:
 LIBRARY_TO_DOMAINS = {
     "GO": {"Biological process", "Cellular component", "Molecular function"},
     "SNP": {"Metabolic and signalling pathway"},
+    "R-": {"Metabolic and signalling pathway"},
     "LION": {"Physical or chemical properties"},
     "DOID": {"Disease"},
     "MONDO": {"Disease"},
@@ -2272,7 +2273,7 @@ def open_sunburstplot(
     for term_id in selected_term_ids:
         queue = [term_id]
         term = terms[term_id.split("|")[0]]
-        term_prefix = [t.split(":")[0] if t.find(":") > -1 else "SNP" for t in term_id.split("|")]
+        term_prefix = [t.split(":")[0] if t.find(":") > -1 else "R-" for t in term_id.split("|")]
         term_prefix = [t for t in term_prefix if ((t in LIBRARY_TO_DOMAINS) and (len(LIBRARY_TO_DOMAINS[t] & domains) > 0))]
         if term in sunburst_terms:
             sunburst_terms[term].entry_point = True
@@ -2290,7 +2291,7 @@ def open_sunburstplot(
 
             for parent_term in child_term.relations:
                 for parent_term_id in parent_term.term_id:
-                    parent_prefix = parent_term_id.split(":")[0] if parent_term_id.find(":") > -1 else "SNP"
+                    parent_prefix = parent_term_id.split(":")[0] if parent_term_id.find(":") > -1 else "R-"
                     if parent_prefix not in LIBRARY_TO_DOMAINS \
                         or len(LIBRARY_TO_DOMAINS[parent_prefix] & domains) == 0 \
                         or term_prefix != parent_prefix \
@@ -3080,6 +3081,9 @@ def show_molecule_term_path(
 
             elif term_id.startswith("ENS") or term_id.startswith("WBGene") or term_id.startswith("FBgn"):
                 href = f"https://www.ensembl.org/id/{term_id}"
+
+            elif term_id.startswith("R-"):
+                href = f"https://reactome.org/content/detail/{term_id}"
 
         else:
             term_name = term_id

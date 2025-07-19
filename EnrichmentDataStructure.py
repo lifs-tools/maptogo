@@ -13,8 +13,8 @@ import traceback
 import pickle
 import os
 
-WITH_LOOKUP = True
-WITH_LOOKUP_STORAGE = True
+WITH_LOOKUP = False
+WITH_STORAGE = False
 SKIP_LOADING = False
 
 def time_elapsed(func):
@@ -70,18 +70,7 @@ class TracebackGraph:
                 continue
             self.nodes[p] = self.current_node
             self.current_node = p
-        self.current_depth = len(path)
 
-    def add_node(self, node):
-        if node in self.nodes: return
-        self.nodes[node] = self.current_node
-        self.current_node = node
-        self.current_depth += 1
-
-    def step_back(self):
-        if self.current_node == None: return
-        self.current_node = self.nodes[self.current_node]
-        self.current_depth -= 1
 
     def get_path(self, node):
         if node not in self.nodes: return []
@@ -93,11 +82,16 @@ class TracebackGraph:
             current_node = self.nodes[current_node]
         return path[::-1]
 
-    def go_back(self, path_len):
-        if self.current_node == None or path_len <= 0: return
-        while self.current_depth > path_len:
-            self.current_node = self.nodes[self.current_node]
-            self.current_depth -= 1
+
+    def go_back_and_add_note(self, parent_node, node):
+        if parent_node not in self.nodes: return
+        self.current_node = parent_node
+
+        if node in self.nodes: return
+        self.nodes[node] = self.current_node
+        self.current_node = node
+
+
 
 
 class OntologyTerm:
@@ -120,27 +114,17 @@ class OntologyTerm:
 class OntologyResult:
     def __init__(
         self,
-        _term_id,
         _term,
-        _number_background,
-        _number_background_events,
-        _targets,
         _pvalue,
         _source_terms,
         _fisher = None,
-        _leaf = True,
     ):
         if _fisher == None: _fisher = [0, 0, 0, 0]
-        self.term_id = _term_id
         self.term = _term
-        self.number_background = _number_background
-        self.number_background_events = _number_background_events
-        self.targets = _targets
         self.pvalue = _pvalue
         self.pvalue_corrected = _pvalue
         self.source_terms = _source_terms
         self.fisher_data = _fisher
-        self.leaf = _leaf
 
         if min(_fisher) < 0:
             print("ERROR: ", self.term.name, self.term.get_term_id(), _fisher)
@@ -168,7 +152,7 @@ class EnrichmentOntology:
 
         pickle_file_name = file_name.replace(".gz", ".pkl.gz")
         pickle_file_exists = os.path.exists(pickle_file_name)
-        if WITH_LOOKUP_STORAGE and pickle_file_exists:
+        if WITH_STORAGE and pickle_file_exists:
             try:
                 with gzip.open(pickle_file_name) as input_stream:
                     load_obj = pickle.load(input_stream)
@@ -284,7 +268,12 @@ class EnrichmentOntology:
 
         # clean up ontology
         for term_id, term in self.ontology_terms.items():
-            term.relations = list({self.ontology_terms[t] for t in term.relations if t in self.ontology_terms})
+            term.relations = sorted(
+                list(
+                    {self.ontology_terms[t] for t in term.relations if t in self.ontology_terms}
+                ),
+                key = lambda term: term.get_term_id()
+            )
 
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
@@ -293,31 +282,25 @@ class EnrichmentOntology:
                 # creating lookup table for molecules
                 for molecule_dict in [self.proteins, self.metabolites, self.transcripts]:
                     for molecule_input_name, input_term in molecule_dict.items():
-                        path = (input_term, )
-                        graph = TracebackGraph(path)
-                        self.molecule_lookup[path] = [set(), graph]
+                        path, graph = (input_term, ), TracebackGraph(path)
+                        self.molecule_lookup[path] = [[], graph]
                         m_lookup = self.molecule_lookup[path]
 
-                        queue = [(input_term, len(path))]
-                        visited_terms = {input_term}
+                        queuevisited_terms,visited_terms  = [(input_term, None)], {input_term}
                         while queue:
-                            term, path_len = queue.pop()
-                            graph.go_back(path_len)
-                            graph.add_node(term)
-                            contains_no_domain = len(term.domain) == 0
-
-                            if not contains_no_domain: m_lookup[0].add(term)
-
-                            for parent_term in term.relations:
-                                if parent_term not in visited_terms:
+                            term, parent_term = queue.pop()
+                            graph.go_back_and_add_note(parent_term, term)
+                            if not term.domain: m_lookup[0].add(term)
+                            for relation_term in term.relations:
+                                if relation_term not in visited_terms:
                                     visited_terms.add(parent_term)
-                                    queue.append((parent_term, graph.current_depth))
+                                    queue.append((relation_term, term))
             except Exception as e:
                 logger.error("".join(traceback.format_tb(e.__traceback__)))
                 logger.error(e)
 
 
-        if WITH_LOOKUP and WITH_LOOKUP_STORAGE and not pickle_file_exists:
+        if WITH_STORAGE and not pickle_file_exists:
             try:
                 with gzip.open(pickle_file_name, 'wb') as output_stream:
                     dump_obj = {
@@ -430,32 +413,46 @@ class EnrichmentOntology:
 
         # run all registered molecules
         search_terms = session.search_terms
-        for molecule_input_name, path in all_paths:
-            if path not in self.molecule_lookup:
-                graph = TracebackGraph(path)
-            else:
-                g = self.molecule_lookup[path][1]
-                for term in self.molecule_lookup[path][0]:
-                    if term not in search_terms: search_terms[term] = {molecule_input_name: g}
-                    else: search_terms[term][molecule_input_name] = g
-                continue
+        if WITH_LOOKUP:
+            for molecule_input_name, path in all_paths:
+                if path in self.molecule_lookup:
+                    g = self.molecule_lookup[path][1]
+                    for term in self.molecule_lookup[path][0]:
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: g}
+                        else: search_terms[term][molecule_input_name] = g
+                    continue
+                else:
+                    graph = TracebackGraph(path)
 
-            queue = [(path[-1], len(path))]
-            visited_terms = {path[-1]}
-            while queue:
-                term, path_len = queue.pop()
-                graph.go_back(path_len)
-                graph.add_node(term)
-                contains_no_domain = len(term.domain) == 0
+                queue, visited_terms = [(path[-1], None)], {path[-1]}
+                while queue:
+                    term, parent_term = queue.pop()
+                    graph.go_back_and_add_note(parent_term, term)
 
-                if not contains_no_domain:
-                    if term not in search_terms: search_terms[term] = {molecule_input_name: graph}
-                    else: search_terms[term][molecule_input_name] = graph
+                    if trem.domain:
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: graph}
+                        else: search_terms[term][molecule_input_name] = graph
 
-                for parent_term in term.relations:
-                    if parent_term not in visited_terms:
-                        visited_terms.add(parent_term)
-                        queue.append((parent_term, graph.current_depth))
+                    for relation_term in term.relations:
+                        if relation_term not in visited_terms:
+                            visited_terms.add(relation_term)
+                            queue.append((relation_term, term))
+
+        else:
+            for molecule_input_name, path in all_paths:
+                graph, queue, visited_terms = TracebackGraph(path), [(path[-1], None)], {path[-1]}
+                while queue:
+                    term, parent_term = queue.pop()
+                    graph.go_back_and_add_note(parent_term, term)
+
+                    if term.domain:
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: graph}
+                        else: search_terms[term][molecule_input_name] = graph
+
+                    for relation_term in term.relations:
+                        if relation_term not in visited_terms:
+                            visited_terms.add(relation_term)
+                            queue.append((relation_term, term))
 
 
 
@@ -467,30 +464,23 @@ class EnrichmentOntology:
         try: # C++ implementation, just way faster
             result_list = [None] * len(session.search_terms)
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
-            visited_terms = set()
-            for i, (term, term_metabolites) in enumerate(session.search_terms.items()):
+            for i, (term, term_molecules) in enumerate(session.search_terms.items()):
                 if (
-                    len(term_metabolites) == 0
+                    len(term_molecules) == 0
                     or len(term.domain & enrichment_domains) == 0
-                    or term in visited_terms
                 ): continue
-                visited_terms.add(term)
-                target_number = len(term_metabolites.keys() & target_set)
-                p_hyp = fisher_exact.exact_fisher(target_number, len(term_metabolites), len(target_set), session.num_background, side)
+                target_number = len(term_molecules.keys() & target_set)
+                p_hyp = fisher_exact.exact_fisher(target_number, len(term_molecules), len(target_set), session.num_background, side)
                 if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
-                    term.get_term_id(),
                     term,
-                    session.num_background,
-                    len(term_metabolites),
-                    len(target_set),
                     p_hyp,
-                    term_metabolites,
+                    term_molecules,
                     [
                         target_number,
-                        len(term_metabolites) - target_number,
+                        len(term_molecules) - target_number,
                         len(target_set) - target_number,
-                        session.num_background - len(term_metabolites) - len(target_set) + target_number,
+                        session.num_background - len(term_molecules) - len(target_set) + target_number,
                     ],
                 )
 
@@ -499,31 +489,25 @@ class EnrichmentOntology:
             logger.error("C++ implementation of fisher exact test failed.")
             result_list = [None] * len(session.search_terms)
             visited_terms = set()
-            for i, (term, term_metabolites) in enumerate(session.search_terms.items()):
+            for i, (term, term_molecules) in enumerate(session.search_terms.items()):
                 if (
-                    len(term_metabolites) == 0
+                    len(term_molecules) == 0
                     or len(term.domain & enrichment_domains) == 0
-                    or term in visited_terms
                 ): continue
-                visited_terms.add(term)
-                target_number = len(term_metabolites.keys() & target_set)
+                target_number = len(term_molecules.keys() & target_set)
 
                 a, b, c, d = (
                     target_number,
-                    len(term_metabolites) - target_number,
+                    len(term_molecules) - target_number,
                     len(target_set) - target_number,
-                    session.num_background - len(term_metabolites) - len(target_set) + target_number,
+                    session.num_background - len(term_molecules) - len(target_set) + target_number,
                 )
                 p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
                 if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
-                    term.get_term_id(),
                     term,
-                    session.num_background,
-                    len(term_metabolites),
-                    len(target_set),
                     p_hyp,
-                    term_metabolites,
+                    term_molecules,
                     [a, b, c, d]
                 )
 
