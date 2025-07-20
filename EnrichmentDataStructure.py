@@ -12,6 +12,7 @@ from collections import defaultdict
 import traceback
 import pickle
 import os
+from collections import deque, defaultdict
 
 WITH_LOOKUP = False
 WITH_STORAGE = False
@@ -293,7 +294,7 @@ class EnrichmentOntology:
 
     @time_elapsed
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
-        session.search_terms = {}
+        session.search_terms = defaultdict(dict)
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
         all_paths = set()
 
@@ -378,44 +379,21 @@ class EnrichmentOntology:
 
         # run all registered molecules
         search_terms = session.search_terms
-        if WITH_LOOKUP:
-            for molecule_input_name, path in all_paths:
-                if path in self.molecule_lookup:
-                    parent_nodes = self.molecule_lookup[path][1]
-                    for term in self.molecule_lookup[path][0]:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
-                        else: search_terms[term][molecule_input_name] = parent_nodes
-                    continue
+        for molecule_input_name, path in all_paths:
+            if WITH_LOOKUP and path in self.molecule_lookup:
+                parent_nodes = self.molecule_lookup[path][1]
+                for term in self.molecule_lookup[path][0]: search_terms[term][molecule_input_name] = parent_nodes
+                continue
 
-                queue, parent_nodes = [path[-1]], {}
-                for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
-                while queue:
-                    term = queue.pop()
-
-                    if term.domain:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
-                        else: search_terms[term][molecule_input_name] = parent_nodes
-
-                    for relation_term in term.relations:
-                        if relation_term not in parent_nodes:
-                            parent_nodes[relation_term] = term
-                            queue.append(relation_term)
-
-        else:
-            for molecule_input_name, path in all_paths:
-                parent_nodes, queue = {}, [path[-1]]
-                for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
-
-                while queue:
-                    term = queue.pop()
-                    if term.domain:
-                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
-                        else: search_terms[term][molecule_input_name] = parent_nodes
-
-                    for relation_term in term.relations:
-                        if relation_term not in parent_nodes:
-                            parent_nodes[relation_term] = term
-                            queue.append(relation_term)
+            parent_nodes, queue = {}, deque([path[-1]])
+            for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
+            while queue:
+                term = queue.pop()
+                if term.domain: search_terms[term][molecule_input_name] = parent_nodes
+                for relation_term in term.relations:
+                    if relation_term not in parent_nodes:
+                        parent_nodes[relation_term] = term
+                        queue.append(relation_term)
 
 
     @time_elapsed
