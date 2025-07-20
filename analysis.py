@@ -1868,7 +1868,7 @@ def download_table(
         term_ids.append(term_id)
         terms.append(row["term"])
         counts.append(row["count"])
-        pvalues.append(row["pvalue"])
+        pvalues.append(float(row["pvalue"]))
 
     df = pd.DataFrame({"Domain": domains, "Term ID": term_ids, "Term": terms, "Count": counts, "p-value": pvalues})
     data = session.data
@@ -1958,8 +1958,8 @@ def download_table(
         background_transcripts = [transcript for transcript in background_transcripts]
         regulated_transcripts = [transcript for transcript in regulated_transcripts]
         pd.DataFrame.from_dict(associated_transcripts, orient = "index").transpose().to_excel(writer, sheet_name = "Associated transcripts", index = False)
-        pd.DataFrame({"ChEBI": background_transcripts}).to_excel(writer, sheet_name = "Background transcripts", index = False)
-        pd.DataFrame({"ChEBI": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
+        pd.DataFrame({"Ensembl": background_transcripts}).to_excel(writer, sheet_name = "Background transcripts", index = False)
+        pd.DataFrame({"Ensembl": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
 
     writer._save()
 

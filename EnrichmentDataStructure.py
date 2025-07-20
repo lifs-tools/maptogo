@@ -249,7 +249,7 @@ class EnrichmentOntology:
                 # creating lookup table for molecules
                 for molecule_dict in [self.proteins, self.metabolites, self.transcripts]:
                     for molecule_input_name, input_term in molecule_dict.items():
-                        path, parent_nodes = (input_term, ), {input_term: None, -1: input_term}
+                        path, parent_nodes = (input_term, ), {input_term: None}
                         self.molecule_lookup[path] = [[], parent_nodes]
                         m_lookup = self.molecule_lookup[path]
 
@@ -387,14 +387,14 @@ class EnrichmentOntology:
                         else: search_terms[term][molecule_input_name] = parent_nodes
                     continue
 
-                queue, parent_nodes = [path[-1]], {-1: molecule_input_name}
+                queue, parent_nodes = [path[-1]], {}
                 for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
                 while queue:
                     term = queue.pop()
 
                     if term.domain:
-                        if term not in search_terms: search_terms[term] = [parent_nodes]
-                        else: search_terms[term].append(parent_nodes)
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
+                        else: search_terms[term][molecule_input_name] = parent_nodes
 
                     for relation_term in term.relations:
                         if relation_term not in parent_nodes:
@@ -403,14 +403,14 @@ class EnrichmentOntology:
 
         else:
             for molecule_input_name, path in all_paths:
-                parent_nodes, queue = {-1: molecule_input_name}, [path[-1]]
+                parent_nodes, queue = {}, [path[-1]]
                 for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
 
                 while queue:
                     term = queue.pop()
                     if term.domain:
-                        if term not in search_terms: search_terms[term] = [parent_nodes]
-                        else: search_terms[term].append(parent_nodes)
+                        if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
+                        else: search_terms[term][molecule_input_name] = parent_nodes
 
                     for relation_term in term.relations:
                         if relation_term not in parent_nodes:
@@ -418,14 +418,11 @@ class EnrichmentOntology:
                             queue.append(relation_term)
 
 
-
     @time_elapsed
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "greater"):
         if len(target_set) == 0 or session.num_background == 0 or len(enrichment_domains) == 0: return []
-        search_terms = session.search_terms
-        for term, term_molecules in search_terms.items():
-            search_terms[term] = {tm[-1]: tm for tm in term_molecules}
 
+        search_terms = session.search_terms
         enrichment_domains = set(enrichment_domains)
         try: # C++ implementation, just way faster
             result_list = [None] * len(search_terms)
