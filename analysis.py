@@ -35,7 +35,7 @@ from math import ceil
 
 organisms = {
     'Homo sapiens': '9606',
-    'Mus musculus': '10090',
+    #'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
@@ -1179,28 +1179,23 @@ def layout():
                                         id = "select_molecule_handling",
                                         data = [
                                             {"value": MOLECULE_HANDLING_ERROR, "label": "Halt analysis and report"},
-                                            {"value": MOLECULE_HANDLING_REMOVE, "label": "Remove from input lists"},
-                                            {"value": MOLECULE_HANDLING_IGNORE, "label": "Keep in input lists and continue"},
+                                            {"value": MOLECULE_HANDLING_REMOVE, "label": "Remove for analysis"},
+                                            {"value": MOLECULE_HANDLING_IGNORE, "label": "Keep and continue"},
                                         ],
-                                        value = MOLECULE_HANDLING_REMOVE,
+                                        value = MOLECULE_HANDLING_IGNORE,
                                         label = "Handling of unrecognizable molecules:",
                                     ),
-                                    # dmc.Switch(
-                                    #     id = "switch_ignore_unparsable_lipids",
-                                    #     checked = False,
-                                    #     label = "Ignore unrecognizable molecules",
-                                    #     style = {"paddingBottom": "8px"},
-                                    # ),
-                                    # style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
                                 ),
                                 html.Div(
-                                    dmc.Switch(
-                                        id = "switch_ignore_unknown_regulated_lipids",
-                                        checked = False,
-                                        label = "Ignore regulated molecules that aren't in background",
-                                        style = {"paddingBottom": "8px"},
+                                    dmc.Select(
+                                        id = "select_regulated_molecule_handling",
+                                        data = [
+                                            {"value": MOLECULE_HANDLING_ERROR, "label": "Halt analysis and report"},
+                                            {"value": MOLECULE_HANDLING_REMOVE, "label": "Remove for analysis"},
+                                        ],
+                                        value = MOLECULE_HANDLING_REMOVE,
+                                        label = "Handling of non-background regulated molecules:",
                                     ),
-                                    style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
                                 ),
                                 html.Div(
                                     dmc.Switch(
@@ -1438,7 +1433,7 @@ def organism_changed(organism, domain_values):
     State("select_domains", "value"),
     State("select_molecule_handling", "value"),
     State("select_test_method", "value"),
-    State("switch_ignore_unknown_regulated_lipids", "checked"),
+    State("select_regulated_molecule_handling", "value"),
     State("select_term_representation", "value"),
     State("sessionid", "children"),
     State("checkbox_use_lipids", "checked"),
@@ -1520,7 +1515,7 @@ def run_enrichment(
             for lipid_name in regulated_lipids_list.split("\n"):
                 if len(lipid_name) == 0: continue
                 if lipid_name not in lipidome:
-                    if ignore_unknown: continue
+                    if ignore_unknown == MOLECULE_HANDLING_REMOVE: continue
                     return "", [], [], {}, do_activate_alert, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
                 regulated_lipids.add(lipid_name)
 
@@ -1535,7 +1530,7 @@ def run_enrichment(
 
             left_lipids = regulated_lipids - lipidome.keys()
             if len(left_lipids) > 0:
-                if ignore_unknown:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
                     for lipid_name in left_lipids:
                         del lipidome[lipid_name]
                 else:
@@ -1577,7 +1572,7 @@ def run_enrichment(
 
             left_proteins = regulated_proteins - proteome
             if len(left_proteins) > 0:
-                if ignore_unknown:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
                     proteome -= left_proteins
                 else:
                     return "", [], [], {}, do_activate_alert, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
@@ -1628,7 +1623,7 @@ def run_enrichment(
 
             left_metabolites = regulated_metabolites - metabolome
             if len(left_metabolites) > 0:
-                if ignore_unknown:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
                     metabolome -= left_metabolites
                 else:
                     return "", [], [], {}, do_activate_alert, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
@@ -1678,7 +1673,7 @@ def run_enrichment(
 
             left_transcripts = regulated_transcripts - transcriptome
             if len(left_transcripts) > 0:
-                if ignore_unknown:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
                     transcriptome -= left_transcripts
                 else:
                     return "", [], [], {}, do_activate_alert, "The regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
@@ -1825,6 +1820,7 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
     Input("checkbox_use_transcripts", "checked"),
     Input("select_organism", "value"),
     Input("select_molecule_handling", "value"),
+    Input("select_regulated_molecule_handling", "value"),
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
@@ -1844,6 +1840,7 @@ def update_background(
     with_transcripts,
     select_organism,
     select_molecule_handling,
+    select_regulated_molecule_handling,
     session_id,
 ):
     num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))

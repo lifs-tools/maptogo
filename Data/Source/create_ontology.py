@@ -46,6 +46,7 @@ else:
 
 species_set = set(species.values())
 
+
 class Term:
     def __init__(self, _id, _name, _relations = None, _synonyms = None, _namespace = None, _xref = None, upper = False, _categories = None):
         if _relations == None: _relations = set()
@@ -62,9 +63,11 @@ class Term:
         self.xref = set(_xref) if type(_xref) in {list, set} else {_xref}
         self.categories = set(_categories) if type(_categories) in {list, set} else {_categories}
         
+    def joining(self, a_set):
+        return "|".join(sorted(list(a_set)))
 
     def to_string(self):
-        return f"{'|'.join(self.id)}\t{self.name}\t{'|'.join(self.relations)}\t{'|'.join(self.synonyms)}\t{'|'.join(self.namespace)}\t{'|'.join(self.categories)}\n"
+        return f"{self.joining(self.id)}\t{self.name}\t{self.joining(self.relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}\n"
 
 
     def copy(self):
@@ -137,7 +140,7 @@ def get_lipid_terms():
 
             for t in tokens[0].split(" | "):
                 if t not in chebi_to_lipid: chebi_to_lipid[t] = set()
-                chebi_to_lipid[t] |= set(tokens[1:])
+                chebi_to_lipid[t] |= set(tokens[1:]) - {""}
 
 
 
@@ -225,11 +228,10 @@ def get_lipid_terms():
     UNDEFINED = "UNDEFINED"
     for chebi_id, lipid_names in chebi_to_lipid.items():
         for lipid_name in lipid_names:
-            if lipid_name[:len(UNDEFINED)] == UNDEFINED or lipid_name == "": continue
+            if lipid_name.startswith(UNDEFINED) == UNDEFINED or lipid_name == "": continue
             if lipid_name in lipid_class_terms:
                 for lipid_class_term in lipid_class_terms[lipid_name]:
                     lipid_class_term.relations.add("CHEBI:" + chebi_id)
-
                 continue
 
             lipid_translates = set()
@@ -380,7 +382,7 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
             gene_ids.add(tokens[6].strip('";').split(";")[0])
 
         if len(tokens) > 8 and len(tokens[8]) > 1:
-            for ncbi_id in tokens[8].strip('\n;').split(";"):
+            for ncbi_id in tokens[8].strip(';').split(";"):
                 gene_ids.add(f"NCBI:{ncbi_id}")
 
         term = Term(uniprot_term, protein_name, _relations = go_terms | gene_ids, _categories = categories)
@@ -389,10 +391,21 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
         uniprot_to_organism[uniprot] = tokens[1]
 
         if len(gene_ids) > 0 and organisms_id in gene_term_organisms:
-            gene_term = Term(gene_ids, f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Gene)")
-            for gene_id in gene_ids:
-                gene_terms[gene_id] = gene_term
-                gene_term_organisms[organisms_id][gene_id] = gene_term
+            # check if at least on gene id is already registered
+            common_gene_ids = gene_ids & gene_terms.keys()
+            if len(common_gene_ids) > 0:
+                common_gene = gene_terms[list(common_gene_ids)[0]]
+                if "HGNC:438" in common_gene_ids: print(common_gene_ids, common_gene)
+                common_gene.id |= gene_ids
+                for cgi in common_gene_ids | gene_ids:
+                    gene_terms[cgi] = common_gene
+
+            else:
+                gene_term = Term(gene_ids, f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Gene)")
+                if "HGNC:438" in gene_ids: print(gene_ids, gene_term)
+                for gene_id in gene_ids:
+                    gene_terms[gene_id] = gene_term
+                    gene_term_organisms[organisms_id][gene_id] = gene_term
 
         if len(tokens) > 7 and len(tokens[7]) > 0 and organisms_id in gene_term_organisms:
             ensembl_organism = ensembl_terms_organisms[organisms_id]
@@ -790,12 +803,6 @@ for tax_name, tax_id in species.items():
     for _, chebi_term in chebi_terms.items():
         output.append(chebi_term.to_string())
 
-
-    for lipid_name, term in chebi_lipid_terms.items():
-        output.append(term.to_string())
-
-
-
     # diseases and phenotypes
     written_diseases = set()
     for _, disease_term in disease_and_phenotype_terms.items():
@@ -803,6 +810,9 @@ for tax_name, tax_id in species.items():
         written_diseases.add(disease_term)
         output.append(disease_term.to_string())
 
+
+    for lipid_name, term in chebi_lipid_terms.items():
+        output.append(term.to_string())
 
 
     for term_id, term in ontology_terms.items():

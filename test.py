@@ -28,7 +28,8 @@ with open(f"{current_path}/Test/test_data.csv", "rt") as infile:
         test_data[tokens[0]][tokens[2]].add(tokens[3] if len(tokens) > 3 and len(tokens[3]) > 0 else None)
 
 unit_tests = 0
-for organism, organism_test_data in test_data.items():
+for organism in sorted(list(test_data.keys()), key = lambda x : int(x)):
+    organism_test_data = test_data[organism]
     print(f"testing organism {organism}")
     start_time = time.time()
     ontology = EnrichmentOntology(f"{current_path}/Data/ontology_{organism}.gz", organism, lipid_parser = lipid_parser)
@@ -45,12 +46,23 @@ for organism, organism_test_data in test_data.items():
             print(f"{molecule_name} -> {term_id}")
             if term_id == None:
                 if molecule_name not in ontology.ontology_terms:
-                    print(f"ERROR: '{molecule_name}' not in ontoloy")
+                    print(f"ERROR: '{molecule_name}' not in ontology")
                     exit(-1)
 
-            elif term_id not in session.search_terms:
-                print("ERROR:", molecule_name, term_id)
-                exit(-1)
+            else:
+                if term_id not in ontology.ontology_terms:
+                    print(f"ERROR: '{term_id}' not in ontology")
+                    exit(-1)
+
+                term = ontology.ontology_terms[term_id]
+                if term not in session.search_terms:
+                    print(f"ERROR: '{term_id}' not in results")
+                    exit(-1)
+
+                if molecule_name not in session.search_terms[term]:
+                    print(f"ERROR: '{molecule_name}' not in '{term_id}' results")
+                    exit(-1)
+
             unit_tests += 1
 
 print(f"Test passed ({unit_tests} unit tests) without errors")

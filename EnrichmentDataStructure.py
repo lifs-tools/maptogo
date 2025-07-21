@@ -246,7 +246,7 @@ class EnrichmentOntology:
         for term_id, term in self.ontology_terms.items():
             term.relations = sorted(
                 list(
-                    {self.ontology_terms[t] for t in term.relations if t in self.ontology_terms}
+                    {t if type(t) == OntologyTerm else self.ontology_terms[t] for t in term.relations if (type(t) == OntologyTerm or t in self.ontology_terms)}
                 ),
                 key = lambda term: term.get_term_id()
             )
@@ -301,7 +301,7 @@ class EnrichmentOntology:
 
     @time_elapsed
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
-        session.search_terms = defaultdict(dict)
+        session.search_terms = {} #defaultdict(dict)
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
         all_paths = set()
 
@@ -396,7 +396,9 @@ class EnrichmentOntology:
             for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
             while queue:
                 term = queue.pop()
-                if term.domain: search_terms[term][molecule_input_name] = parent_nodes
+                if term.domain:
+                    if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
+                    else: search_terms[term][molecule_input_name] = parent_nodes
                 for relation_term in term.relations:
                     if relation_term not in parent_nodes:
                         parent_nodes[relation_term] = term
