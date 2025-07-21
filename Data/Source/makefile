@@ -1,4 +1,4 @@
-DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/rhea2uniprot_trembl.tsv.gz Data/pathbank_all_metabolites.csv.zip Data/pathbank_all_proteins.csv.zip Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Homo_sapiens.all.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/Mus_musculus.all.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz
+DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/rhea2uniprot_trembl.tsv.gz Data/pathbank_all_metabolites.csv.zip Data/pathbank_all_proteins.csv.zip Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Homo_sapiens.all.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/Mus_musculus.all.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz Data/UniProt2Reactome_All_Levels.txt.gz Data/ChEBI2Reactome_All_Levels.txt.gz Data/Ensembl2Reactome_All_Levels.txt.gz Data/ReactomePathwaysRelation.txt
 
 SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Data/pathbank_to_uniprot.csv Data/chebi_to_pathway.csv Data/hgnc_to_mondo.csv
 
@@ -50,6 +50,23 @@ Data/pathbank_all_metabolites.csv.zip:
 
 Data/pathbank_all_proteins.csv.zip:
 	wget --tries=10 -O Data/pathbank_all_proteins.csv.zip https://pathbank.org/downloads/pathbank_all_proteins.csv.zip
+
+# Reactome
+Data/UniProt2Reactome_All_Levels.txt.gz:
+	wget --tries=10 -O Data/UniProt2Reactome_All_Levels.txt https://reactome.org/download/current/UniProt2Reactome_All_Levels.txt
+	gzip Data/UniProt2Reactome_All_Levels.txt
+
+Data/ChEBI2Reactome_All_Levels.txt.gz:
+	wget --tries=10 -O Data/ChEBI2Reactome_All_Levels.txt https://reactome.org/download/current/ChEBI2Reactome_All_Levels.txt
+	gzip Data/ChEBI2Reactome_All_Levels.txt
+
+Data/Ensembl2Reactome_All_Levels.txt.gz:
+	wget --tries=10 -O Data/Ensembl2Reactome_All_Levels.txt https://reactome.org/download/current/Ensembl2Reactome_All_Levels.txt
+	gzip Data/Ensembl2Reactome_All_Levels.txt
+
+
+Data/ReactomePathwaysRelation.txt:
+	wget --tries=10 -O Data/ReactomePathwaysRelation.txt https://reactome.org/download/current/ReactomePathwaysRelation.txt
 
 # Mondo
 Data/mondo.obo:
@@ -120,9 +137,8 @@ Data/HGNC.csv:
 
 # Uniprot
 Data/uniprot.csv.gz:
-	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full%2Cxref_geneid&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A3702%29%29"
 	# revieved = True
-	#wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full&format=tsv&query=%28reviewed%3Atrue%29+AND+%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A3702%29%29"
+	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full%2Cxref_geneid%2Creviewed&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A3702%29%29"
 
 
 

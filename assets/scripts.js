@@ -55,7 +55,7 @@ dagcomponentfuncs.TermIDRenderer = function (props) {
             href = "https://www.ensembl.org/id/" + term_id;
         }
         else if (term_id.startsWith("R-")){
-            href = "https://reactome.org/content/detail/" + term_id;
+            href = "https://reactome.org/PathwayBrowser/#/" + term_id;
         }
 
         if (reacts.length > 0){

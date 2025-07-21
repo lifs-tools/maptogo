@@ -115,6 +115,7 @@ class EnrichmentOntology:
         self.metabolite_names = {}
         self.ontology_name = ontology_name
         self.molecule_lookup = {}
+        self.reviewed_proteins = set()
 
         if SKIP_LOADING: return
 
@@ -164,22 +165,24 @@ class EnrichmentOntology:
                     is_lipid_species = False
                     is_lipid_class = False
                     is_carbon_chain = False
-                    is_protein = False
+                    is_reviewed_protein = False
                     is_metabolite = False
                     is_stable_transcript = False
+                    is_unreviewed_protein = False
                     is_any = False
                     relations = relations.split("|")
                     synonyms = synonyms.split("|")
                     for relation in relations:
-                        if relation[:9] == "LS:000000":
+                        if relation.startswith("LS:000000"):
                             match relation[9]:
                                 case "1": is_lipid_class = True
                                 case "2": is_lipid_species = True
                                 case "3": is_carbon_chain = True
-                                case "4": is_protein = True
+                                case "4": is_reviewed_protein = True
                                 case "5": is_metabolite = True
                                 case "6": is_stable_transcript = True
-                            is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_protein | is_metabolite | is_stable_transcript
+                                case "7": is_unreviewed_protein = True
+                            is_any = is_lipid_class | is_lipid_species | is_carbon_chain | is_reviewed_protein | is_metabolite | is_stable_transcript | is_unreviewed_protein
 
                     term = OntologyTerm(term_id, name, relations, domain, categories)
                     str_term_id = term.get_term_id()
@@ -199,14 +202,19 @@ class EnrichmentOntology:
                             for synonym in synonyms:
                                 self.carbon_chains[synonym] = term
 
-                        elif is_protein:
-                            if str_term_id not in self.proteins: self.proteins[str_term_id] = term
+                        elif is_reviewed_protein:
+                            if str_term_id not in self.proteins:
+                                self.proteins[str_term_id] = term
+                                self.reviewed_proteins.add(str_term_id)
 
                         elif is_metabolite:
                             if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
 
                         elif is_stable_transcript:
                             if str_term_id not in self.transcripts: self.transcripts[str_term_id] = term
+
+                        elif is_unreviewed_protein:
+                            if str_term_id not in self.proteins: self.proteins[str_term_id] = term
 
                     for d in domain.split("|"):
                         if len(d) > 0 and d != "external":
@@ -253,11 +261,10 @@ class EnrichmentOntology:
                         path, parent_nodes = (input_term, ), {input_term: None}
                         self.molecule_lookup[path] = [[], parent_nodes]
                         m_lookup = self.molecule_lookup[path]
-
-                        queue = [input_term]
+                        queue = deque([input_term])
                         while queue:
                             term = queue.pop()
-                            if not term.domain: m_lookup[0].append(term)
+                            if term.domain: m_lookup[0].append(term)
                             for relation_term in term.relations:
                                 if relation_term not in parent_nodes:
                                     parent_nodes[relation_term] = term

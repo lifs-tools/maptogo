@@ -2,6 +2,8 @@ from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
 import gzip
 import sys
+import pickle
+import os
 
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
@@ -307,6 +309,7 @@ with open("Data/rhea_to_chebi.csv", "rt") as infile:
 
 
 chebi_terms_organisms = {org: {} for _, org in species.items()}
+pathway_terms = {}
 pathway_terms_organisms = {org: {} for _, org in species.items()}
 ## PATHBANK
 # with open("Data/chebi_to_pathway.csv", "rt") as infile:
@@ -335,12 +338,14 @@ with gzip.open("Data/ChEBI2Reactome_All_Levels.txt.gz", "rt") as infile:
         if chebi_id not in chebi_terms_organisms[organism]: chebi_terms_organisms[organism][chebi_id] = set()
         chebi_terms_organisms[organism][chebi_id].add(reactome_id)
         if reactome_id not in pathway_terms_organisms[organism]:
-            pathway_terms_organisms[organism][reactome_id] = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            pathway_terms_organisms[organism][reactome_id] = term
+            pathway_terms[reactome_id] = term
 
 
 # import uniprot accession to gene name
 uniprot_data = {}
-uniprot_terms_organisms = {}
+uniprot_terms_organisms = {organism: {} for organism in species.values()}
 uniprot_to_organism = {}
 ensembl_terms_organisms = {organism: {} for _, organism in ensembl_files}
 gene_terms = {}
@@ -349,7 +354,7 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
     print("Readin uniprot")
     for i, line in enumerate(infile):
         if i == 0: continue
-        tokens = line.split("\t")
+        tokens = line.strip().split("\t")
 
         if len(tokens) < 2: continue
 
@@ -357,8 +362,10 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
         organisms_id = tokens[1]
         if organisms_id not in species_set: continue
 
+        reviewed = len(tokens) > 9 and tokens[9] == "reviewed"
         protein_name = f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Protein)"
-        go_terms = {"LS:0000004"}
+
+        go_terms = {"LS:0000004" if reviewed else "LS:0000007"}
         categories = set(tokens[4].split(", ")) if len(tokens) > 4 and len(tokens[4]) > 0 else set()
         uniprot_term = "UNIPROT:" + uniprot
 
@@ -367,7 +374,6 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                 go_term = entry.split("]")[0]
                 if len(go_term) != 10 or go_term[:3] != "GO:": continue
                 go_terms.add(go_term)
-
 
         gene_ids = set()
         if len(tokens) > 6 and len(tokens[6]) > 1:
@@ -378,18 +384,17 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                 gene_ids.add(f"NCBI:{ncbi_id}")
 
         term = Term(uniprot_term, protein_name, _relations = go_terms | gene_ids, _categories = categories)
-        if organisms_id not in uniprot_terms_organisms: uniprot_terms_organisms[organisms_id] = {}
         uniprot_terms_organisms[organisms_id][uniprot] = term
         uniprot_data[uniprot] = term
         uniprot_to_organism[uniprot] = tokens[1]
 
-        if len(gene_ids) > 0:
+        if len(gene_ids) > 0 and organisms_id in gene_term_organisms:
             gene_term = Term(gene_ids, f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Gene)")
             for gene_id in gene_ids:
                 gene_terms[gene_id] = gene_term
                 gene_term_organisms[organisms_id][gene_id] = gene_term
 
-        if len(tokens) > 7 and len(tokens[7]) > 0:
+        if len(tokens) > 7 and len(tokens[7]) > 0 and organisms_id in gene_term_organisms:
             ensembl_organism = ensembl_terms_organisms[organisms_id]
             for ensembl_sets in tokens[7].strip(";").split("\";\""):
                 ensembls = ensembl_sets.split(" ")
@@ -510,7 +515,9 @@ with gzip.open("Data/UniProt2Reactome_All_Levels.txt.gz", "rt") as infile:
         reactome_name = tokens[3]
         uniprot_data[uniprot].relations.add(reactome_id)
         if reactome_id not in pathway_terms_organisms[organism]:
-            pathway_terms_organisms[organism][reactome_id] = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            pathway_terms_organisms[organism][reactome_id] = term
+            pathway_terms[reactome_id] = term
 
 
 with gzip.open("Data/Ensembl2Reactome_All_Levels.txt.gz", "rt") as infile:
@@ -527,8 +534,18 @@ with gzip.open("Data/Ensembl2Reactome_All_Levels.txt.gz", "rt") as infile:
         reactome_name = tokens[3]
         ensembl_terms_organisms[organism][ensembl].relations.add(reactome_id)
         if reactome_id not in pathway_terms_organisms[organism]:
-            pathway_terms_organisms[organism][reactome_id] = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            pathway_terms_organisms[organism][reactome_id] = term
+            pathway_terms[reactome_id] = term
 
+
+
+with open("Data/ReactomePathwaysRelation.txt") as infile:
+    print("Readin ReactomePathwaysRelation")
+    for line in infile:
+        tokens = line.strip().split("\t")
+        if len(tokens) < 2 or tokens[0] not in pathway_terms or tokens[1] not in pathway_terms: continue
+        pathway_terms[tokens[1]].relations.add(tokens[0])
 
 
 rhea_terms_organisms = {tax_id: {} for tax_id in uniprot_terms_organisms}
@@ -701,22 +718,29 @@ namespaces = {
 for go_term_id, go_term in go_terms.items():
     go_term.namespace = {namespaces[n] if n in namespaces else n for n in go_term.namespace}
 
-ontology_terms, chebi_lipid_terms = get_lipid_terms()
 
+if not os.path.exists("Data/LION.pkl.gz"):
+    ontology_terms, chebi_lipid_terms = get_lipid_terms()
+    with gzip.open("Data/LION.pkl.gz", 'wb') as output_stream:
+        pickle.dump([ontology_terms, chebi_lipid_terms], output_stream)
+else:
+    print("Reading LION pickle")
+    with gzip.open("Data/LION.pkl.gz") as input_stream:
+        ontology_terms, chebi_lipid_terms = pickle.load(input_stream)
 
 
 # do several organisms
 for tax_name, tax_id in species.items():
     print(tax_id)
-
     output = []
-
     for go_id, term in go_terms.items():
         output.append(term.to_string())
 
-    output.append("LS:0000004\tUniprot protein\t\t\n")
-    output.append("LS:0000005\tChEBI metabolite\t\t\n")
-    output.append("LS:0000006\tEnsembl transcript\t\t\n") # ENS
+    # adding all remaining categories for multiomics ontology
+    output.append(Term("LS:0000004", "Uniprot protein swissprot").to_string())
+    output.append(Term("LS:0000005", "ChEBI metabolite").to_string())
+    output.append(Term("LS:0000006", "Ensembl transcript").to_string())
+    output.append(Term("LS:0000007", "Uniprot protein trembl").to_string())
 
     # create organism-specific rhea terms
     rhea_terms = {}
@@ -733,13 +757,14 @@ for tax_name, tax_id in species.items():
         if chebi_term not in chebi_terms: continue
         chebi_terms[chebi_term].relations |= pathway_terms
 
-    protein_terms = uniprot_terms_organisms[tax_id]
 
     if tax_id in pathway_terms_organisms:
         pathway_terms = pathway_terms_organisms[tax_id]
         for pathway_id, pathway_term in pathway_terms.items():
             output.append(pathway_term.to_string())
 
+
+    protein_terms = uniprot_terms_organisms[tax_id]
     for _, protein_term in protein_terms.items():
         output.append(protein_term.to_string())
 
@@ -750,11 +775,12 @@ for tax_name, tax_id in species.items():
             output.append(ensembl_term.to_string())
 
 
-    written_genes = set()
-    for _, gene_term in gene_term_organisms[tax_id].items():
-        if gene_term in written_genes: continue
-        written_genes.add(gene_term)
-        output.append(gene_term.to_string())
+    if tax_id in gene_term_organisms:
+        written_genes = set()
+        for _, gene_term in gene_term_organisms[tax_id].items():
+            if gene_term in written_genes: continue
+            written_genes.add(gene_term)
+            output.append(gene_term.to_string())
 
 
     for _, rhea_term in rhea_terms.items():

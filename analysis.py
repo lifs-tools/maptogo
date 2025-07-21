@@ -397,6 +397,13 @@ def layout():
     sessions[session_id] = SessionEntry()
     logger.info(f"New session: {session_id}")
 
+    ontology = enrichment_ontologies[INIT_ORGANISM]
+    predefined_proteins = [
+        len(ontology.reviewed_proteins),
+        len(set(ontology.proteins.keys()) - ontology.reviewed_proteins),
+        len(ontology.proteins),
+    ]
+
     return html.Div([
         dcc.Download(id = "download_data"),
         html.Div(session_id, id = "sessionid", style = {"display": "none"}),
@@ -815,21 +822,32 @@ def layout():
                     ": ",
                     CC4_LINK
                 ]),
+                # dmc.Text([
+                #     "- ",
+                #     html.A(
+                #         "Pathbank",
+                #         href = "https://pathbank.org/about",
+                #         target = "_blank",
+                #         style = {"color": LINK_COLOR},
+                #     ),
+                #     ": ",
+                #     html.A(
+                #         "Open database license",
+                #         href = "https://opendatacommons.org/licenses/odbl/1-0/",
+                #         target = "_blank",
+                #         style = {"color": LINK_COLOR},
+                #     ),
+                # ]),
                 dmc.Text([
                     "- ",
                     html.A(
-                        "Pathbank",
-                        href = "https://pathbank.org/about",
+                        "Reactome",
+                        href = "https://reactome.org/license",
                         target = "_blank",
                         style = {"color": LINK_COLOR},
                     ),
                     ": ",
-                    html.A(
-                        "Open database license",
-                        href = "https://opendatacommons.org/licenses/odbl/1-0/",
-                        target = "_blank",
-                        style = {"color": LINK_COLOR},
-                    ),
+                    CC0_LINK
                 ]),
                 dmc.Text([
                     "- ",
@@ -938,11 +956,36 @@ def layout():
                                         order = 5,
                                         style = {"marginTop": "10px"},
                                     ),
-                                    dmc.ActionIcon(
-                                        DashIconify(icon = "simple-icons:helix", width = 16),
-                                        id = "predefined_bg_proteome",
-                                        title = "Select predefined background proteome",
-                                        style = {"display": "flex", "alignItems": "flex-end"},
+                                    dmc.Menu(
+                                        [
+                                            dmc.MenuTarget(
+                                                dmc.ActionIcon(
+                                                    DashIconify(icon = "simple-icons:helix", width = 16),
+                                                    id = "predefined_bg_proteome",
+                                                    title = "Select predefined background proteome",
+                                                    style = {"display": "flex", "alignItems": "flex-end"},
+                                                ),
+                                            ),
+                                            dmc.MenuDropdown(
+                                                [
+                                                    dmc.MenuItem(
+                                                        f"Reviewed proteins only ({predefined_proteins[0]})",
+                                                        id = "button_load_reviewed_proteins",
+                                                        n_clicks = 0,
+                                                    ),
+                                                    dmc.MenuItem(
+                                                        f"Unreviewed proteins only ({predefined_proteins[1]})",
+                                                        id = "button_load_unreviewed_proteins",
+                                                        n_clicks = 0,
+                                                    ),
+                                                    dmc.MenuItem(
+                                                        f"All registered proteins ({predefined_proteins[2]})",
+                                                        id = "button_load_all_proteins",
+                                                        n_clicks = 0,
+                                                    ),
+                                                ]
+                                            ),
+                                        ]
                                     ),
                                 ]),
                                 dmc.Title(
@@ -1340,15 +1383,35 @@ app.layout = layout
 @callback(
     Output("select_domains", "value", allow_duplicate = True),
     Output("select_domains", "data", allow_duplicate = True),
+    Output("button_load_reviewed_proteins", "children", allow_duplicate = True),
+    Output("button_load_unreviewed_proteins", "children", allow_duplicate = True),
+    Output("button_load_all_proteins", "children", allow_duplicate = True),
     Input("select_organism", "value"),
     State("select_domains", "value"),
     prevent_initial_call = True,
 )
 def organism_changed(organism, domain_values):
-    domains = enrichment_ontologies[organism].domains
+    if organism not in enrichment_ontologies:
+        raise exceptions.PreventUpdate
+
+    ontology = enrichment_ontologies[organism]
+    domains = ontology.domains
     data = sorted(list(domains))
     values = [v for v in domain_values if v in domains]
-    return values, data
+
+    predefined_proteins = [
+        len(ontology.reviewed_proteins),
+        len(set(ontology.proteins.keys()) - ontology.reviewed_proteins),
+        len(ontology.proteins),
+    ]
+
+    return (
+        values,
+        data,
+        f"Reviewed proteins only ({predefined_proteins[0]})",
+        f"Unreviewed proteins only ({predefined_proteins[1]})",
+        f"All registered proteins ({predefined_proteins[2]})",
+    )
 
 
 
@@ -1579,8 +1642,8 @@ def run_enrichment(
             if len(regulated_metabolites) > len(metabolome):
                 return "", [], [], {}, do_activate_alert, "Length of regulated metabolite list must be smaller than background list.", histogram_disabled, [], []
 
-            metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
-            regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or metabolite[:6] != "CHEBI:") and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
+            metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
+            regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
             target_set |= regulated_metabolites
 
         if with_transcripts:
@@ -2732,6 +2795,8 @@ def open_barplot(
     add_arc(fig, 0, 360, 0, outer_inner_radius, "#ffffff")
 
     if bar_sorting == BAR_SORTING_SIMILARITY and n > 1:
+        add_arc(fig, 0, 360, 0, outer_inner_radius * 0.05, "#000000")
+
         dendrogram_points = np.zeros(((n - 1) * 4, 2))
         ddata = dendrogram(Z, no_plot = True)
         icoord = ddata['icoord']  # x-coordinates for each link
@@ -2967,19 +3032,35 @@ def close_info_modal(close_clicks):
 
 @callback(
     Output("textarea_all_proteins", "value", allow_duplicate = True),
-    Input("predefined_bg_proteome", "n_clicks"),
+    Input("button_load_reviewed_proteins", "n_clicks"),
+    Input("button_load_unreviewed_proteins", "n_clicks"),
+    Input("button_load_all_proteins", "n_clicks"),
     State("select_organism", "value"),
     prevent_initial_call = True
 )
-def select_predefined_modal(n_clicks, selected_organism):
-    if selected_organism not in enrichment_ontologies:
+def select_predefined_modal(
+    reviewed_clicks,
+    unreviewed_clicks,
+    all_clicks,
+    selected_organism,
+):
+    if ctx.triggered_id not in {
+        "button_load_reviewed_proteins",
+        "button_load_unreviewed_proteins",
+        "button_load_all_proteins",
+    } or selected_organism not in enrichment_ontologies:
         raise exceptions.PreventUpdate
 
     ontology = enrichment_ontologies[selected_organism]
-    return "\n".join([protein.replace("UNIPROT:", "") for protein in ontology.proteins])
 
+    if ctx.triggered_id == "button_load_reviewed_proteins":
+        protein_set = ontology.reviewed_proteins
+    elif ctx.triggered_id == "button_load_unreviewed_proteins":
+        protein_set = set(ontology.proteins.keys()) - ontology.reviewed_proteins
+    else:
+        protein_set = ontology.proteins.keys()
 
-
+    return "\n".join([protein.replace("UNIPROT:", "") for protein in protein_set])
 
 
 
@@ -3094,7 +3175,7 @@ def show_molecule_term_path(
                 href = f"https://www.ensembl.org/id/{term_id}"
 
             elif term_id.startswith("R-"):
-                href = f"https://reactome.org/content/detail/{term_id}"
+                href = f"https://reactome.org/PathwayBrowser/#/{term_id}"
 
         else:
             term_name = term_id
