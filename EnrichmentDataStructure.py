@@ -244,9 +244,10 @@ class EnrichmentOntology:
 
         # clean up ontology
         for term_id, term in self.ontology_terms.items():
+            if not term.relations or type(term.relations[0]) == OntologyTerm: continue
             term.relations = sorted(
                 list(
-                    {t if type(t) == OntologyTerm else self.ontology_terms[t] for t in term.relations if (type(t) == OntologyTerm or t in self.ontology_terms)}
+                    {self.ontology_terms[t] for t in term.relations if t in self.ontology_terms}
                 ),
                 key = lambda term: term.get_term_id()
             )
@@ -301,7 +302,7 @@ class EnrichmentOntology:
 
     @time_elapsed
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
-        session.search_terms = {} #defaultdict(dict)
+        session.search_terms = defaultdict(dict)
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
         all_paths = set()
 
@@ -396,9 +397,7 @@ class EnrichmentOntology:
             for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
             while queue:
                 term = queue.pop()
-                if term.domain:
-                    if term not in search_terms: search_terms[term] = {molecule_input_name: parent_nodes}
-                    else: search_terms[term][molecule_input_name] = parent_nodes
+                if term.domain: search_terms[term][molecule_input_name] = parent_nodes
                 for relation_term in term.relations:
                     if relation_term not in parent_nodes:
                         parent_nodes[relation_term] = term
@@ -407,7 +406,7 @@ class EnrichmentOntology:
 
     @time_elapsed
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "greater"):
-        if len(target_set) == 0 or session.num_background == 0 or len(enrichment_domains) == 0: return []
+        if len(target_set) == 0 or session.num_background < 2 or len(enrichment_domains) == 0: return []
 
         search_terms = session.search_terms
         enrichment_domains = set(enrichment_domains)
@@ -415,10 +414,7 @@ class EnrichmentOntology:
             result_list = [None] * len(search_terms)
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
             for i, (term, term_molecules) in enumerate(search_terms.items()):
-                if (
-                    len(term_molecules) == 0
-                    or len(term.domain & enrichment_domains) == 0
-                ): continue
+                if not (term.domain & enrichment_domains): continue
                 target_number = len(term_molecules.keys() & target_set)
                 p_hyp = fisher_exact.exact_fisher(target_number, len(term_molecules), len(target_set), session.num_background, side)
                 if p_hyp == 0: continue
@@ -440,10 +436,7 @@ class EnrichmentOntology:
             result_list = [None] * len(search_terms)
             visited_terms = set()
             for i, (term, term_molecules) in enumerate(search_terms.items()):
-                if (
-                    len(term_molecules) == 0
-                    or len(term.domain & enrichment_domains) == 0
-                ): continue
+                if not (term.domain & enrichment_domains): continue
                 target_number = len(term_molecules.keys() & target_set)
                 a, b, c, d = (
                     target_number,
