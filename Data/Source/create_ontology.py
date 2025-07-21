@@ -395,14 +395,12 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
             common_gene_ids = gene_ids & gene_terms.keys()
             if len(common_gene_ids) > 0:
                 common_gene = gene_terms[list(common_gene_ids)[0]]
-                if "HGNC:438" in common_gene_ids: print(common_gene_ids, common_gene)
                 common_gene.id |= gene_ids
                 for cgi in common_gene_ids | gene_ids:
                     gene_terms[cgi] = common_gene
 
             else:
                 gene_term = Term(gene_ids, f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Gene)")
-                if "HGNC:438" in gene_ids: print(gene_ids, gene_term)
                 for gene_id in gene_ids:
                     gene_terms[gene_id] = gene_term
                     gene_term_organisms[organisms_id][gene_id] = gene_term

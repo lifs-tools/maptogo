@@ -35,7 +35,7 @@ from math import ceil
 
 organisms = {
     'Homo sapiens': '9606',
-    #'Mus musculus': '10090',
+    'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
