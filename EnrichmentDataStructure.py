@@ -410,8 +410,9 @@ class EnrichmentOntology:
 
         search_terms = session.search_terms
         enrichment_domains = set(enrichment_domains)
+        result_list = [None] * len(search_terms)
+
         try: # C++ implementation, just way faster
-            result_list = [None] * len(search_terms)
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
             for i, (term, term_molecules) in enumerate(search_terms.items()):
                 if not (term.domain & enrichment_domains): continue
@@ -433,8 +434,6 @@ class EnrichmentOntology:
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error("C++ implementation of fisher exact test failed.")
-            result_list = [None] * len(search_terms)
-            visited_terms = set()
             for i, (term, term_molecules) in enumerate(search_terms.items()):
                 if not (term.domain & enrichment_domains): continue
                 target_number = len(term_molecules.keys() & target_set)
