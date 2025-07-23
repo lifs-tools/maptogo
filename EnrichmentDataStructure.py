@@ -13,9 +13,6 @@ import traceback
 import pickle
 import os
 from collections import deque, defaultdict
-
-WITH_LOOKUP = False
-WITH_STORAGE = False
 SKIP_LOADING = False
 
 current_path = pathlib.Path(__file__).parent.resolve()
@@ -46,6 +43,7 @@ class SessionEntry:
         self.results = []
         self.data_loaded = False
         self.search_terms = {}
+        self.all_parent_nodes = {}
         self.num_background = 0
         self.use_bounded_fatty_acyls = True
         self.ontology = None
@@ -118,33 +116,6 @@ class EnrichmentOntology:
         self.reviewed_proteins = set()
 
         if SKIP_LOADING: return
-
-        pickle_file_name = file_name.replace(".gz", ".pkl.gz")
-        pickle_file_exists = os.path.exists(pickle_file_name)
-        if WITH_STORAGE and pickle_file_exists:
-            try:
-                with gzip.open(pickle_file_name) as input_stream:
-                    load_obj = pickle.load(input_stream)
-                    self.ontology_terms = load_obj["ontology_terms"]
-                    self.lipids = load_obj["lipids"]
-                    self.lipid_classes = load_obj["lipid_classes"]
-                    self.carbon_chains = load_obj["carbon_chains"]
-                    self.transcripts = load_obj["transcripts"]
-                    self.proteins = load_obj["proteins"]
-                    self.clean_protein_ids = load_obj["clean_protein_ids"]
-                    self.metabolites = load_obj["metabolites"]
-                    self.clean_metabolite_ids = load_obj["clean_metabolite_ids"]
-                    self.domains = load_obj["domains"]
-                    self.metabolite_names = load_obj["metabolite_names"]
-                    self.ontology_name = load_obj["ontology_name"]
-                    self.molecule_lookup = load_obj["molecule_lookup"]
-
-                    logger.info(f"Dump loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms and {len(self.molecule_lookup)} lookups.")
-                    return
-
-            except Exception as e:
-                logger.error("".join(traceback.format_tb(e.__traceback__)))
-                logger.error(e)
 
         try:
             with gzip.open(file_name) as input_stream:
@@ -254,57 +225,14 @@ class EnrichmentOntology:
 
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
-        if WITH_LOOKUP:
-            try:
-                # creating lookup table for molecules
-                for molecule_dict in [self.proteins, self.metabolites, self.transcripts]:
-                    for molecule_input_name, input_term in molecule_dict.items():
-                        path, parent_nodes = (input_term, ), {input_term: None}
-                        self.molecule_lookup[path] = [[], parent_nodes]
-                        m_lookup = self.molecule_lookup[path]
-                        queue = deque([input_term])
-                        while queue:
-                            term = queue.pop()
-                            if term.domain: m_lookup[0].append(term)
-                            for relation_term in term.relations:
-                                if relation_term not in parent_nodes:
-                                    parent_nodes[relation_term] = term
-                                    queue.append(relation_term)
-            except Exception as e:
-                logger.error("".join(traceback.format_tb(e.__traceback__)))
-                logger.error(e)
-
-        if WITH_STORAGE and not pickle_file_exists:
-            try:
-                with gzip.open(pickle_file_name, 'wb') as output_stream:
-                    dump_obj = {
-                        "ontology_terms": self.ontology_terms,
-                        "lipids": self.lipids,
-                        "lipid_classes": self.lipid_classes,
-                        "carbon_chains": self.carbon_chains,
-                        "transcripts": self.transcripts,
-                        "proteins": self.proteins,
-                        "clean_protein_ids": self.clean_protein_ids,
-                        "metabolites": self.metabolites,
-                        "clean_metabolite_ids": self.clean_metabolite_ids,
-                        "domains": self.domains,
-                        "metabolite_names": self.metabolite_names,
-                        "ontology_name": self.ontology_name,
-                        "molecule_lookup": self.molecule_lookup,
-                    }
-                    pickle.dump(dump_obj, output_stream)
-                    logger.info(f"Stored {file_name.replace(".gz", ".pkl.gz")} dump")
-
-            except Exception as e:
-                logger.error("".join(traceback.format_tb(e.__traceback__)))
-                logger.error(e)
-
 
     @time_elapsed
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
-        session.search_terms = defaultdict(dict)
+        session.search_terms = defaultdict(list)
+        session.all_parent_nodes = {}
+        all_parent_nodes = session.all_parent_nodes
         session.num_background = len(lipid_dict) + len(protein_set) + len(metabolite_set) + len(transcript_set)
-        all_paths = set()
+        all_paths = []
 
         def fill_path(lipid_term, lipid_name, lipid_input_name):
             path = []
@@ -321,19 +249,22 @@ class EnrichmentOntology:
             lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
             lipid_name = lipid.get_lipid_string()
             lipid_name_class = lipid.get_extended_class()
+            parent_nodes = {}
+            all_parent_nodes[lipid_input_name] = parent_nodes
 
             lipid_term = self.lipids[lipid_name] if lipid_name in self.lipids else None
+            default_path = fill_path(lipid_term, lipid_name, lipid_input_name)
             if lipid_term != None:
-                path = fill_path(lipid_term, lipid_name, lipid_input_name)
-                all_paths.add((lipid_input_name, tuple(path)))
+                path = list(default_path)
+                all_paths.append([lipid_input_name, tuple(path), parent_nodes])
 
             if lipid_name_class in self.lipid_classes:
                 for term in self.lipid_classes[lipid_name_class]:
-                    path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                    path = list(default_path)
                     path.append(term)
-                    all_paths.add((lipid_input_name, tuple(path)))
+                    all_paths.append([lipid_input_name, tuple(path), parent_nodes])
 
-            if lipid != None and lipid.lipid != None and session.use_bounded_fatty_acyls:
+            if session.use_bounded_fatty_acyls:
                 for fa in lipid.lipid.fa_list:
                     if fa.num_carbon == 0: continue
 
@@ -342,66 +273,66 @@ class EnrichmentOntology:
                         if lcb_string in self.carbon_chains:
                             lcb_term = self.carbon_chains[lcb_string]
                             if lipid_term != lcb_term:
-                                path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                                path = list(default_path)
                                 path.append(lcb_term)
-                                all_paths.add((lipid_input_name, tuple(path)))
+                                all_paths.append([lipid_input_name, tuple(path), parent_nodes])
 
                     else:
                         fa_string = "FA " + fa.to_string(lipid.lipid.info.level)
                         if fa_string in self.lipids:
                             fa_term = self.lipids[fa_string]
                             if lipid_term != fa_term:
-                                path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                                path = list(default_path)
                                 path.append(fa_term)
-                                all_paths.add((lipid_input_name, tuple(path)))
+                                all_paths.append([lipid_input_name, tuple(path), parent_nodes])
 
                         fa_string = "C" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
                         if fa_string in self.carbon_chains:
                             fa_term = self.carbon_chains[fa_string]
                             if lipid_term != fa_term:
-                                path = fill_path(lipid_term, lipid_name, lipid_input_name)
+                                path = list(default_path)
                                 path.append(fa_term)
-                                all_paths.add((lipid_input_name, tuple(path)))
+                                all_paths.append([lipid_input_name, tuple(path), parent_nodes])
 
         for protein_input_name in protein_set:
             if protein_input_name not in self.proteins: continue
-            term = self.proteins[protein_input_name]
-            all_paths.add((protein_input_name, (term, )))
+            parent_nodes = {}
+            all_parent_nodes[protein_input_name] = parent_nodes
+            all_paths.append([protein_input_name, (self.proteins[protein_input_name], ), parent_nodes])
 
         for metabolite_input_name in metabolite_set:
             if metabolite_input_name in self.metabolites:
-                term = self.metabolites[metabolite_input_name]
-
+                parent_nodes = {}
+                all_parent_nodes[metabolite_input_name] = parent_nodes
+                all_paths.append([metabolite_input_name, (self.metabolites[metabolite_input_name], ), parent_nodes])
+                continue
             elif metabolite_input_name.lower() in self.metabolite_names:
-                term = self.metabolite_names[metabolite_input_name.lower()]
-
-            else: continue
-
-            all_paths.add((metabolite_input_name, (term, )))
+                parent_nodes = {}
+                all_parent_nodes[metabolite_input_name] = parent_nodes
+                all_paths.append([metabolite_input_name, (self.metabolite_names[metabolite_input_name.lower()], ), parent_nodes])
 
         for transcript_input_name in transcript_set:
             transcript_name = transcript_input_name.split(".")[0]
             if transcript_name not in self.transcripts: continue
-            term = self.transcripts[transcript_name]
-            all_paths.add((transcript_input_name, (term, )))
+            parent_nodes = {}
+            all_parent_nodes[transcript_input_name] = parent_nodes
+            all_paths.append([transcript_input_name, (self.transcripts[transcript_name], ), parent_nodes])
 
         # run all registered molecules
         search_terms = session.search_terms
-        for molecule_input_name, path in all_paths:
-            if WITH_LOOKUP and path in self.molecule_lookup:
-                parent_nodes = self.molecule_lookup[path][1]
-                for term in self.molecule_lookup[path][0]: search_terms[term][molecule_input_name] = parent_nodes
-                continue
-
-            parent_nodes, queue = {}, deque([path[-1]])
+        for molecule_input_name, path, parent_nodes in all_paths:
+            queue = deque([path[-1]])
             for i, p in enumerate(path): parent_nodes[p] = path[i - 1] if i > 0 else None
             while queue:
                 term = queue.pop()
-                if term.domain: search_terms[term][molecule_input_name] = parent_nodes
+                if term.domain: search_terms[term].append(molecule_input_name)
                 for relation_term in term.relations:
                     if relation_term not in parent_nodes:
                         parent_nodes[relation_term] = term
                         queue.append(relation_term)
+
+        for term, term_molecules in search_terms.items():
+            search_terms[term] = set(term_molecules)
 
 
     @time_elapsed
@@ -416,7 +347,7 @@ class EnrichmentOntology:
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
             for i, (term, term_molecules) in enumerate(search_terms.items()):
                 if not (term.domain & enrichment_domains): continue
-                target_number = len(term_molecules.keys() & target_set)
+                target_number = len(term_molecules & target_set)
                 p_hyp = fisher_exact.exact_fisher(target_number, len(term_molecules), len(target_set), session.num_background, side)
                 if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
@@ -436,7 +367,7 @@ class EnrichmentOntology:
             logger.error("C++ implementation of fisher exact test failed.")
             for i, (term, term_molecules) in enumerate(search_terms.items()):
                 if not (term.domain & enrichment_domains): continue
-                target_number = len(term_molecules.keys() & target_set)
+                target_number = len(term_molecules & target_set)
                 a, b, c, d = (
                     target_number,
                     len(term_molecules) - target_number,

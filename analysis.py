@@ -35,7 +35,7 @@ from math import ceil
 
 organisms = {
     'Homo sapiens': '9606',
-    'Mus musculus': '10090',
+    #'Mus musculus': '10090',
     # 'Saccharomyces cerevisiae': '4932',
     # 'Escherichia coli': '562',
     # 'Drosophila melanogaster': '7227',
@@ -1197,13 +1197,35 @@ def layout():
                                         label = "Handling of non-background regulated molecules:",
                                     ),
                                 ),
-                                html.Div(
-                                    dmc.Switch(
-                                        id = "use_bounded_fatty_acyls",
-                                        checked = True,
-                                        label = "Use bounded fatty acyls for analysis, too",
-                                        style = {"paddingBottom": "8px"},
-                                    ),
+                                html.Div([
+                                        dmc.Switch(
+                                            id = "use_bounded_fatty_acyls",
+                                            checked = False,
+                                            label = "Use bounded fatty acyls for analysis, too",
+                                            style = {"paddingBottom": "8px", "paddingRight": "2px"},
+                                        ),
+                                        dmc.HoverCard(
+                                            withArrow = True,
+                                            width = 400,
+                                            zIndex = 1000,
+                                            shadow = "md",
+                                            children = [
+                                                dmc.HoverCardTarget(
+                                                    DashIconify(
+                                                        icon="material-symbols:live-help",
+                                                        style={
+                                                            "position": "relative",
+                                                            "height": "100%",
+                                                            "top": "-8px",
+                                                        },
+                                                    )
+                                                ),
+                                                dmc.HoverCardDropdown(
+                                                    dmc.Text("When activated, fatty chains in lipids such as the 20:4 (AA) in 'PI 18:0/20:4' will be considered for the analysis."),
+                                                )
+                                            ],
+                                        ),
+                                    ],
                                     style = {"height": "100%", "display": "flex", "alignItems": "flex-end", "paddingLeft": "10px"},
                                 ),
                             ],
@@ -1730,7 +1752,7 @@ def run_enrichment(
             "domain": " | ".join(result.term.domain),
             "term": result.term.name,
             "termid": result.term.get_term_id(),
-            "count": f"{result.fisher_data[0]} / {len(set(result.source_terms))}",
+            "count": f"{result.fisher_data[0]} / {len(result.source_terms)}",
             "pvalue": "{:.6g}".format(result.pvalue_corrected)
         }
         data.append(row)
@@ -1865,9 +1887,10 @@ def update_background(
             f"Entries: {num_all_transcripts}",
             f"Entries: {num_regulated_transcripts}",
         )
-
-    sessions[session_id].time = time.time()
-    sessions[session_id].data_loaded = False
+    session = sessions[session_id]
+    session.time = time.time()
+    session.data_loaded = False
+    session.use_bounded_fatty_acyls = use_bounded_fatty_acyls
 
     return (
         False,
@@ -2503,7 +2526,7 @@ def open_barplot(
     n = len(selected_term_ids)
 
     source_terms = [
-        set(session_data[term_id].source_terms.keys()) for term_id in selected_term_ids
+        set(session_data[term_id].source_terms) for term_id in selected_term_ids
     ]
     jaccard_values = np.ones((n , n))
     for i in range(0, n - 1):
@@ -2620,7 +2643,7 @@ def open_barplot(
         len_protein_table = 0
         len_metabolite_table = 0
         len_transcript_table = 0
-        molecules = set(result.source_terms.keys())
+        molecules = result.source_terms
         if with_lipids: len_lipid_table = len(molecules & background_lipids)
         if with_proteins: len_protein_table = len(molecules & background_proteins)
         if with_metabolites: len_metabolite_table = len(molecules & background_metabolites)
@@ -2743,7 +2766,7 @@ def open_barplot(
         remaining_domains_categories[i][0] = description_start_angle - bar_width * 0.025
 
         for molecule in molecules:
-            for term in get_path(result.source_terms[molecule], result.term):
+            for term in get_path(session.all_parent_nodes[molecule], result.term):
                 if type(term) == OntologyTerm: break
 
             for category in term.categories:
@@ -3128,7 +3151,7 @@ def show_molecule_term_path(
         molecule = row_data_transcripts[row_index]["molecule"]
 
     term_path = []
-    for i, term in enumerate(get_path(sessions[session_id].search_terms[target_term][molecule], target_term)):
+    for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
         if type(term) == str: term_id = term
         else: term_id = list(term.term_id)[0]
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
