@@ -91,7 +91,7 @@ for font_size in range(1, 23):
 
 hash_function = hashlib.new('sha256')
 LINK_COLOR = "#2980B9"
-SESSION_DURATION_TIME = 60 * 60 # one hour
+SESSION_DURATION_TIME = 60 * 60 * 2 # two hours
 domain_colors = {
     "Biological process": ["#F09EA7", "#e5a9b0"],
     "Cellular component": ["#F6CA94", "#eac9a0"],
@@ -1325,7 +1325,7 @@ def layout():
                             {
                                 'field': "domain",
                                 "headerName": "Domain",
-                                "maxWidth": 220,
+                                "maxWidth": 200,
                                 "checkboxSelection": True,
                             },
                             {
@@ -1342,13 +1342,13 @@ def layout():
                             {
                                 'field': "count",
                                 "headerName": "Count",
-                                "width": 80,
-                                "headerTooltip": "Number of regulated associated molecules / Number of all associated molecules",
+                                "width": 120,
+                                "headerTooltip": "Number of regulated associated molecules (Expected number of regulated associated molecules) / Number of all associated molecules",
                             },
                             {
                                 'field': "pvalue",
                                 "headerName": "p-value",
-                                "width": 150,
+                                "width": 100,
                                 "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
                             },
                         ],
@@ -1511,7 +1511,10 @@ def run_enrichment(
     transcriptome, regulated_transcripts = set(), set()
     background_list = []
 
-    if not session.data_loaded:
+
+    data_not_loaded = not session.data_loaded
+
+    if data_not_loaded:
         if with_lipids:
             if len(all_lipids_list) == 0:
                 return "", [], [], {}, do_activate_alert, "Please paste lipid names into the first text area.", histogram_disabled, [], []
@@ -1523,14 +1526,17 @@ def run_enrichment(
                 if len(lipid_name) == 0: continue
                 try:
                     lipid = lipid_parser.parse(lipid_name)
-
                 except Exception as e:
-                    if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                        lipid = None
-                    elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                        continue
+                    lower_lipid_name = lipid_name.lower()
+                    if lower_lipid_name in ontology.unspecific_lipids:
+                        lipid = ontology.unspecific_lipids[lower_lipid_name]
                     else:
-                        return "", [], [], {}, do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
+                        if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                            lipid = None
+                        elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
+                            continue
+                        else:
+                            return "", [], [], {}, do_activate_alert, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", histogram_disabled, [], []
 
                 lipidome[lipid_name] = lipid
 
@@ -1559,7 +1565,7 @@ def run_enrichment(
                     return "", [], [], {}, do_activate_alert, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", histogram_disabled, [], []
 
             target_set |= regulated_lipids
-            background_list += list(lipidome.keys())
+            background_list += [{"value": k, "label": k} for k in lipidome.keys()]
 
         if with_proteins:
             if len(all_proteins_list) == 0:
@@ -1571,7 +1577,7 @@ def run_enrichment(
             proteome = set(protein for protein in all_proteins_list.split("\n") if len(protein) > 0)
             regulated_proteins = set(protein for protein in regulated_proteins_list.split("\n") if len(protein) > 0)
 
-            background_list += list(proteome)
+            background_list += [{"value": p, "label": p + (' (' + ontology.proteins["UNIPROT:" + p].name + ')' if ("UNIPROT:" + p in ontology.proteins) else '')} for p in proteome]
             proteome = set(p.split("-")[0] for p in proteome)
             regulated_proteins = set(rp.split("-")[0] for rp in regulated_proteins)
             left_proteins = proteome - ontology.clean_protein_ids
@@ -1622,7 +1628,7 @@ def run_enrichment(
             metabolome = set(metabolite for metabolite in all_metabolites_list.split("\n") if len(metabolite) > 0)
             regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list.split("\n") if len(metabolite) > 0)
 
-            background_list += list(metabolome)
+            background_list += [{"value": m, "label": m} for m in metabolome]
             left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
             left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
             if len(left_metabolites) > 0:
@@ -1673,7 +1679,7 @@ def run_enrichment(
             transcriptome = set(transcript for transcript in all_transcripts_list.split("\n") if len(transcript) > 0)
             regulated_transcripts = set(transcript for transcript in regulated_transcripts_list.split("\n") if len(transcript) > 0)
 
-            background_list += list(transcriptome)
+            background_list += [{"value": t, "label": t + (' (' + ontology.transcripts[tt].name + ')' if (tt in ontology.transcripts) else '')} for t in transcriptome if (tt := t.split(".")[0])]
             transcript_keys = set(ontology.transcripts.keys())
             left_transcripts = set(t for t in transcriptome if t.split(".")[0] not in transcript_keys)
             if len(left_transcripts) > 0:
@@ -1723,7 +1729,7 @@ def run_enrichment(
         session.regulated_metabolites = regulated_metabolites if with_metabolites else None
         session.background_transcripts = transcriptome if with_transcripts else None
         session.regulated_transcripts = regulated_transcripts if with_transcripts else None
-        background_list.sort()
+        background_list.sort(key = lambda row: row["value"])
         session.background_list = background_list
 
     else:
@@ -1731,7 +1737,7 @@ def run_enrichment(
         if with_proteins: target_set |= session.regulated_proteins
         if with_metabolites: target_set |= session.regulated_metabolites
         if with_transcripts: target_set |= session.regulated_transcripts
-        background_list = session.background_list
+        background_list = no_update
 
     session.domains = set(domains)
     results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
@@ -1747,12 +1753,14 @@ def run_enrichment(
     data = []
     session.data = {}
     session.results = []
+    result_map = {}
     for result in results:
+        expected = round((result.fisher_data[0] + result.fisher_data[1]) * (result.fisher_data[0] + result.fisher_data[2]) / sum(result.fisher_data))
         row = {
             "domain": " | ".join(result.term.domain),
             "term": result.term.name,
             "termid": result.term.get_term_id(),
-            "count": f"{result.fisher_data[0]} / {len(result.source_terms)}",
+            "count": f"{result.fisher_data[0]} ({expected}) / {len(result.source_terms)}",
             "pvalue": "{:.6g}".format(result.pvalue_corrected)
         }
         data.append(row)
@@ -1762,6 +1770,7 @@ def run_enrichment(
     for result in results:
         for term_id in result.term.term_id:
             session.data[term_id] = result
+
 
     return (
         "",
@@ -1809,7 +1818,7 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
 
     if len(multiselect_values) > 0:
         multiselect_values = set(multiselect_values)
-        data = [row for result, row in session.results if len(set(result.source_terms.keys()) & multiselect_values) > 0]
+        data = [row for result, row in session.results if len(set(result.source_terms) & multiselect_values) > 0]
     else:
         data = [row for _, row in session.results]
     return data, [], {}, False, ""
@@ -3159,7 +3168,7 @@ def show_molecule_term_path(
         if term_id in ontology.ontology_terms:
             term_name = term.name if type(term) == OntologyTerm else ontology.ontology_terms[term_id].name
             if term_id.startswith("GO:"):
-                href = "https://amigo.geneontology.org/amigo/term/" + term_id
+                href = "https://www.ebi.ac.uk/QuickGO/term/" + term_id
 
             elif term_id.startswith("SMP"):
                 href = "https://pathbank.org/view/" + term_id
@@ -3196,6 +3205,9 @@ def show_molecule_term_path(
 
             elif term_id.startswith("R-"):
                 href = f"https://reactome.org/PathwayBrowser/#/{term_id}"
+
+            elif term_id.startswith("LM"):
+                href = f"https://www.lipidmaps.org/databases/lmsd/{term_id}"
 
         else:
             term_name = term_id

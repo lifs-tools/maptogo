@@ -19,44 +19,54 @@ dagcomponentfuncs.CustomNoRowsOverlay = function (props) {
 };
 
 
+
+function get_url(term_id){
+    if (term_id.startsWith("GO:")){
+        return "https://www.ebi.ac.uk/QuickGO/term/" + term_id;
+    }
+    else if (term_id.startsWith("SMP")){
+        return "https://pathbank.org/view/" + term_id;
+    }
+    else if (term_id.startsWith("LION:") || term_id.startsWith("CAT:")){
+        return "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_");
+    }
+    else if (term_id.startsWith("DOID:")){
+        return "https://disease-ontology.org/?id=" + term_id;
+    }
+    else if (term_id.startsWith("MONDO:")){
+        return "https://monarchinitiative.org/" + term_id;
+    }
+    else if (term_id.startsWith("HGNC:")){
+        return "https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/" + term_id;
+    }
+    else if (term_id.startsWith("HP:")){
+        return "https://hpo.jax.org/browse/term/" + term_id;
+    }
+    else if (term_id.startsWith("NCBI:")){
+        return "https://www.ncbi.nlm.nih.gov/gene/" + term_id.split(":")[1];
+    }
+    else if (term_id.startsWith("ENS") || term_id.startsWith("WBGene") || term_id.startsWith("FBgn")){
+        return "https://www.ensembl.org/id/" + term_id;
+    }
+    else if (term_id.startsWith("R-")){
+        return "https://reactome.org/PathwayBrowser/#/" + term_id;
+    }
+    else if (term_id.startsWith("LM")){
+        return "https://www.lipidmaps.org/databases/lmsd/" + term_id;
+    }
+    return "";
+}
+
+
+
 dagcomponentfuncs.TermIDRenderer = function (props) {
     const {setData, data} = props;
 
-    var href = "";
     var term_ids = data["termid"].split("|");
     var reacts = [];
     var unique_key = 0;
     for (var term_id of term_ids){
-        if (term_id.startsWith("GO:")){
-            href = "https://amigo.geneontology.org/amigo/term/" + term_id;
-        }
-        else if (term_id.startsWith("SMP")){
-            href = "https://pathbank.org/view/" + term_id;
-        }
-        else if (term_id.startsWith("LION:") || term_id.startsWith("CAT:")){
-            href = "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_");
-        }
-        else if (term_id.startsWith("DOID:")){
-            href = "https://disease-ontology.org/?id=" + term_id;
-        }
-        else if (term_id.startsWith("MONDO:")){
-            href = "https://monarchinitiative.org/" + term_id;
-        }
-        else if (term_id.startsWith("HGNC:")){
-            href = "https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/" + term_id;
-        }
-        else if (term_id.startsWith("HP:")){
-            href = "https://hpo.jax.org/browse/term/" + term_id;
-        }
-        else if (term_id.startsWith("NCBI:")){
-            href = "https://www.ncbi.nlm.nih.gov/gene/" + term_id.split(":")[1];
-        }
-        else if (term_id.startsWith("ENS") || term_id.startsWith("WBGene") || term_id.startsWith("FBgn")){
-            href = "https://www.ensembl.org/id/" + term_id;
-        }
-        else if (term_id.startsWith("R-")){
-            href = "https://reactome.org/PathwayBrowser/#/" + term_id;
-        }
+        var href = get_url(term_id);
 
         if (reacts.length > 0){
             reacts.push(
@@ -136,4 +146,29 @@ dagcomponentfuncs.MoleculeRenderer = function (props) {
         data["molecule"]
     );
 }
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Wait for Dash to render the plot
+    const observer = new MutationObserver(function () {
+        const plot = document.querySelector("#barplot_terms .js-plotly-plot");
+        if (plot && !plot.__sunburstClickHooked) {
+            plot.on('plotly_sunburstclick', function (event) {
+                const pt = event.points?.[0];
+                if (pt) {
+                    for (var term_id of pt.id.split("|")){
+                        var url = get_url(term_id);
+                        if (url.length > 0) window.open(url, '_blank');
+                    }
+                }
+
+                // Prevent zoom/expansion
+                return false;
+            });
+            plot.__sunburstClickHooked = true;
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+});
 

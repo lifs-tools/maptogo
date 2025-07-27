@@ -83,6 +83,16 @@ class Term:
         self.categories |= copy.categories
 
 
+lipid_maps_terms = {}
+with open("Data/LM.csv") as fin:
+    print("Readin LM")
+    for line in fin:
+        line = line.strip()
+        if len(line) == 0: continue
+        tokens = line.split("\t")
+        if len(tokens) < 3 or len(tokens[0]) == 0 or len(tokens[1]) == 0: continue
+        lipid_maps_terms[tokens[0]] = Term(tokens[0], tokens[2], {"LS:0000008", "CHEBI:" + tokens[1]}, tokens[3:] if len(tokens) > 3 else set())
+
 
 def get_terms(term_file, prefix, upper = False):
     ontology_terms = {}
@@ -365,7 +375,8 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
         if organisms_id not in species_set: continue
 
         reviewed = len(tokens) > 9 and tokens[9] == "reviewed"
-        protein_name = f"{tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else uniprot} (Protein)"
+        gene_name = tokens[2] if len(tokens) > 2 and len(tokens[2]) > 0 else ""
+        protein_name = gene_name if len(gene_name) > 0 else uniprot
 
         go_terms = {"LS:0000004" if reviewed else "LS:0000007"}
         categories = set(tokens[4].split(", ")) if len(tokens) > 4 and len(tokens[4]) > 0 else set()
@@ -414,20 +425,21 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                 ENP = ensembls[1].strip('" ;.').split(".")[0]
                 ENG = ensembls[2].strip('" ;.').split(".")[0]
 
+
                 if ENG in ensembl_organism:
                     ensembl_organism[ENG].relations |= {uniprot_term} | gene_ids
                 else:
-                    ensembl_organism[ENG] = Term(ENG, ENG, {"LS:0000006", uniprot_term} | gene_ids)
+                    ensembl_organism[ENG] = Term(ENG, gene_name if len(gene_name) > 0 else ENG, {"LS:0000006", uniprot_term} | gene_ids)
 
                 if ENP in ensembl_organism:
                     ensembl_organism[ENP].relations |= {uniprot_term, ENG}
                 else:
-                    ensembl_organism[ENP] = Term(ENP, ENP, {"LS:0000006", uniprot_term, ENG})
+                    ensembl_organism[ENP] = Term(ENP, gene_name if len(gene_name) > 0 else ENP, {"LS:0000006", uniprot_term, ENG})
 
                 if ENT in ensembl_organism:
                     ensembl_organism[ENT].relations |= {ENP, ENG}
                 else:
-                    ensembl_organism[ENT] = Term(ENT, ENT, {"LS:0000006", ENP, ENG})
+                    ensembl_organism[ENT] = Term(ENT, gene_name if len(gene_name) > 0 else ENT, {"LS:0000006", ENP, ENG})
 
 
 
@@ -447,19 +459,21 @@ for ensembl_file, organism in ensembl_files:
                 uniprot_term = "UNIPROT:" + uniprot
                 uniprot_known = uniprot in uniprot_data
 
+                gene_name = uniprot_data[uniprot].name if (uniprot in uniprot_data and list(uniprot_data[uniprot].id)[0].find(uniprot_data[uniprot].name) < 0) else ""
+
                 if ENG not in ensembl_organism:
-                    ensembl_organism[ENG] = Term(ENG, ENG, {"LS:0000006"} | ({uniprot_term} if uniprot_known else set()))
+                    ensembl_organism[ENG] = Term(ENG, gene_name if len(gene_name) > 0 else ENG, {"LS:0000006"} | ({uniprot_term} if uniprot_known else set()))
                 elif uniprot_known:
                     ensembl_organism[ENG].relations.add(uniprot_term)
 
                 if ENP != ENG:
                     if ENP not in ensembl_organism:
-                        ensembl_organism[ENP] = Term(ENP, ENP, {"LS:0000006", ENG} | ({uniprot_term} if uniprot_known else set()))
+                        ensembl_organism[ENP] = Term(ENP, gene_name if len(gene_name) > 0 else ENP, {"LS:0000006", ENG} | ({uniprot_term} if uniprot_known else set()))
                     else:
                         ensembl_organism[ENP].relations |= {ENG} | ({uniprot_term} if uniprot_known else set())
 
                 if ENT not in ensembl_organism:
-                    ensembl_organism[ENT] = Term(ENT, ENT, {"LS:0000006", ENG, ENP})
+                    ensembl_organism[ENT] = Term(ENT, gene_name if len(gene_name) > 0 else ENT, {"LS:0000006", ENG, ENP})
                 else:
                     ensembl_organism[ENT].relations |= {ENG, ENP}
 
@@ -752,6 +766,7 @@ for tax_name, tax_id in species.items():
     output.append(Term("LS:0000005", "ChEBI metabolite").to_string())
     output.append(Term("LS:0000006", "Ensembl transcript").to_string())
     output.append(Term("LS:0000007", "Uniprot protein trembl").to_string())
+    output.append(Term("LS:0000008", "Unspecific lipid").to_string())
 
     # create organism-specific rhea terms
     rhea_terms = {}
@@ -810,6 +825,10 @@ for tax_name, tax_id in species.items():
 
 
     for lipid_name, term in chebi_lipid_terms.items():
+        output.append(term.to_string())
+
+
+    for lipid_maps_id, term in lipid_maps_terms.items():
         output.append(term.to_string())
 
 
