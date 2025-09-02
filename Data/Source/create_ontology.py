@@ -96,7 +96,10 @@ with open("Data/LM.csv") as fin:
 
 def get_terms(term_file, prefix, upper = False):
     ontology_terms = {}
-    with open(term_file, "rt") as obo:
+
+    opener = open if term_file.lower()[-3:] != ".gz" else gzip.open
+
+    with opener(term_file, "rt") as obo:
         term_id, name, relations, synonyms, namespace, is_obsolete, xref = "", "", set(), [], "", False, set()
         for i, line in enumerate(obo):
             line = line.strip()
@@ -136,6 +139,16 @@ def get_terms(term_file, prefix, upper = False):
     return ontology_terms
 
 
+print("writing chebi synonym table")
+chebi_obo = get_terms("Data/chebi.obo.gz", "CHEBI:")
+chebi_synonyms = {}
+for term_id, term in chebi_obo.items():
+    for synonym in term.synonyms:
+        chebi_synonyms[synonym] = term_id
+
+with gzip.open("../CHEBI_synonyms.csv.gz", "wt") as out:
+    for synonym, term_id in chebi_synonyms.items():
+        out.write(f"{synonym}\t{term_id}\n")
 
 
 def get_lipid_terms():
@@ -294,7 +307,6 @@ with open("Data/chebi.csv", "rt") as infile:
         chebi_terms_all[tokens[0]].relations.add("LS:0000005")
 
 
-chebi_obo = get_terms("Data/chebi_lite.obo", "CHEBI:")
 max_depth = 2
 for chebi_id, c_term in chebi_obo.items():
     if not chebi_id.startswith("CHEBI:"): continue

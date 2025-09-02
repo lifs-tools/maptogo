@@ -1,4 +1,4 @@
-DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/rhea2uniprot_trembl.tsv.gz Data/pathbank_all_metabolites.csv.zip Data/pathbank_all_proteins.csv.zip Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Homo_sapiens.all.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/Mus_musculus.all.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz Data/UniProt2Reactome_All_Levels.txt.gz Data/ChEBI2Reactome_All_Levels.txt.gz Data/Ensembl2Reactome_All_Levels.txt.gz Data/ReactomePathwaysRelation.txt
+DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/chebi.obo.gz Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/rhea2uniprot_trembl.tsv.gz Data/pathbank_all_metabolites.csv.zip Data/pathbank_all_proteins.csv.zip Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Homo_sapiens.all.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/Mus_musculus.all.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz Data/UniProt2Reactome_All_Levels.txt.gz Data/ChEBI2Reactome_All_Levels.txt.gz Data/Ensembl2Reactome_All_Levels.txt.gz Data/ReactomePathwaysRelation.txt
 
 SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Data/pathbank_to_uniprot.csv Data/chebi_to_pathway.csv Data/hgnc_to_mondo.csv
 
@@ -33,6 +33,11 @@ Data/go-basic.obo:
 Data/chebi_lite.obo:
 	# ChEBI
 	wget --tries=10 -O Data/chebi_lite.obo https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi_lite.obo
+
+Data/chebi.obo.gz:
+	# ChEBI
+	wget --tries=10 -O Data/chebi.obo https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.obo
+	gzip Data/chebi.obo
 
 # RHEA
 Data/rhea-reactions.txt.gz:

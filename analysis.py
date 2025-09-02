@@ -611,26 +611,40 @@ def layout():
                 html.Div(
                     dmc.SimpleGrid(
                         [
-                            dmc.NumberInput(
+                            dmc.Text("Maximum p-value", size = "xs", w = "500"),
+                            dmc.Text("Minimum p-value", size = "xs", w = "500"),
+                            dcc.Input(
                                 id = "barplot_numberinput_max_pvalue",
-                                label = "Maximum p-value",
-                                value = 0.05,
-                                precision = 10,
-                                min = 1e-10,
-                                max = 1,
-                                step = 1e-10,
+                                value = "0.05",
+                                debounce = True,
+                                style = {
+                                    "borderRadius": "4px",
+                                    "paddingLeft": "12px",
+                                    "paddingRight": "12px",
+                                    "fontSize": "14px",
+                                    "border": "1px solid rgb(206, 212, 218)",
+                                    "height": "32px",
+                                    "fontFamily": "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji",
+                                },
                             ),
-                            dmc.NumberInput(
+                            dcc.Input(
                                 id = "barplot_numberinput_min_pvalue",
-                                label = "Minimum p-value",
-                                value = 0.0001,
-                                precision = 10,
-                                min = 1e-10,
-                                max = 1,
-                                step = 1e-10,
+                                value = "0.0001",
+                                debounce = True,
+                                style = {
+                                    "borderRadius": "4px",
+                                    "paddingLeft": "12px",
+                                    "paddingRight": "12px",
+                                    "fontSize": "14px",
+                                    "border": "1px solid rgb(206, 212, 218)",
+                                    "height": "32px",
+                                    "fontFamily": "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji",
+                                },
                             ),
                         ],
                         cols = 2,
+                        verticalSpacing = "2px",
+                        spacing = "xs",
                     ),
                     id = "sunburst_controls",
                     style = {"marginTop": "10px"},
@@ -2324,6 +2338,8 @@ def open_term_window(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
+    Output("barplot_numberinput_max_pvalue", "value", allow_duplicate = True),
+    Output("barplot_numberinput_min_pvalue", "value", allow_duplicate = True),
     Input("sunburst_results", "n_clicks"),
     Input("barplot_numberinput_max_pvalue", "value"),
     Input("barplot_numberinput_min_pvalue", "value"),
@@ -2344,7 +2360,7 @@ def open_sunburstplot(
     barplot_controls_style,
     sunburst_controls_style,
 ):
-    if session_id == None or n_clicks == None or pval_max < pval_min:
+    if session_id == None or n_clicks == None:
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -2357,20 +2373,48 @@ def open_sunburstplot(
             "Your session has expired. Please refresh the website.",
             no_update,
             no_update,
+            no_update,
+            no_update,
         )
+
+    session = sessions[session_id]
+
+    pval_max_float, pval_min_float = pval_max, pval_min
+
+    try:
+        pval_max_float = float(pval_max_float)
+    except Exception as e:
+        return tuple([no_update] * 8 + [session.max_pvalue, session.min_pvalue])
+
+    try:
+        pval_min_float = float(pval_min_float)
+    except Exception as e:
+        return tuple([no_update] * 8 + [session.max_pvalue, session.min_pvalue])
+
+    if not (0 <= pval_max_float <= 1):
+        return tuple([no_update] * 8 + [session.max_pvalue, session.min_pvalue])
+
+    if not (0 <= pval_min_float <= 1):
+        return tuple([no_update] * 8 + [session.max_pvalue, session.min_pvalue])
+
+    if pval_max_float < pval_min_float:
+        return tuple([no_update] * 8 + [session.max_pvalue, session.min_pvalue])
+
+    session.min_pvalue = pval_min
+    session.max_pvalue = pval_max
 
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "block"
     fig = go.Figure()
-    ontology = sessions[session_id].ontology
-    domains = sessions[session_id].domains
+    ontology = session.ontology
+    domains = session.domains
 
-    session_data = sessions[session_id].data
+    session_data = session.data
     selected_term_ids = [row["termid"] for row in selected_rows]
     terms = ontology.ontology_terms
 
-    pval_max = -np.log10(pval_max)
-    pval_min = -np.log10(pval_min)
+    pval_max_float = -np.log10(pval_max_float)
+    pval_min_float = -np.log10(pval_min_float)
 
     sunburst_terms = {}
     for term_id in selected_term_ids:
@@ -2416,8 +2460,8 @@ def open_sunburstplot(
         names.append(shorten_label(term.name, num_letters) if sunburst_term.entry_point else "")
         custom_text = f"Id: <b>{labels[-1]}</b><br>Name: {term.name}"
         if sunburst_term.pvalue > 0:
-            pvalue = max(min(-np.log10(sunburst_term.pvalue), pval_min), pval_max)
-            ratio = (pvalue - pval_max) / (pval_min - pval_max)
+            pvalue = max(min(-np.log10(sunburst_term.pvalue), pval_min_float), pval_max_float)
+            ratio = (pvalue - pval_max_float) / (pval_min_float - pval_max_float)
 
             fisher_data = session_data[list(term.term_id)[0]].fisher_data
             n, K, N = fisher_data[0] + fisher_data[2], fisher_data[0] + fisher_data[1], sum(fisher_data)
@@ -2459,7 +2503,18 @@ def open_sunburstplot(
         margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
     )
 
-    return True, fig, "70%", {'height': '70vh'}, False, "", barplot_controls_style, sunburst_controls_style
+    return (
+        True,
+        fig,
+        "70%",
+        {'height': '70vh'},
+        False,
+        "",
+        barplot_controls_style,
+        sunburst_controls_style,
+        no_update,
+        no_update,
+    )
 
 
 

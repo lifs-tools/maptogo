@@ -12,7 +12,6 @@ from collections import defaultdict
 import traceback
 import pickle
 import os
-from collections import deque, defaultdict
 
 SKIP_LOADING = False
 
@@ -26,6 +25,11 @@ except Exception as e:
     logger.error("Unable to load c++ library file(s)")
 
 
+CHEBI_synonym_table_filename = "Data/CHEBI_synonyms.csv.gz"
+CHEBI_synonym_table = {}
+
+if os.path.isfile(CHEBI_synonym_table_filename):
+    CHEBI_synonym_table = {tokens[0].lower(): tokens[1] for line in gzip.open("Data/CHEBI_synonyms.csv.gz").read().decode("utf8").split("\n") if len(line) > 0 and (tokens := line.split("\t")) and len(tokens) >= 2}
 
 def time_elapsed(func):
     def wrapper(*args, **kwargs):
@@ -35,7 +39,6 @@ def time_elapsed(func):
         logger.info(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
         return result
     return wrapper
-
 
 
 class SessionEntry:
@@ -59,6 +62,8 @@ class SessionEntry:
         self.background_transcripts = None
         self.regulated_transcripts = None
         self.background_list = []
+        self.min_pvalue = "0.0001"
+        self.max_pvalue = "0.05"
 
 
 
@@ -184,7 +189,10 @@ class EnrichmentOntology:
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
-        self.metabolite_names = {term.name: term for _, term in self.metabolites.items()}
+        self.metabolite_names = {term.name.lower(): term for _, term in self.metabolites.items()}
+        for synonym, term_id in CHEBI_synonym_table.items():
+            if term_id in self.metabolites:
+                self.metabolite_names[synonym] = self.metabolites[term_id]
 
         # add additional knowlegde graph edges
         try:
@@ -198,7 +206,7 @@ class EnrichmentOntology:
             logger.error(e)
 
         # clean up ontology
-        for term_id, term in self.ontology_terms.items():
+        for i, (term_id, term) in enumerate(self.ontology_terms.items()):
             if not term.relations or type(term.relations[0]) == OntologyTerm: continue
             term.relations = sorted(
                 list(
@@ -209,6 +217,7 @@ class EnrichmentOntology:
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
 
+    #@profile
     @time_elapsed
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
         session.search_terms = defaultdict(list)
@@ -309,15 +318,15 @@ class EnrichmentOntology:
         # run all registered molecules
         search_terms = session.search_terms
         for molecule_input_name, start_term, parent_nodes in all_paths:
-            queue = deque([start_term])
-            print(molecule_input_name, start_term.get_term_id())
+            queue = [start_term]
             while queue:
                 term = queue.pop()
-                if term.domain: search_terms[term].append(molecule_input_name)
+                if term.domain:
+                    search_terms[term].append(molecule_input_name)
                 for relation_term in term.relations:
                     if relation_term not in parent_nodes:
-                        parent_nodes[relation_term] = term
                         queue.append(relation_term)
+                        parent_nodes[relation_term] = term
 
         for term, term_molecules in search_terms.items():
             search_terms[term] = set(term_molecules)
