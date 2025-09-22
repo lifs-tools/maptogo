@@ -12,6 +12,7 @@ from collections import defaultdict
 import traceback
 import pickle
 import os
+import csv
 
 SKIP_LOADING = False
 
@@ -50,7 +51,7 @@ class SessionEntry:
         self.search_terms = {}
         self.all_parent_nodes = {}
         self.num_background = 0
-        self.use_bounded_fatty_acyls = True
+        self.use_bounded_fatty_acyls = False
         self.ontology = None
         self.domains = None
         self.background_lipids = None
@@ -73,14 +74,14 @@ class OntologyTerm:
         if _categories == None: _categories = set()
 
         self.term_id = sorted(list(_term_id) if type(_term_id) in {list, set} else list(_term_id.split("|")))
+        self.term_id_str = "|".join(sorted(list(self.term_id)))
         self.name = _name
         self.relations = sorted([r for r in _relations if r != ""])
         self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {"", "external"}
         self.categories = (set(_categories) if type(_categories) in {list, set} else set(_categories.split("|"))) - {""}
 
     def get_term_id(self, space = False):
-        if space: " | ".join(sorted(list(self.term_id)))
-        return "|".join(sorted(list(self.term_id)))
+        return " | ".join(sorted(list(self.term_id)))
 
 
 
@@ -93,18 +94,21 @@ class OntologyResult:
         _fisher = None,
     ):
         if _fisher == None: _fisher = [0, 0, 0, 0]
+        if min(_fisher) < 0:
+            logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher}")
+
         self.term = _term
         self.pvalue = _pvalue
         self.pvalue_corrected = _pvalue
+        self.lor = _fisher[0] * _fisher[3] / (_fisher[1] * _fisher[2]) if _fisher[1] > 0 and _fisher[2] > 0 else 0
         self.source_terms = _source_terms
         self.fisher_data = _fisher
 
-        if min(_fisher) < 0:
-            logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher}")
 
 
 
 class EnrichmentOntology:
+    #@profile
     def __init__(self, file_name, ontology_name, lipid_parser):
         self.lipid_parser = lipid_parser
         self.ontology_terms = {}
@@ -125,21 +129,17 @@ class EnrichmentOntology:
         if SKIP_LOADING: return
 
         try:
-            with gzip.open(file_name) as input_stream:
-                for line in [l for l in input_stream.read().decode("utf8").split("\n") if len(l) > 0]:
-                    tokens = line.strip(" ").split("\t")
-                    if len(tokens) < 5: continue
-                    term_id, name, relations, synonyms, domain = tokens[:5]
-                    categories = set() if len(tokens) <= 5 else tokens[5]
-                    term_type = 0
-                    relations = relations.split("|")
+            with gzip.open(file_name, "rt") as file_stream:
+                lines = file_stream.read().split("\n")
+                tokens_list = [l.split("\t") for l in lines if len(l) > 0]
+                for tokens in tokens_list:
+                    term_id, name, relations, synonyms, domain, categories = tokens
+                    relations_split = relations.split("|")
                     synonyms = synonyms.split("|")
-                    for relation in relations:
-                        if relation.startswith("LS:000000"):
-                            term_type = int(relation[-1])
+                    term_type = ord(relations[pos + 9]) - 48 if (pos := relations.find("LS:000000")) > 0 else 0
 
-                    term = OntologyTerm(term_id, name, relations, domain, categories)
-                    str_term_id = term.get_term_id()
+                    term = OntologyTerm(term_id, name, relations_split, domain, categories)
+                    str_term_id = term.term_id_str
                     match term_type:
                         case 1: # lipid class
                             if name not in self.lipid_classes: self.lipid_classes[name] = []
@@ -206,13 +206,11 @@ class EnrichmentOntology:
             logger.error(e)
 
         # clean up ontology
-        for i, (term_id, term) in enumerate(self.ontology_terms.items()):
+        for term_id, term in self.ontology_terms.items():
             if not term.relations or type(term.relations[0]) == OntologyTerm: continue
             term.relations = sorted(
-                list(
-                    {self.ontology_terms[t] for t in term.relations if t in self.ontology_terms}
-                ),
-                key = lambda term: term.get_term_id()
+                {self.ontology_terms[t] for t in term.relations if t in self.ontology_terms},
+                key = lambda term: term.term_id_str
             )
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
@@ -321,8 +319,7 @@ class EnrichmentOntology:
             queue = [start_term]
             while queue:
                 term = queue.pop()
-                if term.domain:
-                    search_terms[term].append(molecule_input_name)
+                if term.domain: search_terms[term].append(molecule_input_name)
                 for relation_term in term.relations:
                     if relation_term not in parent_nodes:
                         queue.append(relation_term)

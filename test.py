@@ -5,6 +5,12 @@ import time
 lipid_parser = LipidParser()
 session = SessionEntry()
 
+
+ontology = EnrichmentOntology(f"Data/ontology_9606.gz", "Homo sapiens", lipid_parser = lipid_parser)
+
+exit()
+
+
 test_data = {}
 lipid_dict = {}
 protein_set = set()

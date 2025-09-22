@@ -9,6 +9,7 @@ all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
 
 
+
 if all_species:
     print("Creating all ontologies")
     species = {
@@ -32,6 +33,18 @@ if all_species:
         ("Data/Bos_taurus.uniprot.tsv.gz", "9913"),
         ("Data/Caenorhabditis_elegans.uniprot.tsv.gz", "6239"),
     ]
+    reactomes = {
+        "9606": "HSA",
+        "10090": "MMU",
+        "4932": "SCE",
+        "562": "ECO",
+        "7227": "DME",
+        "10116": "RNO",
+        "9913": "BTA",
+        "6239": "CEL",
+        "287": None,
+        "3702": None,
+    }
 
 else:
     print("Creating Human & Mouse ontology")
@@ -43,6 +56,10 @@ else:
         ("Data/Homo_sapiens.uniprot.tsv.gz", "9606"),
         ("Data/Mus_musculus.uniprot.tsv.gz", "10090"),
     ]
+    reactomes = {
+        "9606": "HSA",
+        "10090": "MMU",
+    }
 
 species_set = set(species.values())
 
@@ -618,6 +635,26 @@ with gzip.open("Data/rhea2uniprot_trembl.tsv.gz", "rt") as infile:
 
 
 
+# black_list_chebi = {"23367", "24431"}
+# print("Readin reactome reactions")
+# with open("Data/ChEBI2ReactomeReactions.txt", "rt") as input_stream:
+#     for line in input_stream:
+#         tokens = line.strip().split("\t")
+#
+#         if tokens[0] in black_list_chebi: continue
+#         if tokens[0] in chebi_terms_all: chebi_terms_all[tokens[0]].relations.add(tokens[1])
+#
+#
+# reactome_reactions = {}
+# with open("Data/UniProt2ReactomeReactions.txt", "rt") as input_stream:
+#     for line in input_stream:
+#         tokens = line.strip().split("\t")
+#
+#         uniprot_id = "UNIPROT:" + tokens[0]
+#         if tokens[1] not in reactome_reactions: reactome_reactions[tokens[1]] = Term(tokens[1], f"Reactome reaction {tokens[1]}", {uniprot_id})
+#         else: reactome_reactions[tokens[1]].relations.add(uniprot_id)
+
+
 disease_and_phenotype_terms = get_terms("Data/doid-base.obo", "DOID:", True)
 for _, doid_term in disease_and_phenotype_terms.items():
     doid_term.namespace.add("Disease")
@@ -788,6 +825,12 @@ for tax_name, tax_id in species.items():
             f"Rhea reaction {rhea_term_id}",
             set(["UNIPROT:" + uniprot for uniprot in uniprot_terms])
         )
+
+    # reactome_tag = reactomes[tax_id]
+    # for reactome_id, reactome_term in reactome_reactions.items():
+    #     if reactome_id.find(reactome_tag) > -1:
+    #         output.append(reactome_term.to_string())
+
 
 
     chebi_terms = {t: c.copy() for t, c in chebi_terms_all.items()}
