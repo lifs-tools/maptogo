@@ -53,7 +53,7 @@ try:
 except Exception as e:
     organisms = {
         'Homo sapiens': '9606',
-        #'Mus musculus': '10090',
+        'Mus musculus': '10090',
         # 'Saccharomyces cerevisiae': '4932',
         # 'Escherichia coli': '562',
         # 'Drosophila melanogaster': '7227',
@@ -3557,14 +3557,6 @@ class EnrichmentResource(Resource):
             non_background_molecules_api = data.get("non_background_molecules", MOLECULE_HANDLING_REMOVE)
             bounded_fatty_acyls_api = data.get("bounded_fatty_acyls", False)
 
-            print(organism_api)
-            print(domains_api)
-            print(accepted_domains)
-            print(pvalue_correction_api)
-            print(term_representation_api)
-            print(unrecognizable_molecules_api)
-            print(bounded_fatty_acyls_api)
-
             if type(organism_api) not in {str, int} or (type(organism_api) == str and not organism_api.isnumeric()):
                 return {"error_message": "'organism_taxonomy' must be a (string) number", "result": []}, 422
 
@@ -3701,7 +3693,6 @@ class EnrichmentResource(Resource):
             return {"error_message": "", "result": result_data}, 200
 
         except Exception as e:
-            print("".join(traceback.format_tb(e.__traceback__)))
             return {"error_message": f"{e}", "result": []}, 500
 
 
