@@ -3444,18 +3444,18 @@ enrichment_model = api.model("Enrichment", {
     "background_lipids": fields.List(
         fields.String,
         description = "All lipid names in experiment (background, required)",
-        example = ["ST 27:1;O", "TG 16:0/18:1/20;0"],
+        example = ["ST 27:1;O", "TG 16:0/18:1/20;0", "10-HDoHE", "12-HEPE", "12-HETE", "12-HHTrE", "12-OxoETE", "13-HODE", "15-HETE", "5,6-diHETE", "8,9-EET", "8-HETE", "9-HODE"],
 
     ),
     "regulated_lipids": fields.List(
         fields.String,
         description = "All regulated lipid names in experiment",
-        example = ["PC(18:1/20:4)", "DAG 20:0-20:0"],
+        example = ["ST 27:1;O", "TG 16:0/18:1/20;0", "10-HDoHE", "12-HEPE", "12-HETE", "12-HHTrE"],
     ),
     "background_proteins": fields.List(
         fields.String,
         description = "All protein accessions in experiment (background)",
-        example = ["Q8TF30", "Q15465"],
+        example = ["Q8TF30", "Q15465", "P37231", "P12958"],
     ),
     "regulated_proteins": fields.List(
         fields.String,
@@ -3465,7 +3465,7 @@ enrichment_model = api.model("Enrichment", {
     "background_metabolites": fields.List(
         fields.String,
         description = "All metabolite ChEBI Ids in experiment (background)",
-        example = ["CHEBI:46053", "CHEBI:27732", "methanol"],
+        example = ["CHEBI:46053", "CHEBI:27732", "methanol","CHEBI:27958", "CHEBI:17234"],
     ),
     "regulated_metabolites": fields.List(
         fields.String,
@@ -3475,7 +3475,7 @@ enrichment_model = api.model("Enrichment", {
     "background_transcripts": fields.List(
         fields.String,
         description = "All ensembl Ids in experiment (background)",
-        example = ["ENST00000515318.6", "ENST00000435425.1"],
+        example = ["ENST00000515318.6", "ENST00000435425.1", "ENST00000438682.6", "ENSG00000156006.6"],
     ),
     "regulated_transcripts": fields.List(
         fields.String,
@@ -3485,30 +3485,37 @@ enrichment_model = api.model("Enrichment", {
     "organism_taxonomy": fields.String(
         description = "Select organism (Taxonomic number), default: '9606' (Homo sapiens)",
         enum = [v for k, v in organisms.items()],
+        example = "9606",
     ),
     "domains": fields.List(
         fields.String,
         description = "Select domain(s), default: 'biological_process'",
         enum = sorted(list(d.lower().replace(" ", "_") for d in enrichment_ontologies[INIT_ORGANISM].domains)),
+        example = ["biological_process"],
     ),
     "pvalue_correction": fields.String(
-        description = "Select method for p-value correction, default: 'bh_fdr' (Benjamini-Hochberg)",
+        description = "Select method for p-value correction, default: 'fdr_bh' (Benjamini-Hochberg)",
         enum = [c["value"] for c in correction_list],
+        example = "fdr_bh",
     ),
     "term_representation": fields.String(
         description = "Term representation, default: greater",
         enum = [t["value"] for t in term_representation],
+        example = "greater",
     ),
     "unrecognizable_molecules": fields.String(
         description = f"Handling of unrecognizable molecules, default: {MOLECULE_HANDLING_IGNORE}",
         enum = [m["value"] for m in molecule_handling],
+        example = MOLECULE_HANDLING_IGNORE,
     ),
     "non_background_molecules": fields.String(
         description = f"Handling of non-background regulated molecules, default: {MOLECULE_HANDLING_REMOVE}",
         enum = [r["value"] for r in regulated_molecule_handling],
+        example = MOLECULE_HANDLING_REMOVE,
     ),
     "bounded_fatty_acyls": fields.Boolean(
-        description = f"Use bounded fatty acyls for analysis too, default: 0",
+        description = f"Use bounded fatty acyls for analysis too, default: false",
+        example = False,
     ),
 })
 
