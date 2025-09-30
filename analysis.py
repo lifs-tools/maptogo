@@ -54,6 +54,7 @@ except Exception as e:
     organisms = {
         'Homo sapiens': '9606',
         'Mus musculus': '10090',
+        'Bacillus cereus': "405534",
         # 'Saccharomyces cerevisiae': '4932',
         # 'Escherichia coli': '562',
         # 'Drosophila melanogaster': '7227',
@@ -1353,6 +1354,13 @@ def layout():
                                     style = {"marginRight": "5px"},
                                 ),
                                 dmc.ActionIcon(
+                                    DashIconify(icon = "carbon:sankey-diagram-alt", width = 20),
+                                    id = "sankey_results",
+                                    title = "Show term flow",
+                                    disabled = True,
+                                    style = {"marginRight": "5px"},
+                                ),
+                                dmc.ActionIcon(
                                     DashIconify(icon = "material-symbols:download-rounded", width = 20),
                                     id = "icon_download_results",
                                     title = "Download table",
@@ -2148,7 +2156,7 @@ def download_table(
     for term_id, term in zip(term_ids, terms):
         term_id = term_id.split("|")[0]
         if term_id not in data: continue
-        molecules = data[term_id].source_terms.keys()
+        molecules = data[term_id].source_terms
 
         if with_lipids:
             lipids = sorted(list(molecules & set(background_lipids)))
@@ -2296,12 +2304,13 @@ def disclaimer_clicked(n_clicks):
 @callback(
     Output("chart_results", "disabled", allow_duplicate = True),
     Output("sunburst_results", "disabled", allow_duplicate = True),
+    Output("sankey_results", "disabled", allow_duplicate = True),
     Output("icon_download_results", "disabled", allow_duplicate = True),
     Input("graph_enrichment_results", "selectedRows"),
     prevent_initial_call = True,
 )
 def update_action_icons(selected_rows):
-    return len(selected_rows) == 0, len(selected_rows) == 0, len(selected_rows) == 0
+    return (len(selected_rows) == 0, ) * 4
 
 
 
@@ -2647,6 +2656,189 @@ def open_sunburstplot(
     fig.update_layout(
         margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
     )
+
+    return (
+        True,
+        fig,
+        "70%",
+        {'height': '70vh'},
+        False,
+        "",
+        barplot_controls_style,
+        sunburst_controls_style,
+        no_update,
+        no_update,
+    )
+
+
+
+@callback(
+    Output("barplot_terms_modal", "opened", allow_duplicate = True),
+    Output("barplot_terms", "figure", allow_duplicate = True),
+    Output("barplot_terms_modal", "size", allow_duplicate = True),
+    Output("barplot_terms", "style", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Output("barplot_controls", "style", allow_duplicate = True),
+    Output("sunburst_controls", "style", allow_duplicate = True),
+    Output("barplot_numberinput_max_pvalue", "value", allow_duplicate = True),
+    Output("barplot_numberinput_min_pvalue", "value", allow_duplicate = True),
+    Input("sankey_results", "n_clicks"),
+    State("graph_enrichment_results", "virtualRowData"),
+    State("graph_enrichment_results", "selectedRows"),
+    State("sessionid", "children"),
+    State("barplot_controls", "style"),
+    State("sunburst_controls", "style"),
+    prevent_initial_call = True,
+)
+def open_sankeyplot(
+    n_clicks,
+    row_data,
+    selected_rows,
+    session_id,
+    barplot_controls_style,
+    sunburst_controls_style,
+):
+    raise exceptions.PreventUpdate
+
+    if session_id == None or n_clicks == None:
+        raise exceptions.PreventUpdate
+
+    if session_id not in sessions:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website.",
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+        )
+    session = sessions[session_id]
+    selected_term_ids = [row["termid"] for row in selected_rows]
+    ontology = session.ontology
+    domains = session.domains
+    terms = ontology.ontology_terms
+
+    barplot_controls_style["display"] = "none"
+    sunburst_controls_style["display"] = "none"
+
+    background_lipids = session.background_lipids
+    regulated_lipids = session.regulated_lipids
+    background_proteins = session.background_proteins
+    regulated_proteins = session.regulated_proteins
+    background_metabolites = session.background_metabolites
+    regulated_metabolites = session.regulated_metabolites
+    background_transcripts = session.background_transcripts
+    regulated_transcripts = session.regulated_transcripts
+
+    with_lipids = background_lipids != None
+    with_proteins = background_proteins != None
+    with_metabolites = background_metabolites != None
+    with_transcripts = background_transcripts != None
+
+    if with_lipids:
+        background_lipids = set(background_lipids.keys())
+
+    flow_data = {}
+    flow_data_id = {}
+    for target_term_id in selected_term_ids:
+        target_term = terms[target_term_id.split("|")[0]]
+
+        molecules = sorted(list(session.data[target_term_id].source_terms))
+        molecule_table = []
+
+        if with_lipids:
+            molecule_table += [molecule for molecule in molecules if molecule in background_lipids]
+
+        if with_proteins:
+            molecule_table += [molecule for molecule in molecules if molecule in background_proteins]
+
+        if with_metabolites:
+            molecule_table += [molecule for molecule in molecules if molecule in background_metabolites]
+
+        if with_transcripts:
+            molecule_table = [molecule for molecule in molecules if molecule in background_transcripts and (m := molecule.split(".")[0])]
+
+        for molecule in molecule_table:
+            term_path = []
+            last_term = None
+            for term in get_path(session.all_parent_nodes[molecule], target_term):
+                if type(term) != OntologyTerm: continue
+                # if type(term) == str: term_id = term
+                # else: term_id = list(term.term_id)[0]
+                # if term_id in ontology.ontology_terms:
+                #     term_name = term.name if type(term) == OntologyTerm else ontology.ontology_terms[term_id].name
+                if last_term != None:
+                    last_term_nodes = [last_term.name] if len(last_term.domain) > 0 or len(last_term.categories) == 0 else last_term.categories
+                    term_nodes = [term.name] if len(term.domain) > 0 or len(term.categories) == 0 else term.categories
+
+                    for term_node in term_nodes:
+                        if term_node not in flow_data_id:
+                            flow_data_id[term_node] = len(flow_data_id)
+                            flow_data[flow_data_id[term_node]] = {}
+
+                    for last_term_node in last_term_nodes:
+                        if last_term_node not in flow_data_id:
+                            flow_data_id[last_term_node] = len(flow_data_id)
+                            flow_data[flow_data_id[last_term_node]] = {}
+                        last_flow_data = flow_data[flow_data_id[last_term_node]]
+                        for term_node in term_nodes:
+                            term_node_id = flow_data_id[term_node]
+                            if term_node_id not in last_flow_data:
+                                last_flow_data[term_node_id] = 0
+                            last_flow_data[term_node_id] += 1
+                last_term = term
+
+    fig_source, fig_target, fig_value = [], [], []
+    fig_label = sorted([f for f in flow_data_id], key = lambda f: flow_data_id[f])
+    for source_node in fig_label:
+        source_node_id = flow_data_id[source_node]
+        for target_node_id, value in flow_data[source_node_id].items():
+            fig_source.append(source_node_id)
+            fig_target.append(target_node_id)
+            fig_value.append(value)
+            print(source_node, source_node_id, target_node_id, value)
+
+    fig = go.Figure(
+        go.Sankey(
+            arrangement = 'snap',
+            node = dict(
+                label = fig_label,
+                align = "right",
+            ),
+            link = dict(
+                arrowlen = 15,
+                source = fig_source,
+                target = fig_target,
+                value = fig_value,
+            )
+        )
+    )
+
+    #
+    # fig.add_trace(go.Sunburst(
+    #     ids = labels,
+    #     parents = parents,
+    #     labels = names,
+    #     values = values,
+    #     marker = dict(
+    #         colors = colors,
+    #         colorscale = None,
+    #         cmin = 0,
+    #         cmax = 1,
+    #         showscale = False,
+    #     ),
+    #     #textinfo = 'none',
+    #     customdata = custom_data,
+    #     hovertemplate="%{customdata}<extra></extra>",
+    # ))
+    # fig.update_layout(
+    #     margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
+    # )
 
     return (
         True,

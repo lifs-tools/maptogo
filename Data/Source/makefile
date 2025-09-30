@@ -32,22 +32,22 @@ Data/go-basic.obo:
 
 Data/chebi_lite.obo:
 	# ChEBI
-	wget --tries=10 -O Data/chebi_lite.obo https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi_lite.obo
+	wget --tries=10 -O Data/chebi_lite.obo ftp://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi_lite.obo
 
 Data/chebi.obo.gz:
 	# ChEBI
-	wget --tries=10 -O Data/chebi.obo https://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.obo
+	wget --tries=10 -O Data/chebi.obo ftp://ftp.ebi.ac.uk/pub/databases/chebi/ontology/chebi.obo
 	gzip Data/chebi.obo
 
 # RHEA
 Data/rhea-reactions.txt.gz:
-	wget --tries=10 -O Data/rhea-reactions.txt.gz https://ftp.expasy.org/databases/rhea/txt/rhea-reactions.txt.gz
+	wget --tries=10 -O Data/rhea-reactions.txt.gz ftp://ftp.expasy.org/databases/rhea/txt/rhea-reactions.txt.gz
 
 Data/rhea2uniprot_sprot.tsv:
-	wget --tries=10 -O Data/rhea2uniprot_sprot.tsv https://ftp.expasy.org/databases/rhea/tsv/rhea2uniprot%5Fsprot.tsv
+	wget --tries=10 -O Data/rhea2uniprot_sprot.tsv ftp://ftp.expasy.org/databases/rhea/tsv/rhea2uniprot%5Fsprot.tsv
 
 Data/rhea2uniprot_trembl.tsv.gz:
-	wget --tries=10 -O Data/rhea2uniprot_trembl.tsv.gz https://ftp.expasy.org/databases/rhea/tsv/rhea2uniprot_trembl.tsv.gz
+	wget --tries=10 -O Data/rhea2uniprot_trembl.tsv.gz ftp://ftp.expasy.org/databases/rhea/tsv/rhea2uniprot_trembl.tsv.gz
 
 # PathBank
 Data/pathbank_all_metabolites.csv.zip:
@@ -95,46 +95,46 @@ Data/genes_to_disease.txt:
 
 # Ensembl
 Data/Homo_sapiens.uniprot.tsv.gz:
-	wget --tries=10 -O Data/Homo_sapiens.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/homo_sapiens/Homo_sapiens.GRCh38.114.uniprot.tsv.gz"
+	wget --tries=10 -O Data/Homo_sapiens.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/homo_sapiens/Homo_sapiens.GRCh38.114.uniprot.tsv.gz"
 
 Data/Homo_sapiens.all.tsv.gz:
-	wget --tries=10 -O Data/Homo_sapiens.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/homo_sapiens/Homo_sapiens.GRCh38.114.ena.tsv.gz"
+	wget --tries=10 -O Data/Homo_sapiens.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/homo_sapiens/cds/Homo_sapiens.GRCh38.cds.all.fa.gz"
 
 Data/Mus_musculus.uniprot.tsv.gz:
-	wget --tries=10 -O Data/Mus_musculus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/mus_musculus/Mus_musculus.GRCm39.114.uniprot.tsv.gz"
+	wget --tries=10 -O Data/Mus_musculus.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/mus_musculus/Mus_musculus.GRCm39.114.uniprot.tsv.gz"
 
 Data/Mus_musculus.all.tsv.gz:
-	wget --tries=10 -O Data/Mus_musculus.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/mus_musculus/Mus_musculus.GRCm39.114.ena.tsv.gz"
+	wget --tries=10 -O Data/Mus_musculus.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/mus_musculus/cds/Mus_musculus.GRCm39.cds.all.fa.gz"
 
 Data/Saccharomyces_cerevisiae.uniprot.tsv.gz:
-	wget --tries=10 -O Data/Saccharomyces_cerevisiae.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.114.uniprot.tsv.gz"
+	wget --tries=10 -O Data/Saccharomyces_cerevisiae.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.114.uniprot.tsv.gz"
 
 Data/Saccharomyces_cerevisiae.all.tsv.gz:
-	wget --tries=10 -O Data/Saccharomyces_cerevisiae.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.114.ena.tsv.gz"
+	wget --tries=10 -O Data/Saccharomyces_cerevisiae.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/saccharomyces_cerevisiae/cds/Saccharomyces_cerevisiae.R64-1-1.cds.all.fa.gz"
 
 Data/Drosophila_melanogaster.uniprot.tsv.gz:
-	wget --tries=10 -O Data/Drosophila_melanogaster.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.54.114.uniprot.tsv.gz"
+	wget --tries=10 -O Data/Drosophila_melanogaster.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.54.114.uniprot.tsv.gz"
 
 Data/Drosophila_melanogaster.all.tsv.gz:
-	wget --tries=10 -O Data/Drosophila_melanogaster.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.54.114.ena.tsv.gz"
+	wget --tries=10 -O Data/Drosophila_melanogaster.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/drosophila_melanogaster/cds/Drosophila_melanogaster.BDGP6.54.cds.all.fa.gz"
 
 Data/Rattus_norvegicus.uniprot.tsv.gz:
-	wget --tries=10 -O Data/Rattus_norvegicus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/rattus_norvegicus/Rattus_norvegicus.GRCr8.114.uniprot.tsv.gz"
+	wget --tries=10 -O Data/Rattus_norvegicus.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/rattus_norvegicus/Rattus_norvegicus.GRCr8.114.uniprot.tsv.gz"
 
 Data/Rattus_norvegicus.all.tsv.gz:
-	wget --tries=10 -O Data/Rattus_norvegicus.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/rattus_norvegicus/Rattus_norvegicus.GRCr8.114.ena.tsv.gz"
+	wget --tries=10 -O Data/Rattus_norvegicus.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/rattus_norvegicus/cds/Rattus_norvegicus.GRCr8.cds.all.fa.gz"
 
 Data/Bos_taurus.uniprot.tsv.gz:
-	wget --tries=10 -O Data/Bos_taurus.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/bos_taurus/Bos_taurus.ARS-UCD2.0.114.uniprot.tsv.gz"
+	wget --tries=10 -O Data/Bos_taurus.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/bos_taurus/Bos_taurus.ARS-UCD2.0.114.uniprot.tsv.gz"
 
 Data/Bos_taurus.all.tsv.gz:
-	wget --tries=10 -O Data/Bos_taurus.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/bos_taurus/Bos_taurus.ARS-UCD2.0.114.ena.tsv.gz"
+	wget --tries=10 -O Data/Bos_taurus.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/bos_taurus/cds/Bos_taurus.ARS-UCD2.0.cds.all.fa.gz"
 
 Data/Caenorhabditis_elegans.uniprot.tsv.gz:
-	wget --tries=10 -O Data/Caenorhabditis_elegans.uniprot.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.114.uniprot.tsv.gz"
+	wget --tries=10 -O Data/Caenorhabditis_elegans.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.cds.all.fa.gz"
 
 Data/Caenorhabditis_elegans.all.tsv.gz:
-	wget --tries=10 -O Data/Caenorhabditis_elegans.all.tsv.gz "https://ftp.ensembl.org/pub/current_tsv/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.114.ena.tsv.gz"
+	wget --tries=10 -O Data/Caenorhabditis_elegans.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/caenorhabditis_elegans/cds/Caenorhabditis_elegans.WBcel235.cds.all.fa.gz"
 
 # HGNC
 Data/HGNC.csv:
@@ -143,7 +143,7 @@ Data/HGNC.csv:
 # Uniprot
 Data/uniprot.csv.gz:
 	# revieved = True
-	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full%2Cxref_geneid%2Creviewed&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A3702%29%29"
+	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cec%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full%2Cxref_geneid%2Creviewed&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A405534%29+OR+%28taxonomy_id%3A3702%29%29"
 
 
 

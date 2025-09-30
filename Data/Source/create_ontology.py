@@ -8,6 +8,82 @@ import os
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
 
+# Map EC class (first digit) to category
+EC_CATEGORY = {
+    "1": "Oxidation–Reduction (Oxidoreductases)",
+    "2": "Transfer Reactions (Transferases)",
+    "3": "Hydrolysis (Hydrolases)",
+    "4": "Group Elimination (Lyases)",
+    "5": "Isomerization (Isomerases)",
+    "6": "Ligation (Ligases)"
+}
+
+
+gene_biotype_dict = {
+    "protein_coding": "Standard protein-coding gene",
+    "IG_V_gene": "Immunoglobulin Variable gene segment",
+    "IG_C_gene": "Immunoglobulin Constant gene segment",
+    "IG_D_gene": "Immunoglobulin Diversity gene segment",
+    "TR_V_gene": "T-cell Receptor Variable gene segment",
+    "TR_C_gene": "T-cell Receptor Constant gene segment",
+    "TR_D_gene": "T-cell Receptor Diversity gene segment",
+    "TR_J_gene": "T-cell Receptor Joining gene segment",
+    "miRNA": "MicroRNA",
+    "rRNA": "Ribosomal RNA",
+    "snRNA": "Small Nuclear RNA",
+    "snoRNA": "Small Nucleolar RNA",
+    "scRNA": "Small Cajal body-specific RNA",
+    "sRNA": "Small RNA",
+    "misc_RNA": "Miscellaneous RNA",
+    "lincRNA": "Long Intergenic Non-Coding RNA",
+    "lncRNA": "Long Non-Coding RNA",
+    "antisense": "Antisense RNA",
+    "sense_intronic": "Sense Intronic RNA",
+    "sense_overlapping": "Sense Overlapping RNA",
+    "bidirectional_promoter_lncRNA": "Bidirectional Promoter Long Non-Coding RNA",
+    "processed_transcript": "Processed Transcript",
+    "pseudogene": "Generic pseudogene",
+    "IG_pseudogene": "Immunoglobulin Pseudogene",
+    "TR_pseudogene": "T-cell Receptor Pseudogene",
+    "miRNA_pseudogene": "MicroRNA Pseudogene",
+    "rRNA_pseudogene": "Ribosomal RNA Pseudogene",
+    "snRNA_pseudogene": "Small Nuclear RNA Pseudogene",
+    "snoRNA_pseudogene": "Small Nucleolar RNA Pseudogene",
+    "scRNA_pseudogene": "Small Cajal body-specific RNA Pseudogene",
+    "misc_RNA_pseudogene": "Miscellaneous RNA Pseudogene",
+    "tRNA_pseudogene": "Transfer RNA Pseudogene",
+    "Mt_tRNA_pseudogene": "Mitochondrial Transfer RNA Pseudogene",
+    "TEC": "To be Experimentally Confirmed",
+    "nonsense_mediated_decay": "Transcript subject to Nonsense-Mediated Decay",
+    "ribozyme": "Ribozyme",
+    "scaRNA": "Small Cajal body-specific RNA",
+    "scRNA": "Small Cajal body-specific RNA",
+    "Mt_rRNA": "Mitochondrial Ribosomal RNA",
+    "Mt_tRNA": "Mitochondrial Transfer RNA",
+    "misc_RNA": "Miscellaneous RNA",
+    "sRNA": "Small RNA",
+    "scaRNA": "Small Cajal body-specific RNA",
+}
+
+CHEBI_CATEGORY_MAPPING = {
+    "CHEBI:18059": "Lipid",
+    "CHEBI:33708": "Amino acid",
+    "CHEBI:16670": "Peptide",
+    "CHEBI:16646": "Carbohydrate",
+    "CHEBI:33838": "Nucleoside",
+    "CHEBI:22315": "Alkaloid",
+    "CHEBI:26873": "Terpenoid",
+    "CHEBI:35341": "Steroid",
+    "CHEBI:134179": "Volatile organic compound",
+    "CHEBI:64709": "Organic acid",
+    "CHEBI:36976": "Nucleotide",
+    "CHEBI:47916": "Flavonoids",
+    "CHEBI:166890": "Phenolic acid",
+    "CHEBI:22580": "Anthraquinone",
+    "CHEBI:28794": "Coumarins",
+}
+
+
 
 
 if all_species:
@@ -15,6 +91,7 @@ if all_species:
     species = {
         'Homo sapiens': "9606",
         'Mus musculus': "10090",
+        #'Bacillus cereus': "405534",
         'Saccharomyces cerevisiae': "4932",
         'Escherichia coli': "562",
         'Drosophila melanogaster': "7227",
@@ -25,13 +102,13 @@ if all_species:
         'Arabidopsis thaliana': "3702",
     }
     ensembl_files = [
-        ("Data/Homo_sapiens.uniprot.tsv.gz", "9606"),
-        ("Data/Mus_musculus.uniprot.tsv.gz", "10090"),
-        ("Data/Saccharomyces_cerevisiae.uniprot.tsv.gz", "4932"),
-        ("Data/Drosophila_melanogaster.uniprot.tsv.gz", "7227"),
-        ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116"),
-        ("Data/Bos_taurus.uniprot.tsv.gz", "9913"),
-        ("Data/Caenorhabditis_elegans.uniprot.tsv.gz", "6239"),
+        ("Data/Homo_sapiens.uniprot.tsv.gz", "9606", "Data/Homo_sapiens.all.tsv.gz"),
+        ("Data/Mus_musculus.uniprot.tsv.gz", "10090", "Data/Mus_musculus.all.tsv.gz"),
+        ("Data/Saccharomyces_cerevisiae.uniprot.tsv.gz", "4932", "Data/Saccharomyces_cerevisiae.all.tsv.gz"),
+        ("Data/Drosophila_melanogaster.uniprot.tsv.gz", "7227", "Data/Drosophila_melanogaster.all.tsv.gz"),
+        ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116", "Data/Rattus_norvegicus.all.tsv.gz"),
+        ("Data/Bos_taurus.uniprot.tsv.gz", "9913", "Data/Bos_taurus.all.tsv.gz"),
+        ("Data/Caenorhabditis_elegans.uniprot.tsv.gz", "6239", "Data/Caenorhabditis_elegans.all.tsv.gz"),
     ]
     reactomes = {
         "9606": "HSA",
@@ -44,6 +121,7 @@ if all_species:
         "6239": "CEL",
         "287": None,
         "3702": None,
+        "405534": None,
     }
 
 else:
@@ -53,8 +131,8 @@ else:
         'Mus musculus': "10090",
     }
     ensembl_files = [
-        ("Data/Homo_sapiens.uniprot.tsv.gz", "9606"),
-        ("Data/Mus_musculus.uniprot.tsv.gz", "10090"),
+        ("Data/Homo_sapiens.uniprot.tsv.gz", "9606", "Data/Homo_sapiens.all.tsv.gz"),
+        ("Data/Mus_musculus.uniprot.tsv.gz", "10090", "Data/Mus_musculus.all.tsv.gz"),
     ]
     reactomes = {
         "9606": "HSA",
@@ -324,19 +402,37 @@ with open("Data/chebi.csv", "rt") as infile:
         chebi_terms_all[tokens[0]].relations.add("LS:0000005")
 
 
-max_depth = 2
+# max_depth = 2
+# for chebi_id, c_term in chebi_obo.items():
+#     if not chebi_id.startswith("CHEBI:"): continue
+#     chebi_id = chebi_id.replace("CHEBI:", "")
+#     chebi_term = chebi_terms_all[chebi_id]
+#     queue = [(rel, 1) for rel in c_term.relations]
+#     while queue:
+#         current_id, depth = queue.pop()
+#         current_term = chebi_obo[current_id]
+#         chebi_term.categories.add(current_term.name.replace("|", "/"))
+#         if depth + 1 > max_depth: continue
+#         for relation_id in current_term.relations:
+#             queue.append((relation_id, depth + 1))
+
+print("set metabolite categories")
+chebi_tree = {}
 for chebi_id, c_term in chebi_obo.items():
-    if not chebi_id.startswith("CHEBI:"): continue
-    chebi_id = chebi_id.replace("CHEBI:", "")
-    chebi_term = chebi_terms_all[chebi_id]
-    queue = [(rel, 1) for rel in c_term.relations]
+    for relation in c_term.relations:
+        if relation not in chebi_tree: chebi_tree[relation] = [chebi_id]
+        else: chebi_tree[relation].append(chebi_id)
+
+for chebi_id, category in CHEBI_CATEGORY_MAPPING.items():
+    if chebi_id not in chebi_tree: continue
+    queue = [chebi_id]
     while queue:
-        current_id, depth = queue.pop()
-        current_term = chebi_obo[current_id]
-        chebi_term.categories.add(current_term.name.replace("|", "/"))
-        if depth + 1 > max_depth: continue
-        for relation_id in current_term.relations:
-            queue.append((relation_id, depth + 1))
+        current_chebi_id = queue.pop()
+        if current_chebi_id in chebi_terms_all:
+            chebi_terms_all[current_chebi_id].categories.add(category)
+        if current_chebi_id in chebi_tree:
+            queue += chebi_tree[current_chebi_id]
+
 
 
 with open("Data/rhea_to_chebi.csv", "rt") as infile:
@@ -388,9 +484,11 @@ with gzip.open("Data/ChEBI2Reactome_All_Levels.txt.gz", "rt") as infile:
 uniprot_data = {}
 uniprot_terms_organisms = {organism: {} for organism in species.values()}
 uniprot_to_organism = {}
-ensembl_terms_organisms = {organism: {} for _, organism in ensembl_files}
+uniprot_to_ec = {}
+ensembl_terms_organisms = {organism: {} for ens, organism, ens_cds in ensembl_files}
+ensembl_terms = {}
 gene_terms = {}
-gene_term_organisms = {organism: {} for _, organism in ensembl_files}
+gene_term_organisms = {organism: {} for _, organism, _ in ensembl_files}
 with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
     print("Readin uniprot")
     for i, line in enumerate(infile):
@@ -408,7 +506,7 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
         protein_name = gene_name if len(gene_name) > 0 else uniprot
 
         go_terms = {"LS:0000004" if reviewed else "LS:0000007"}
-        categories = set(tokens[4].split(", ")) if len(tokens) > 4 and len(tokens[4]) > 0 else set()
+        categories = set(tokens[5].split(", ")) if len(tokens) > 5 and len(tokens[5]) > 0 else set()
         uniprot_term = "UNIPROT:" + uniprot
 
         if len(tokens) > 3 and len(tokens[3]) > 0 and tokens[3].find("[") > -1:
@@ -417,12 +515,15 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                 if len(go_term) != 10 or go_term[:3] != "GO:": continue
                 go_terms.add(go_term)
 
-        gene_ids = set()
-        if len(tokens) > 6 and len(tokens[6]) > 1:
-            gene_ids.add(tokens[6].strip('";').split(";")[0])
+        if len(tokens) > 4 and len(tokens[4]) > 0 and tokens[4][0] in EC_CATEGORY:
+            uniprot_to_ec[uniprot] = EC_CATEGORY[tokens[4][0]]
 
-        if len(tokens) > 8 and len(tokens[8]) > 1:
-            for ncbi_id in tokens[8].strip(';').split(";"):
+        gene_ids = set()
+        if len(tokens) > 7 and len(tokens[7]) > 1:
+            gene_ids.add(tokens[7].strip('";').split(";")[0])
+
+        if len(tokens) > 9 and len(tokens[9]) > 1:
+            for ncbi_id in tokens[9].strip(';').split(";"):
                 gene_ids.add(f"NCBI:{ncbi_id}")
 
         term = Term(uniprot_term, protein_name, _relations = go_terms | gene_ids, _categories = categories)
@@ -445,9 +546,9 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                     gene_terms[gene_id] = gene_term
                     gene_term_organisms[organisms_id][gene_id] = gene_term
 
-        if len(tokens) > 7 and len(tokens[7]) > 0 and organisms_id in gene_term_organisms:
+        if len(tokens) > 8 and len(tokens[8]) > 0 and organisms_id in gene_term_organisms:
             ensembl_organism = ensembl_terms_organisms[organisms_id]
-            for ensembl_sets in tokens[7].strip(";").split("\";\""):
+            for ensembl_sets in tokens[8].strip(";").split("\";\""):
                 ensembls = ensembl_sets.split(" ")
                 if len(ensembls) < 3: continue
                 ENT = ensembls[0].strip('" ;.').split(".")[0]
@@ -458,29 +559,35 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                 if ENG in ensembl_organism:
                     ensembl_organism[ENG].relations |= {uniprot_term} | gene_ids
                 else:
-                    ensembl_organism[ENG] = Term(ENG, gene_name if len(gene_name) > 0 else ENG, {"LS:0000006", uniprot_term} | gene_ids)
+                    ensembl_term = Term(ENG, gene_name if len(gene_name) > 0 else ENG, {"LS:0000006", uniprot_term} | gene_ids)
+                    ensembl_organism[ENG] = ensembl_term
+                    ensembl_terms[ENG] = ensembl_term
 
                 if ENP in ensembl_organism:
                     ensembl_organism[ENP].relations |= {uniprot_term, ENG}
                 else:
-                    ensembl_organism[ENP] = Term(ENP, gene_name if len(gene_name) > 0 else ENP, {"LS:0000006", uniprot_term, ENG})
+                    ensembl_term = Term(ENP, gene_name if len(gene_name) > 0 else ENP, {"LS:0000006", uniprot_term, ENG})
+                    ensembl_organism[ENP] = ensembl_term
+                    ensembl_terms[ENP] = ensembl_term
 
                 if ENT in ensembl_organism:
                     ensembl_organism[ENT].relations |= {ENP, ENG}
                 else:
-                    ensembl_organism[ENT] = Term(ENT, gene_name if len(gene_name) > 0 else ENT, {"LS:0000006", ENP, ENG})
+                    ensembl_term = Term(ENT, gene_name if len(gene_name) > 0 else ENT, {"LS:0000006", ENP, ENG})
+                    ensembl_organism[ENT] = ensembl_term
+                    ensembl_terms[ENT] = ensembl_term
 
 
 
 
-for ensembl_file, organism in ensembl_files:
+for ensembl_file, organism, ensembl_cds in ensembl_files:
     ensembl_organism = ensembl_terms_organisms[organism]
     print(f"Readin Ensembl {organism}")
     try:
-        with gzip.open(ensembl_file) as infile:
+        with gzip.open(ensembl_file, "rt") as infile:
             for i, line in enumerate(infile):
                 if i == 0: continue
-                tokens = line.decode("utf8").split("\t")
+                tokens = line.split("\t")
                 if len(tokens) < 4: continue
                 uniprot = tokens[3].split("-")[0]
                 ENG, ENT, ENP = tokens[:3]
@@ -528,6 +635,21 @@ for ensembl_file, organism in ensembl_files:
                         ensembl_organism[ENP] = Term(ENP, ENP, {"LS:0000006", ENG})
                         if ENT_term != None:
                             ENT_term.relations.add(ENP)
+
+    except Exception as e:
+        print(e)
+        exit(-1)
+
+    try:
+        with gzip.open(ensembl_cds, "rt") as infile:
+            for inline in infile:
+                if inline[0] != ">": continue
+                tokens = inline[1:].strip().split(" ")
+                ensembl_prot = tokens[0].split(".")[0]
+                ensembl_gene = tokens[3][5:].split(".")[0]
+                biotype = tokens[4][13:]
+                if ensembl_prot in ensembl_terms: ensembl_terms[ensembl_prot].categories.add(biotype)
+                if ensembl_gene in ensembl_terms: ensembl_terms[ensembl_gene].categories.add(biotype)
 
     except Exception as e:
         print(e)
@@ -602,6 +724,15 @@ with open("Data/ReactomePathwaysRelation.txt") as infile:
         pathway_terms[tokens[1]].relations.add(tokens[0])
 
 
+
+    for rhea_term_id, uniprot_terms in rhea_terms_organisms[tax_id].items():
+        rhea_terms[rhea_term_id] = Term(
+            f"RHEA:{rhea_term_id}",
+            f"Rhea reaction {rhea_term_id}",
+            set(["UNIPROT:" + uniprot for uniprot in uniprot_terms])
+        )
+
+
 rhea_terms_organisms = {tax_id: {} for tax_id in uniprot_terms_organisms}
 with open("Data/rhea2uniprot_sprot.tsv", "rt") as infile:
     print("Readin rhea2 sprot")
@@ -612,10 +743,28 @@ with open("Data/rhea2uniprot_sprot.tsv", "rt") as infile:
         if tokens[3] not in uniprot_to_organism: continue
         organism = uniprot_to_organism[tokens[3]]
 
-        if tokens[0] not in rhea_terms_organisms[organism]: rhea_terms_organisms[organism][tokens[0]] = set()
-        rhea_terms_organisms[organism][tokens[0]].add(tokens[3])
-        if tokens[2] not in rhea_terms_organisms[organism]: rhea_terms_organisms[organism][tokens[2]] = set()
-        rhea_terms_organisms[organism][tokens[2]].add(tokens[3])
+        if tokens[0] not in rhea_terms_organisms[organism]:
+            rhea_terms_organisms[organism][tokens[0]] = Term(
+                f"RHEA:{tokens[0]}",
+                f"Rhea reaction {tokens[0]}",
+                {"UNIPROT:" + tokens[3]}
+            )
+        else:
+            rhea_terms_organisms[organism][tokens[0]].relations.add("UNIPROT:" + tokens[3])
+
+        if tokens[2] not in rhea_terms_organisms[organism]:
+            rhea_terms_organisms[organism][tokens[2]] = Term(
+                f"RHEA:{tokens[2]}",
+                f"Rhea reaction {tokens[2]}",
+                {"UNIPROT:" + tokens[3]}
+            )
+        else:
+            rhea_terms_organisms[organism][tokens[2]].relations.add("UNIPROT:" + tokens[3])
+
+
+for _, rhea_term in rhea_terms.items():
+    rhea_term.categories += {uniprot_to_ec[relation] for relation in rhea_term.relations if relation in uniprot_to_ec}
+
 
 
 with gzip.open("Data/rhea2uniprot_trembl.tsv.gz", "rt") as infile:
@@ -627,10 +776,23 @@ with gzip.open("Data/rhea2uniprot_trembl.tsv.gz", "rt") as infile:
         if tokens[3] not in uniprot_to_organism: continue
         organism = uniprot_to_organism[tokens[3]]
 
-        if tokens[0] not in rhea_terms_organisms[organism]: rhea_terms_organisms[organism][tokens[0]] = set()
-        rhea_terms_organisms[organism][tokens[0]].add(tokens[3])
-        if tokens[2] not in rhea_terms_organisms[organism]: rhea_terms_organisms[organism][tokens[2]] = set()
-        rhea_terms_organisms[organism][tokens[2]].add(tokens[3])
+        if tokens[0] not in rhea_terms_organisms[organism]:
+            rhea_terms_organisms[organism][tokens[0]] = Term(
+                f"RHEA:{tokens[0]}",
+                f"Rhea reaction {tokens[0]}",
+                {"UNIPROT:" + tokens[3]}
+            )
+        else:
+            rhea_terms_organisms[organism][tokens[0]].relations.add("UNIPROT:" + tokens[3])
+
+        if tokens[2] not in rhea_terms_organisms[organism]:
+            rhea_terms_organisms[organism][tokens[2]] = Term(
+                f"RHEA:{tokens[2]}",
+                f"Rhea reaction {tokens[2]}",
+                {"UNIPROT:" + tokens[3]}
+            )
+        else:
+            rhea_terms_organisms[organism][tokens[2]].relations.add("UNIPROT:" + tokens[3])
 
 
 
@@ -817,14 +979,6 @@ for tax_name, tax_id in species.items():
     output.append(Term("LS:0000007", "Uniprot protein trembl").to_string())
     output.append(Term("LS:0000008", "Unspecific lipid").to_string())
 
-    # create organism-specific rhea terms
-    rhea_terms = {}
-    for rhea_term_id, uniprot_terms in rhea_terms_organisms[tax_id].items():
-        rhea_terms[rhea_term_id] = Term(
-            f"RHEA:{rhea_term_id}",
-            f"Rhea reaction {rhea_term_id}",
-            set(["UNIPROT:" + uniprot for uniprot in uniprot_terms])
-        )
 
     # reactome_tag = reactomes[tax_id]
     # for reactome_id, reactome_term in reactome_reactions.items():
@@ -864,8 +1018,10 @@ for tax_name, tax_id in species.items():
             output.append(gene_term.to_string())
 
 
-    for _, rhea_term in rhea_terms.items():
-        output.append(rhea_term.to_string())
+    # create organism-specific rhea terms
+    if tax_id in rhea_terms_organisms:
+        for _, rhea_term in rhea_terms_organisms[tax_id].items():
+            output.append(rhea_term.to_string())
 
 
     for _, chebi_term in chebi_terms.items():
