@@ -8,6 +8,36 @@ import os
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
 
+PROTEIN_CATEGORY_RULES = {
+    "Enzyme": [
+        "catalytic activity", "EC=", "oxidoreductase", "transferase",
+        "hydrolase", "lyase", "isomerase", "ligase"
+    ],
+    "Structural": [
+        "structural molecule activity", "cytoskeleton", "extracellular matrix",
+        "filament", "scaffold", "collagen"
+    ],
+    "Transport": [
+        "transporter activity", "channel activity", "carrier activity",
+        "oxygen transport", "ion transport", "permease"
+    ],
+    "Storage": [
+        "nutrient reservoir activity", "storage", "ferritin", "casein", "ovalbumin"
+    ],
+    "Signaling": [
+        "signal transduction", "receptor", "hormone", "ligand",
+        "cytokine", "transcription factor", "gpcr"
+    ],
+    "Defense": [
+        "immune response", "antibody", "defensin", "complement",
+        "toxin", "antimicrobial", "venom"
+    ],
+    "Motor": [
+        "motor activity", "myosin", "kinesin", "dynein", "movement"
+    ]
+}
+
+
 # Map EC class (first digit) to category
 EC_CATEGORY = {
     "1": "Oxidation–Reduction (Oxidoreductases)",
@@ -398,8 +428,7 @@ with open("Data/chebi.csv", "rt") as infile:
     print("reading chebi")
     for line in infile:
         tokens = line.strip().split("\t")
-        chebi_terms_all[tokens[0]] = Term("CHEBI:" + tokens[0], tokens[1], set(["CHEBI:" + t for t in tokens[2:]]) if len(tokens) > 2 else set())
-        chebi_terms_all[tokens[0]].relations.add("LS:0000005")
+        chebi_terms_all[tokens[0]] = Term("CHEBI:" + tokens[0], tokens[1], {"LS:0000005"} | {"CHEBI:" + t for t in tokens[2:]} if len(tokens) > 2 else {"LS:0000005"})
 
 
 # max_depth = 2
@@ -419,6 +448,8 @@ with open("Data/chebi.csv", "rt") as infile:
 print("set metabolite categories")
 chebi_tree = {}
 for chebi_id, c_term in chebi_obo.items():
+    chebi_pure_id = chebi_id.split(":")[1]
+    if chebi_pure_id not in chebi_terms_all: chebi_terms_all[chebi_pure_id] = Term(chebi_id, c_term.name, c_term.relations | {"LS:0000005"})
     for relation in c_term.relations:
         if relation not in chebi_tree: chebi_tree[relation] = [chebi_id]
         else: chebi_tree[relation].append(chebi_id)
@@ -426,10 +457,15 @@ for chebi_id, c_term in chebi_obo.items():
 for chebi_id, category in CHEBI_CATEGORY_MAPPING.items():
     if chebi_id not in chebi_tree: continue
     queue = [chebi_id]
+    visited_terms = set()
     while queue:
         current_chebi_id = queue.pop()
-        if current_chebi_id in chebi_terms_all:
-            chebi_terms_all[current_chebi_id].categories.add(category)
+        chebi_pure_id = current_chebi_id.split(":")[1]
+        if current_chebi_id in visited_terms: continue
+        visited_terms.add(current_chebi_id)
+
+        if chebi_pure_id in chebi_terms_all:
+            chebi_terms_all[chebi_pure_id].categories.add(category)
         if current_chebi_id in chebi_tree:
             queue += chebi_tree[current_chebi_id]
 
@@ -506,17 +542,20 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
         protein_name = gene_name if len(gene_name) > 0 else uniprot
 
         go_terms = {"LS:0000004" if reviewed else "LS:0000007"}
-        categories = set(tokens[5].split(", ")) if len(tokens) > 5 and len(tokens[5]) > 0 else set()
+        #categories = set(tokens[5].split(", ")) if len(tokens) > 5 and len(tokens[5]) > 0 else set()
         uniprot_term = "UNIPROT:" + uniprot
 
+        function_terms = []
+
         if len(tokens) > 3 and len(tokens[3]) > 0 and tokens[3].find("[") > -1:
+            function_terms.append(tokens[3].lower())
             for entry in tokens[3].split("["):
                 go_term = entry.split("]")[0]
                 if len(go_term) != 10 or go_term[:3] != "GO:": continue
                 go_terms.add(go_term)
 
         if len(tokens) > 4 and len(tokens[4]) > 0 and tokens[4][0] in EC_CATEGORY:
-            uniprot_to_ec[uniprot] = EC_CATEGORY[tokens[4][0]]
+            uniprot_to_ec[uniprot_term] = EC_CATEGORY[tokens[4][0]]
 
         gene_ids = set()
         if len(tokens) > 7 and len(tokens[7]) > 1:
@@ -525,6 +564,19 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
         if len(tokens) > 9 and len(tokens[9]) > 1:
             for ncbi_id in tokens[9].strip(';').split(";"):
                 gene_ids.add(f"NCBI:{ncbi_id}")
+
+        if len(tokens) > 10 and len(tokens[10]) > 1:
+            function_terms.append(tokens[10].lower())
+
+        if len(tokens) > 11 and len(tokens[11]) > 1:
+            function_terms.append(tokens[11].lower())
+
+        categories = set()
+        for cat, patterns in PROTEIN_CATEGORY_RULES.items():
+            for pattern in patterns:
+                if any(pattern in txt for txt in function_terms):
+                    categories.add(cat)
+
 
         term = Term(uniprot_term, protein_name, _relations = go_terms | gene_ids, _categories = categories)
         uniprot_terms_organisms[organisms_id][uniprot] = term
@@ -576,7 +628,6 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
                     ensembl_term = Term(ENT, gene_name if len(gene_name) > 0 else ENT, {"LS:0000006", ENP, ENG})
                     ensembl_organism[ENT] = ensembl_term
                     ensembl_terms[ENT] = ensembl_term
-
 
 
 
@@ -723,14 +774,13 @@ with open("Data/ReactomePathwaysRelation.txt") as infile:
         if len(tokens) < 2 or tokens[0] not in pathway_terms or tokens[1] not in pathway_terms: continue
         pathway_terms[tokens[1]].relations.add(tokens[0])
 
-
-
-    for rhea_term_id, uniprot_terms in rhea_terms_organisms[tax_id].items():
-        rhea_terms[rhea_term_id] = Term(
-            f"RHEA:{rhea_term_id}",
-            f"Rhea reaction {rhea_term_id}",
-            set(["UNIPROT:" + uniprot for uniprot in uniprot_terms])
-        )
+    #
+    # for rhea_term_id, uniprot_terms in rhea_terms_organisms[tax_id].items():
+    #     rhea_terms[rhea_term_id] = Term(
+    #         f"RHEA:{rhea_term_id}",
+    #         f"Rhea reaction {rhea_term_id}",
+    #         set(["UNIPROT:" + uniprot for uniprot in uniprot_terms])
+    #     )
 
 
 rhea_terms_organisms = {tax_id: {} for tax_id in uniprot_terms_organisms}
@@ -761,9 +811,9 @@ with open("Data/rhea2uniprot_sprot.tsv", "rt") as infile:
         else:
             rhea_terms_organisms[organism][tokens[2]].relations.add("UNIPROT:" + tokens[3])
 
-
-for _, rhea_term in rhea_terms.items():
-    rhea_term.categories += {uniprot_to_ec[relation] for relation in rhea_term.relations if relation in uniprot_to_ec}
+for _, rhea_terms in rhea_terms_organisms.items():
+    for _, rhea_term in rhea_terms.items():
+        rhea_term.categories |= {uniprot_to_ec[relation] for relation in rhea_term.relations if relation in uniprot_to_ec}
 
 
 
