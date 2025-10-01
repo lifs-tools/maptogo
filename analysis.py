@@ -22,10 +22,11 @@ import io
 from scipy.cluster.hierarchy import linkage, leaves_list, dendrogram
 from scipy.spatial.distance import squareform
 from statsmodels.stats.multitest import multipletests
-from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry, OntologyTerm
+from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry, OntologyTerm, TermType
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
+from pygoslin.domain.LipidAdduct import LipidAdduct
 import pathlib
 import time
 import hashlib
@@ -53,8 +54,8 @@ try:
 except Exception as e:
     organisms = {
         'Homo sapiens': '9606',
-        'Mus musculus': '10090',
-        'Bacillus cereus': "405534",
+        #'Mus musculus': '10090',
+        #'Bacillus cereus': "405534",
         # 'Saccharomyces cerevisiae': '4932',
         # 'Escherichia coli': '562',
         # 'Drosophila melanogaster': '7227',
@@ -2699,8 +2700,6 @@ def open_sankeyplot(
     barplot_controls_style,
     sunburst_controls_style,
 ):
-    raise exceptions.PreventUpdate
-
     if session_id == None or n_clicks == None:
         raise exceptions.PreventUpdate
 
@@ -2745,53 +2744,67 @@ def open_sankeyplot(
 
     flow_data = {}
     flow_data_id = {}
+    lipidome = session.background_lipids
     for target_term_id in selected_term_ids:
-        target_term = terms[target_term_id.split("|")[0]]
+        target_term_id_single = target_term_id.split("|")[0]
+        target_term = terms[target_term_id_single]
 
-        molecules = sorted(list(session.data[target_term_id].source_terms))
-        molecule_table = []
+        for molecule in session.data[target_term_id_single].source_terms:
+            path_layers = []
 
-        if with_lipids:
-            molecule_table += [molecule for molecule in molecules if molecule in background_lipids]
+            # determine category path
+            for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
+                if type(term) == str: term_id = term
+                else: term_id = list(term.term_id)[0]
 
-        if with_proteins:
-            molecule_table += [molecule for molecule in molecules if molecule in background_proteins]
+                if not term_id in ontology.ontology_terms:
+                    if term_id in lipidome and type(lipidome[term_id]) == LipidAdduct:
+                        lipid_category = lipidome[term_id].get_lipid_string(LipidLevel.CATEGORY)
+                        if not path_layers or path_layers[-1][0] != TermType.LIPID_SPECIES:
+                            path_layers.append((TermType.LIPID_SPECIES, [{lipid_category}]))
+                        else:
+                            path_layers[-1][1].append({lipid_category})
 
-        if with_metabolites:
-            molecule_table += [molecule for molecule in molecules if molecule in background_metabolites]
+                if term_id in ontology.ontology_terms:
+                    term_type = ontology.ontology_terms[term_id].term_type
+                    if term_type == TermType.LIPID_CLASS: term_type = TermType.LIPID_SPECIES
+                    elif term_type in {TermType.UNREVIEWED_PROTEIN, TermType.ENSEMBLE_PROTEIN}: term_type = TermType.REVIEWED_PROTEIN
+                    elif term_type == TermType.ENSEMBLE_GENE: term_type = TermType.GENE
 
-        if with_transcripts:
-            molecule_table = [molecule for molecule in molecules if molecule in background_transcripts and (m := molecule.split(".")[0])]
+                    if term_type != TermType.UNCLASSIFIED_TERM:
+                        if not path_layers or path_layers[-1][0] != term_type:
+                            path_layers.append((term_type, [ontology.ontology_terms[term_id].categories]))
+                        else:
+                            path_layers[-1][1].append(ontology.ontology_terms[term_id].categories)
 
-        for molecule in molecule_table:
-            term_path = []
-            last_term = None
-            for term in get_path(session.all_parent_nodes[molecule], target_term):
-                if type(term) != OntologyTerm: continue
-                # if type(term) == str: term_id = term
-                # else: term_id = list(term.term_id)[0]
-                # if term_id in ontology.ontology_terms:
-                #     term_name = term.name if type(term) == OntologyTerm else ontology.ontology_terms[term_id].name
-                if last_term != None:
-                    last_term_nodes = [last_term.name] if len(last_term.domain) > 0 or len(last_term.categories) == 0 else last_term.categories
-                    term_nodes = [term.name] if len(term.domain) > 0 or len(term.categories) == 0 else term.categories
+                    else:
+                        if not path_layers or path_layers[-1][0] != ontology.ontology_terms[term_id].domain:
+                            path_layers.append((ontology.ontology_terms[term_id].domain, [{ontology.ontology_terms[term_id].name}]))
+                        else:
+                            path_layers[-1][1].append({ontology.ontology_terms[term_id].name})
 
-                    for term_node in term_nodes:
-                        if term_node not in flow_data_id:
-                            flow_data_id[term_node] = len(flow_data_id)
-                            flow_data[flow_data_id[term_node]] = {}
+            if len(path_layers) < 2: continue
+            for pos in range(len(path_layers) - 1):
+                path_key_prev, layers_list_prev = path_layers[pos]
+                categories_prev = layers_list_prev[0] if type(path_key_prev) == TermType else layers_list_prev[-1]
+                path_key_next, layers_list_next = path_layers[pos + 1]
+                categories_next = layers_list_next[0] if type(path_key_next) == TermType else layers_list_next[-1]
 
-                    for last_term_node in last_term_nodes:
-                        if last_term_node not in flow_data_id:
-                            flow_data_id[last_term_node] = len(flow_data_id)
-                            flow_data[flow_data_id[last_term_node]] = {}
-                        last_flow_data = flow_data[flow_data_id[last_term_node]]
-                        for term_node in term_nodes:
-                            term_node_id = flow_data_id[term_node]
-                            if term_node_id not in last_flow_data:
-                                last_flow_data[term_node_id] = 0
-                            last_flow_data[term_node_id] += 1
-                last_term = term
+                for category_next in categories_next:
+                    if category_next not in flow_data_id:
+                        flow_data_id[category_next] = len(flow_data_id)
+                        flow_data[flow_data_id[category_next]] = {}
+
+                for category_prev in categories_prev:
+                    if category_prev not in flow_data_id:
+                        flow_data_id[category_prev] = len(flow_data_id)
+                        flow_data[flow_data_id[category_prev]] = {}
+                    last_flow_data = flow_data[flow_data_id[category_prev]]
+                    for category_next in categories_next:
+                        term_node_id = flow_data_id[category_next]
+                        if term_node_id not in last_flow_data:
+                            last_flow_data[term_node_id] = 0
+                        last_flow_data[term_node_id] += 1
 
     fig_source, fig_target, fig_value = [], [], []
     fig_label = sorted([f for f in flow_data_id], key = lambda f: flow_data_id[f])
@@ -2818,6 +2831,9 @@ def open_sankeyplot(
             )
         )
     )
+    fig.update_layout(
+        margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
+    )
 
     #
     # fig.add_trace(go.Sunburst(
@@ -2836,14 +2852,11 @@ def open_sankeyplot(
     #     customdata = custom_data,
     #     hovertemplate="%{customdata}<extra></extra>",
     # ))
-    # fig.update_layout(
-    #     margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
-    # )
 
     return (
         True,
         fig,
-        "70%",
+        "90%",
         {'height': '70vh'},
         False,
         "",
@@ -3557,6 +3570,7 @@ def show_molecule_term_path(
         else: term_id = list(term.term_id)[0]
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
         href, term_name = ".", ""
+
         if term_id in ontology.ontology_terms:
             term_name = term.name if type(term) == OntologyTerm else ontology.ontology_terms[term_id].name
             if term_id.startswith("GO:"):
@@ -3624,7 +3638,6 @@ def show_molecule_term_path(
                 },
             ),
         )
-
     return False, "", term_path
 
 

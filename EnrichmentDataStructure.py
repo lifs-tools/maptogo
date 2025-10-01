@@ -13,6 +13,24 @@ import traceback
 import pickle
 import os
 import csv
+from enum import Enum
+
+class TermType(Enum):
+    # Undefined / non-inferable lipid level
+    LIPID_CLASS = 1                 # special handling
+    LIPID_SPECIES = 2               # special handling
+    CARBON_CHAIN = 3                # special handling
+    UNSPECIFIC_LIPID = 4            # special handling
+    REVIEWED_PROTEIN = 5            # special handling
+    UNREVIEWED_PROTEIN = 6          # special handling
+    ENSEMBLE_PROTEIN = 7            # special handling
+    METABOLITE = 8                  # special handling
+    GENERIC_REACTION = 9
+    ENSEMBLE_TRANSCRIPT = 10        # special handling
+    ENSEMBLE_GENE = 11              # special handling
+    GENE = 12
+    UNCLASSIFIED_TERM = 99
+
 
 SKIP_LOADING = False
 
@@ -75,6 +93,7 @@ class OntologyTerm:
 
         self.term_id = sorted(list(_term_id) if type(_term_id) in {list, set} else list(_term_id.split("|")))
         self.term_id_str = "|".join(sorted(list(self.term_id)))
+        self.term_type = TermType.UNCLASSIFIED_TERM
         self.name = _name
         self.relations = sorted([r for r in _relations if r != ""])
         self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {"", "external"}
@@ -136,45 +155,48 @@ class EnrichmentOntology:
                     term_id, name, relations, synonyms, domain, categories = tokens
                     relations_split = relations.split("|")
                     synonyms = synonyms.split("|")
-                    term_type = ord(relations[pos + 9]) - 48 if (pos := relations.find("LS:000000")) > 0 else 0
+                    moea_pos = relations.find("MOEA:00000")
+                    term_type = TermType(int(relations[moea_pos + 5 : moea_pos + 12])) if moea_pos > -1 else TermType.UNCLASSIFIED_TERM
 
                     term = OntologyTerm(term_id, name, relations_split, domain, categories)
+                    term.term_type = term_type
                     str_term_id = term.term_id_str
                     match term_type:
-                        case 1: # lipid class
+                        case TermType.LIPID_CLASS: # lipid class
                             if name not in self.lipid_classes: self.lipid_classes[name] = []
                             self.lipid_classes[name].append(term)
                             for synonym in synonyms:
                                 if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
                                 self.lipid_classes[synonym].append(term)
 
-                        case 2: # lipid species
+                        case TermType.LIPID_SPECIES: # lipid species
                             if name not in self.lipids: self.lipids[name] = term
 
-                        case 3: # carbon chain
+                        case TermType.CARBON_CHAIN: # carbon chain
                             if name not in self.carbon_chains: self.carbon_chains[name] = term
                             for synonym in synonyms:
                                 self.carbon_chains[synonym] = term
 
-                        case 4: # reviewed protein
-                            if str_term_id not in self.proteins:
-                                self.proteins[str_term_id] = term
-                                self.reviewed_proteins.add(str_term_id)
-
-                        case 5: # metabolite
-                            if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
-
-                        case 6: # stable transcript
-                            if str_term_id not in self.transcripts: self.transcripts[str_term_id] = term
-
-                        case 7: # unreviewed protein
-                            if str_term_id not in self.proteins: self.proteins[str_term_id] = term
-
-                        case 8:
+                        case TermType.UNSPECIFIC_LIPID:
                             if name.lower() not in self.unspecific_lipids: self.unspecific_lipids[name.lower()] = term
                             for synonym in synonyms:
                                 if synonym.lower() not in self.unspecific_lipids:
                                     self.unspecific_lipids[synonym.lower()] = term
+
+                        case TermType.REVIEWED_PROTEIN: # reviewed protein
+                            if str_term_id not in self.proteins:
+                                self.proteins[str_term_id] = term
+                                self.reviewed_proteins.add(str_term_id)
+
+                        case TermType.UNREVIEWED_PROTEIN: # unreviewed protein
+                            if str_term_id not in self.proteins: self.proteins[str_term_id] = term
+
+                        case TermType.ENSEMBLE_PROTEIN | TermType.ENSEMBLE_TRANSCRIPT | TermType.ENSEMBLE_GENE: # ensemble
+                            if str_term_id not in self.transcripts: self.transcripts[str_term_id] = term
+
+                        case TermType.METABOLITE: # metabolite
+                            if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
+
 
                     for d in domain.split("|"):
                         if len(d) > 0 and d != "external":
