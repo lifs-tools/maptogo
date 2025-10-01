@@ -626,10 +626,22 @@ def layout():
             id = "barplot_terms_modal",
             zIndex = 10000,
             children = [
-                dcc.Graph(
-                    id = "barplot_terms",
-                    config = plotly_config,
-                    style = {'height': '80vh'},
+                html.Div(
+                    dcc.Graph(
+                        id = "barplot_terms",
+                        config = {**plotly_config, **{"responsive": True}},
+                        style = {
+                            "height": "100%",
+                            "width": "100%",
+                        },
+                    ),
+                    id = "barplot_terms_wrapper",
+                    style = {
+                        "resize": "both",
+                        "overflow": "hidden",
+                        "width": "100%",
+                        "height": "70vh",
+                    }
                 ),
                 html.Div(
                     dmc.SimpleGrid(
@@ -2488,7 +2500,7 @@ def open_term_window(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
     Output("barplot_terms_modal", "size", allow_duplicate = True),
-    Output("barplot_terms", "style", allow_duplicate = True),
+    Output("barplot_terms_wrapper", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
@@ -2503,6 +2515,7 @@ def open_term_window(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
 def open_sunburstplot(
@@ -2514,6 +2527,7 @@ def open_sunburstplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
+    barplot_terms_wrapper_style,
 ):
     if session_id == None or n_clicks == None:
         raise exceptions.PreventUpdate
@@ -2655,14 +2669,15 @@ def open_sunburstplot(
         hovertemplate="%{customdata}<extra></extra>",
     ))
     fig.update_layout(
-        margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
+        margin = dict(t = 5, l = 5, r = 5, b = 5),
     )
+    barplot_terms_wrapper_style["height"] = "70vh"
 
     return (
         True,
         fig,
         "70%",
-        {'height': '70vh'},
+        barplot_terms_wrapper_style,
         False,
         "",
         barplot_controls_style,
@@ -2677,7 +2692,7 @@ def open_sunburstplot(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
     Output("barplot_terms_modal", "size", allow_duplicate = True),
-    Output("barplot_terms", "style", allow_duplicate = True),
+    Output("barplot_terms_wrapper", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
@@ -2690,6 +2705,7 @@ def open_sunburstplot(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
 def open_sankeyplot(
@@ -2699,6 +2715,7 @@ def open_sankeyplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
+    barplot_terms_wrapper_style,
 ):
     if session_id == None or n_clicks == None:
         raise exceptions.PreventUpdate
@@ -2750,7 +2767,7 @@ def open_sankeyplot(
         target_term = terms[target_term_id_single]
 
         for molecule in session.data[target_term_id_single].source_terms:
-            path_layers = []
+            path_layers = [[None, [{"Input molecules"}]]]
 
             # determine category path
             for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
@@ -2783,7 +2800,7 @@ def open_sankeyplot(
                         else:
                             path_layers[-1][1].append({ontology.ontology_terms[term_id].name})
 
-            if len(path_layers) < 2: continue
+            if len(path_layers) < 3: continue
             for pos in range(len(path_layers) - 1):
                 path_key_prev, layers_list_prev = path_layers[pos]
                 categories_prev = layers_list_prev[0] if type(path_key_prev) == TermType else layers_list_prev[-1]
@@ -2814,7 +2831,6 @@ def open_sankeyplot(
             fig_source.append(source_node_id)
             fig_target.append(target_node_id)
             fig_value.append(value)
-            print(source_node, source_node_id, target_node_id, value)
 
     fig = go.Figure(
         go.Sankey(
@@ -2832,7 +2848,9 @@ def open_sankeyplot(
         )
     )
     fig.update_layout(
-        margin = dict(t = 0, l = 0, r = 0, b = 0)  # top, left, right, bottom
+        margin = dict(t = 5, l = 5, r = 5, b = 5),
+        autosize = True,
+        height = None,
     )
 
     #
@@ -2853,11 +2871,13 @@ def open_sankeyplot(
     #     hovertemplate="%{customdata}<extra></extra>",
     # ))
 
+    barplot_terms_wrapper_style["height"] = "80vh"
+
     return (
         True,
         fig,
         "90%",
-        {'height': '70vh'},
+        barplot_terms_wrapper_style,
         False,
         "",
         barplot_controls_style,
@@ -2872,7 +2892,7 @@ def open_sankeyplot(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
     Output("barplot_terms_modal", "size", allow_duplicate = True),
-    Output("barplot_terms", "style", allow_duplicate = True),
+    Output("barplot_terms_wrapper", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
@@ -2887,6 +2907,7 @@ def open_sankeyplot(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
 def open_barplot(
@@ -2900,6 +2921,7 @@ def open_barplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
+    barplot_terms_wrapper_style,
 ):
     if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"} or bar_sorting not in {BAR_SORTING_PVALUE, BAR_SORTING_SIMILARITY} or type(jaccard_ths) not in {float, int}:
         raise exceptions.PreventUpdate
@@ -3355,14 +3377,20 @@ def open_barplot(
         dragmode = False,
         width = CIRCLE_WIDTH * 2,
         height = CIRCLE_WIDTH * 2,
-        margin = dict(
-            l = 0,
-            r = 0,
-            t = 0,
-            b = 0
-        ),
+        margin = dict(t = 5, l = 5, r = 5, b = 5),
     )
-    return True, fig, CIRCLE_WIDTH * 2 + 50, {}, False, "", barplot_controls_style, sunburst_controls_style
+    barplot_terms_wrapper_style["height"] = "50%"
+
+    return (
+        True,
+        fig,
+        CIRCLE_WIDTH * 2 + 50,
+        barplot_terms_wrapper_style,
+        False,
+        "",
+        barplot_controls_style,
+        sunburst_controls_style,
+    )
 
 
 
@@ -3370,7 +3398,7 @@ def open_barplot(
     Output("barplot_terms_modal", "opened", allow_duplicate = True),
     Output("barplot_terms", "figure", allow_duplicate = True),
     Output("barplot_terms_modal", "size", allow_duplicate = True),
-    Output("barplot_terms", "style", allow_duplicate = True),
+    Output("barplot_terms_wrapper", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
@@ -3379,9 +3407,16 @@ def open_barplot(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
-def open_histogram(n_clicks, session_id, barplot_controls_style, sunburst_controls_style):
+def open_histogram(
+    n_clicks,
+    session_id,
+    barplot_controls_style,
+    sunburst_controls_style,
+    barplot_terms_wrapper_style,
+):
 
     if session_id not in sessions:
         return (
@@ -3409,11 +3444,26 @@ def open_histogram(n_clicks, session_id, barplot_controls_style, sunburst_contro
         )
     )
     fig.update_layout(
-        title = 'P-value Histogram',
         xaxis_title = 'Uncorrected p-values',
         yaxis_title = 'Count',
+        margin = dict(
+            l = 0,
+            r = 0,
+            t = 0,
+            b = 0
+        ),
     )
-    return True, fig, "90%", {'height': '80vh'}, False, "", barplot_controls_style, sunburst_controls_style
+    barplot_terms_wrapper_style["height"] = "80%"
+    return (
+        True,
+        fig,
+        "90%",
+        barplot_terms_wrapper_style,
+        False,
+        "",
+        barplot_controls_style,
+        sunburst_controls_style,
+    )
 
 
 
