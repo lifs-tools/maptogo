@@ -299,6 +299,7 @@ for worksheet_name in xl.sheet_names:
 
 plotly_config = {
     "scrollZoom": False,
+    "displayModeBar": True,
     "modeBarButtonsToRemove": [
         "resetScale",
         "toImage",
@@ -453,6 +454,7 @@ def layout():
 
     return html.Div([
         dcc.Download(id = "download_data"),
+        dmc.TextInput(id = "html_download_trigger", style = {"display": "none"}),
         html.Div(session_id, id = "sessionid", style = {"display": "none"}),
         dcc.Loading(
             id = "loading_field",
@@ -717,6 +719,16 @@ def layout():
                         spacing = "xs",
                     ),
                     id = "sunburst_controls",
+                    style = {"marginTop": "10px"},
+                ),
+                html.Div(
+                    dmc.Switch(
+                        id = "switch_sankey_regulated_only",
+                        checked = False,
+                        label = "Regulated molecules only",
+                        style = {"paddingBottom": "8px", "paddingRight": "2px"},
+                    ),
+                    id = "sankey_controls",
                     style = {"marginTop": "10px"},
                 ),
             ],
@@ -2227,6 +2239,23 @@ def download_table(
 
 
 @callback(
+    Output("download_data", "data", allow_duplicate = True),
+    Output("html_download_trigger", "value", allow_duplicate = True),
+    Input("html_download_trigger", "value"),
+    prevent_initial_call = True
+)
+def download_html_figure(json_figure):
+    if json_figure == None or len(json_figure) == 0:
+        raise exceptions.PreventUpdate
+    figure = go.Figure(json.loads(json_figure))
+    buffer = io.StringIO()
+    figure.write_html(buffer)
+    html_code = buffer.getvalue()
+    return dict(content = html_code, filename = "enrichment_figure.html"), ""
+
+
+
+@callback(
     Output("load_examples_modal", "opened", allow_duplicate = True),
     Input("load_examples_link", "n_clicks"),
     prevent_initial_call = True,
@@ -2505,6 +2534,7 @@ def open_term_window(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
+    Output("sankey_controls", "style", allow_duplicate = True),
     Output("barplot_numberinput_max_pvalue", "value", allow_duplicate = True),
     Output("barplot_numberinput_min_pvalue", "value", allow_duplicate = True),
     Input("sunburst_results", "n_clicks"),
@@ -2515,6 +2545,7 @@ def open_term_window(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
@@ -2527,6 +2558,7 @@ def open_sunburstplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
+    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
     if session_id == None or n_clicks == None:
@@ -2574,6 +2606,7 @@ def open_sunburstplot(
 
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "block"
+    sankey_controls_style["display"] = "none"
     fig = go.Figure()
     ontology = session.ontology
     domains = session.domains
@@ -2682,6 +2715,7 @@ def open_sunburstplot(
         "",
         barplot_controls_style,
         sunburst_controls_style,
+        sankey_controls_style,
         no_update,
         no_update,
     )
@@ -2697,27 +2731,32 @@ def open_sunburstplot(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
+    Output("sankey_controls", "style", allow_duplicate = True),
     Output("barplot_numberinput_max_pvalue", "value", allow_duplicate = True),
     Output("barplot_numberinput_min_pvalue", "value", allow_duplicate = True),
     Input("sankey_results", "n_clicks"),
+    Input("switch_sankey_regulated_only", "checked"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
 def open_sankeyplot(
     n_clicks,
+    switch_sankey_regulated_only,
     row_data,
     selected_rows,
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
+    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
-    if session_id == None or n_clicks == None:
+    if session_id == None or n_clicks == None or switch_sankey_regulated_only == None:
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -2741,6 +2780,7 @@ def open_sankeyplot(
 
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "none"
+    sankey_controls_style["display"] = "block"
 
     background_lipids = session.background_lipids
     regulated_lipids = session.regulated_lipids
@@ -2751,13 +2791,13 @@ def open_sankeyplot(
     background_transcripts = session.background_transcripts
     regulated_transcripts = session.regulated_transcripts
 
-    with_lipids = background_lipids != None
-    with_proteins = background_proteins != None
-    with_metabolites = background_metabolites != None
-    with_transcripts = background_transcripts != None
-
-    if with_lipids:
-        background_lipids = set(background_lipids.keys())
+    if switch_sankey_regulated_only:
+        regulated_molecules = (
+            rl if (rl := session.regulated_lipids) != None else set() |
+            rp if (rl := session.regulated_proteins) != None else set() |
+            rm if (rl := session.regulated_metabolites) != None else set() |
+            rt if (rl := session.regulated_transcripts) != None else set()
+        )
 
     flow_data = {}
     flow_data_id = {}
@@ -2767,6 +2807,7 @@ def open_sankeyplot(
         target_term = terms[target_term_id_single]
 
         for molecule in session.data[target_term_id_single].source_terms:
+            if switch_sankey_regulated_only and molecule not in regulated_molecules: continue
             path_layers = [[None, [{"Input molecules"}]]]
 
             # determine category path
@@ -2823,10 +2864,14 @@ def open_sankeyplot(
                             last_flow_data[term_node_id] = 0
                         last_flow_data[term_node_id] += 1
 
+    pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
     fig_source, fig_target, fig_value = [], [], []
+    node_colors, edge_colors = [], []
     fig_label = sorted([f for f in flow_data_id], key = lambda f: flow_data_id[f])
-    for source_node in fig_label:
+    for i, source_node in enumerate(fig_label):
         source_node_id = flow_data_id[source_node]
+        node_colors.append(pastel_colors[i % len(pastel_colors)])
+        edge_colors += [pastel_colors[i % len(pastel_colors)]] * len(flow_data[source_node_id])
         for target_node_id, value in flow_data[source_node_id].items():
             fig_source.append(source_node_id)
             fig_target.append(target_node_id)
@@ -2838,12 +2883,16 @@ def open_sankeyplot(
             node = dict(
                 label = fig_label,
                 align = "right",
+                color = node_colors,
+                pad = 20,
+                thickness = 40,
             ),
             link = dict(
                 arrowlen = 15,
                 source = fig_source,
                 target = fig_target,
                 value = fig_value,
+                color = edge_colors,
             )
         )
     )
@@ -2882,6 +2931,7 @@ def open_sankeyplot(
         "",
         barplot_controls_style,
         sunburst_controls_style,
+        sankey_controls_style,
         no_update,
         no_update,
     )
@@ -2897,6 +2947,7 @@ def open_sankeyplot(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
+    Output("sankey_controls", "style", allow_duplicate = True),
     Input("chart_results", "n_clicks"),
     Input("barplot_numberinput_connect_ths", "value"),
     Input("barplot_numberinput_font_size", "value"),
@@ -2907,6 +2958,7 @@ def open_sankeyplot(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
@@ -2921,6 +2973,7 @@ def open_barplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
+    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
     if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"} or bar_sorting not in {BAR_SORTING_PVALUE, BAR_SORTING_SIMILARITY} or type(jaccard_ths) not in {float, int}:
@@ -2954,6 +3007,7 @@ def open_barplot(
     multiomics = sum([with_lipids + with_proteins + with_metabolites + with_transcripts]) > 1
     barplot_controls_style["display"] = "block"
     sunburst_controls_style["display"] = "none"
+    sankey_controls_style["display"] = "none"
 
     fig = go.Figure()
     id_position = {row["termid"]: i for i, row in enumerate(row_data)}
@@ -3390,6 +3444,7 @@ def open_barplot(
         "",
         barplot_controls_style,
         sunburst_controls_style,
+        sankey_controls_style,
     )
 
 
@@ -3403,10 +3458,12 @@ def open_barplot(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
+    Output("sankey_controls", "style", allow_duplicate = True),
     Input("histogram_results", "n_clicks"),
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
+    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
@@ -3415,6 +3472,7 @@ def open_histogram(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
+    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
 
@@ -3434,6 +3492,7 @@ def open_histogram(
     results = sessions[session_id].result
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "none"
+    sankey_controls_style["display"] = "none"
 
     fig = go.Figure()
     fig.add_trace(
@@ -3463,6 +3522,7 @@ def open_histogram(
         "",
         barplot_controls_style,
         sunburst_controls_style,
+        sankey_controls_style,
     )
 
 
@@ -3493,6 +3553,28 @@ clientside_callback(
             },
             click: function(gd) {
                 Plotly.downloadImage(gd, {format: "svg", filename: "barplot"});
+            }
+        });
+
+        graph_config.modeBarButtonsToAdd.push({
+            name: 'download_html',
+            title: 'Download as standalone interactive html',
+            icon: {
+                width: 24,
+                height: 24,
+                path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
+            },
+            click: function(gd) {
+                var gd_figure = {
+                    data: gd.data,
+                    layout: gd.layout
+                };
+                var html_download_trigger = document.getElementById('html_download_trigger');
+                var gd_str = JSON.stringify(gd_figure);
+                var _setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                _setter.call(html_download_trigger, gd_str);
+                var ev = new Event('input', { bubbles: true });
+                html_download_trigger.dispatchEvent(ev);
             }
         });
         return window.dash_clientside.no_update;

@@ -704,7 +704,7 @@ for ensembl_file, organism, ensembl_cds in ensembl_files:
                 tokens = inline[1:].strip().split(" ")
                 ensembl_prot = tokens[0].split(".")[0]
                 ensembl_gene = tokens[3][5:].split(".")[0]
-                biotype = tokens[4][13:]
+                biotype = gene_biotype_dict[bt] if (bt := tokens[4][13:]) in gene_biotype_dict else "Unclassified gene"
                 if ensembl_prot in ensembl_terms: ensembl_terms[ensembl_prot].categories.add(biotype)
                 if ensembl_gene in ensembl_terms: ensembl_terms[ensembl_gene].categories.add(biotype)
 
@@ -1019,23 +1019,15 @@ for line in open("Data/hgnc_to_mondo.csv").read().split("\n"):
 
 
 for ensembl_id, ensembl_term in ensembl_terms.items():
-    if ensembl_id == "ENST00000632585":
-        print(ensembl_term.relations, ensembl_term.categories)
-        print("HGNC:5835" in gene_terms)
     for relation_id in ensembl_term.relations:
         if relation_id in gene_terms:
             gene_terms[relation_id].categories |= ensembl_term.categories
-            if ensembl_id == "ENST00000632585":
-                print(gene_terms[relation_id].to_string())
 
 
 for _, gene_term in gene_terms.items():
     if not gene_term.categories:
         gene_term.categories.add("Unclassified gene")
 
-
-print(gene_terms["HGNC:5835"].to_string())
-print(gene_term_organisms["9606"]["HGNC:5835"].to_string())
 
 
 go_terms = get_terms("Data/go-basic.obo", "GO:", True)
