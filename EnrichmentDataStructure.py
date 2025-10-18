@@ -29,6 +29,7 @@ class TermType(Enum):
     ENSEMBLE_TRANSCRIPT = 10        # special handling
     ENSEMBLE_GENE = 11              # special handling
     GENE = 12
+    INPUT_TERM = 90
     UNCLASSIFIED_TERM = 99
 
 
@@ -113,8 +114,6 @@ class OntologyResult:
         _fisher = None,
     ):
         if _fisher == None: _fisher = [0, 0, 0, 0]
-        if min(_fisher) < 0:
-            logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher}")
 
         self.term = _term
         self.pvalue = _pvalue
@@ -122,6 +121,9 @@ class OntologyResult:
         self.lor = _fisher[0] * _fisher[3] / (_fisher[1] * _fisher[2]) if _fisher[1] > 0 and _fisher[2] > 0 else 0
         self.source_terms = _source_terms
         self.fisher_data = _fisher
+
+        if min(_fisher) < 0:
+            logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher}")
 
 
 
@@ -257,19 +259,25 @@ class EnrichmentOntology:
             lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
             lipid_name = lipid.get_lipid_string()
             lipid_name_class = lipid.get_extended_class()
-            parent_nodes, path = {}, []
+            parent_nodes = {}
             all_parent_nodes[lipid_input_name] = parent_nodes
             lipid_term = self.lipids[lipid_name] if lipid_name in self.lipids else None
 
+            start_term = None
             if not lipid_term:
-                if lipid_input_name != lipid_name: path.append(lipid_input_name)
-                path.append(lipid_name)
+                parent_nodes[lipid_input_name] = None
+                if lipid_input_name != lipid_name:
+                    parent_nodes[lipid_name] = lipid_input_name
+                    start_term = lipid_name
+                else:
+                    start_term = lipid_input_name
             else:
-                if lipid_input_name != lipid_term.name: path.append(lipid_input_name)
-                path.append(lipid_term)
-            parent_nodes[path[0]] = None
-            if len(path) > 1: parent_nodes[path[1]] = path[0]
-            start_term = path[-1]
+                if lipid_input_name != lipid_term.name:
+                    parent_nodes[lipid_input_name] = None
+                    parent_nodes[lipid_term] = lipid_input_name
+                else:
+                    parent_nodes[lipid_term] = None
+                start_term = lipid_term
 
             if lipid_term != None:
                 all_paths.append([lipid_input_name, start_term, parent_nodes])

@@ -5,6 +5,17 @@ import sys
 import pickle
 import os
 
+uniport_accs = set()
+with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
+    print("Readin uniprot")
+    for i, line in enumerate(infile):
+        if i == 0: continue
+        tokens = line.strip().split("\t")
+        if len(tokens) < 2: continue
+        uniport_accs.add(tokens[0])
+
+
+
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
 
@@ -187,6 +198,10 @@ class Term:
         self.namespace = set(_namespace) if type(_namespace) in {list, set} else {_namespace}
         self.xref = set(_xref) if type(_xref) in {list, set} else {_xref}
         self.categories = set(_categories) if type(_categories) in {list, set} else {_categories}
+
+
+    def get_first_id(self):
+        return list(self.id)[0]
         
     def joining(self, a_set):
         return "|".join(sorted(list(a_set)))
@@ -219,7 +234,7 @@ with open("Data/LM.csv") as fin:
         lipid_maps_terms[tokens[0]] = Term(tokens[0], tokens[2], {"MOEA:0000004", "CHEBI:" + tokens[1]}, tokens[3:] if len(tokens) > 3 else set())
 
 
-def get_terms(term_file, prefix, upper = False):
+def get_terms(term_file, prefix, upper = False, with_relationship = False):
     ontology_terms = {}
 
     opener = open if term_file.lower()[-3:] != ".gz" else gzip.open
@@ -246,6 +261,10 @@ def get_terms(term_file, prefix, upper = False):
                 relation = line[5:].split(" ! ")[0].strip(" ").split(" ")[0]
                 relations.add(relation)
 
+            elif with_relationship and line.startswith("relationship: "):
+                relation = "GO:" + line[14:].split("GO:")[1].split(" ! ")[0]
+                relations.add(relation)
+
             elif line.startswith( "synonym:"):
                 synonyms.append(line.split("\"")[1])
 
@@ -264,34 +283,8 @@ def get_terms(term_file, prefix, upper = False):
     return ontology_terms
 
 
-print("writing chebi synonym table")
-chebi_obo = get_terms("Data/chebi.obo.gz", "CHEBI:")
-chebi_synonyms = {}
-for term_id, term in chebi_obo.items():
-    for synonym in term.synonyms:
-        chebi_synonyms[synonym] = term_id
-
-with gzip.open("../CHEBI_synonyms.csv.gz", "wt") as out:
-    for synonym, term_id in chebi_synonyms.items():
-        out.write(f"{synonym}\t{term_id}\n")
-
 
 def get_lipid_terms():
-    # import chebi to lipid dictionary
-    chebi_to_lipid = {t.split("\t")[0]: {t.split("\t")[1]} for t in open("Data/chebi_to_lipid.csv", "rt").read().split("\n") if t.find("\t") > -1}
-
-    for directory in ["ChEBI", "LipidMaps", "SwissLipids"]:
-        for line in open(f"Data/{directory}_chebi_to_lipid.csv", "rt").read().split("\n"):
-            if len(line) < 1: continue
-            tokens = line.split("\t")
-            if len(tokens) < 2: continue
-
-            for t in tokens[0].split(" | "):
-                if t not in chebi_to_lipid: chebi_to_lipid[t] = set()
-                chebi_to_lipid[t] |= set(tokens[1:]) - {""}
-
-
-
     # import LION ontology
     term_id, name, relations, synonyms, is_class, is_species, namespace, category = "", "", set(), [], False, False, "", None
     ontology_terms = {}
@@ -371,54 +364,85 @@ def get_lipid_terms():
 
 
 
+
+    # import chebi to lipid dictionary
+    chebi_to_lipid = {}
+    UNDEFINED = "UNDEFINED"
+    for file_prefix in ["", "ChEBI_", "LipidMaps_", "SwissLipids_"]:
+        for line in open(f"Data/{file_prefix}chebi_to_lipid.csv", "rt").read().split("\n"):
+            if len(line) < 1: continue
+            tokens = line.split("\t")
+            if len(tokens) < 2: continue
+
+            the_lipid = None
+            for lipid_name in tokens[1:]:
+                if lipid_name == "": continue
+                try:
+                    lipid = parser.parse(lipid_name)
+                    if not the_lipid or the_lipid.lipid.info.level.value < lipid.lipid.info.level.value:
+                        the_lipid = lipid
+                except:
+                    if lipid_name.startswith(UNDEFINED): continue
+                    if lipid_name in lipid_class_terms:
+                        if "lipid_name" == "PC": print(lipid_name, lipid_name in lipid_class_terms, tokens[0])
+                        for lipid_class_term in lipid_class_terms[lipid_name]:
+                            for chebi_id in tokens[0].split(" | "):
+                                lipid_class_term.relations.add("CHEBI:" + chebi_id)
+            if not the_lipid: continue
+
+            for t in tokens[0].split(" | "):
+                if t not in chebi_to_lipid: chebi_to_lipid[t] = the_lipid
+                elif chebi_to_lipid[t].lipid.info.level.value < the_lipid.lipid.info.level.value:
+                    chebi_to_lipid[t] = the_lipid
+
+
     chebi_lipid_terms = {}
     ls_id = 1000
-    UNDEFINED = "UNDEFINED"
-    for chebi_id, lipid_names in chebi_to_lipid.items():
-        for lipid_name in lipid_names:
-            if lipid_name.startswith(UNDEFINED) == UNDEFINED or lipid_name == "": continue
-            if lipid_name in lipid_class_terms:
-                for lipid_class_term in lipid_class_terms[lipid_name]:
-                    lipid_class_term.relations.add("CHEBI:" + chebi_id)
-                continue
+    for chebi_id, lipid in chebi_to_lipid.items():
+        lipid_name = lipid.get_lipid_string()
+        if lipid_name.startswith(UNDEFINED) or lipid_name == "": continue
 
-            lipid_translates = set()
-            try:
-                lipid = parser.parse(lipid_name)
-                lipid_category = lipid.get_lipid_string(LipidLevel.CATEGORY)
-                lipid_translates.add((lipid.get_lipid_string(), lipid_category))
-                if lipid.lipid.info.level.value >= LipidLevel.COMPLETE_STRUCTURE.value:
-                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.COMPLETE_STRUCTURE), lipid_category))
-                if lipid.lipid.info.level.value >= LipidLevel.FULL_STRUCTURE.value:
-                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.FULL_STRUCTURE), lipid_category))
-                if lipid.lipid.info.level.value >= LipidLevel.STRUCTURE_DEFINED.value:
-                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.STRUCTURE_DEFINED), lipid_category))
-                if lipid.lipid.info.level.value >= LipidLevel.SN_POSITION.value:
-                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.SN_POSITION), lipid_category))
-                if lipid.lipid.info.level.value >= LipidLevel.MOLECULAR_SPECIES.value:
-                    lipid.lipid.sort_fatty_acyl_chains()
-                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.MOLECULAR_SPECIES), lipid_category))
-                if lipid.lipid.info.level.value >= LipidLevel.SPECIES.value:
-                    lipid_translates.add((lipid.get_lipid_string(LipidLevel.SPECIES), lipid_category))
+        lipid_category = lipid.get_lipid_string(LipidLevel.CATEGORY)
+        lipid_translates = [lipid.get_lipid_string()]
 
-            except Exception as e:
-                lipid_translates.add((lipid_name, ""))
+        for lipid_level in [LipidLevel.COMPLETE_STRUCTURE, LipidLevel.FULL_STRUCTURE, LipidLevel.STRUCTURE_DEFINED, LipidLevel.SN_POSITION, LipidLevel.MOLECULAR_SPECIES, LipidLevel.SPECIES, LipidLevel.CLASS]:
+            if lipid.lipid.info.level.value > lipid_level.value:
+                lipid_level_name = lipid.get_lipid_string(lipid_level)
+                if lipid_level_name != lipid_translates[-1]:
+                    lipid_translates.append(lipid_level_name)
 
-            for lipid_translate, lipid_category in lipid_translates:
-                if lipid_translate not in lipid_species_terms:
-                    if lipid_translate not in chebi_lipid_terms:
-                        term = Term(f"MOEA:{ls_id:07}", lipid_translate, {"MOEA:0000002"}, _categories = {lipid_category})
-                        term.relations.add("CHEBI:" + chebi_id)
-                        ls_id += 1
-                        chebi_lipid_terms[lipid_translate] = term
-                    else:
-                        chebi_lipid_terms[lipid_translate].relations.add("CHEBI:" + chebi_id)
-
+        term_list = []
+        for lipid_translate in lipid_translates:
+            if lipid_translate not in lipid_species_terms:
+                if lipid_translate not in chebi_lipid_terms:
+                    term_id = f"MOEA:{ls_id:07}"
+                    term = Term(term_id, lipid_translate, {"MOEA:0000002"}, _categories = {lipid_category})
+                    ls_id += 1
+                    chebi_lipid_terms[lipid_translate] = term
+                    term_list.append(term)
                 else:
-                    for lipid_species_term in lipid_species_terms[lipid_translate]:
-                        lipid_species_term.relations.add("CHEBI:" + chebi_id)
+                    term_list.append(chebi_lipid_terms[lipid_translate])
+
+            else:
+                term_list.append(lipid_species_terms[lipid_translate][-1])
+
+        term_list[0].relations.add("CHEBI:" + chebi_id)
+        for i in range(len(term_list) - 1):
+            term_list[i].relations.add(term_list[i + 1].get_first_id())
 
     return ontology_terms, chebi_lipid_terms
+
+
+
+
+if not os.path.exists("Data/LION.pkl.gz"):
+    ontology_terms, chebi_lipid_terms = get_lipid_terms()
+    with gzip.open("Data/LION.pkl.gz", 'wb') as output_stream:
+        pickle.dump([ontology_terms, chebi_lipid_terms], output_stream)
+else:
+    print("Reading LION pickle")
+    with gzip.open("Data/LION.pkl.gz") as input_stream:
+        ontology_terms, chebi_lipid_terms = pickle.load(input_stream)
 
 
 
@@ -447,12 +471,19 @@ with open("Data/chebi.csv", "rt") as infile:
 
 print("set metabolite categories")
 chebi_tree = {}
+chebi_obo = get_terms("Data/chebi.obo.gz", "CHEBI:")
 for chebi_id, c_term in chebi_obo.items():
     chebi_pure_id = chebi_id.split(":")[1]
-    if chebi_pure_id not in chebi_terms_all: chebi_terms_all[chebi_pure_id] = Term(chebi_id, c_term.name, c_term.relations | {"MOEA:0000008"})
+    if chebi_pure_id not in chebi_terms_all: chebi_terms_all[chebi_pure_id] = Term(chebi_id, c_term.name, {"MOEA:0000008"})
     for relation in c_term.relations:
         if relation not in chebi_tree: chebi_tree[relation] = [chebi_id]
         else: chebi_tree[relation].append(chebi_id)
+
+# for chebi_id, chebi_relations in chebi_tree.items():
+#     chebi_pure_id = chebi_id.split(":")[1]
+#     if chebi_pure_id not in chebi_terms_all: continue
+#     chebi_terms_all[chebi_pure_id].relations |= set(chebi_relations)
+
 
 for chebi_id, category in CHEBI_CATEGORY_MAPPING.items():
     if chebi_id not in chebi_tree: continue
@@ -718,6 +749,14 @@ for ensembl_file, organism, ensembl_cds in ensembl_files:
         print(e)
         exit(-1)
 
+
+with gzip.open("Data/goa_uniprot.csv.gz", "rt") as input_stream:
+    for line in input_stream:
+        tokens = line.strip().split("\t")
+        if len(tokens) < 2: continue
+        if tokens[0] in uniprot_data: uniprot_data[tokens[0]].relations |= set(tokens[1:]) - {""}
+
+
 ## PATHBANK
 # with open("Data/pathbank_to_uniprot.csv", "rt") as infile:
 #     print("Readin pathbank_to_uniprot")
@@ -863,24 +902,33 @@ with gzip.open("Data/rhea2uniprot_trembl.tsv.gz", "rt") as infile:
 
 
 
-# black_list_chebi = {"23367", "24431"}
-# print("Readin reactome reactions")
-# with open("Data/ChEBI2ReactomeReactions.txt", "rt") as input_stream:
-#     for line in input_stream:
-#         tokens = line.strip().split("\t")
-#
-#         if tokens[0] in black_list_chebi: continue
-#         if tokens[0] in chebi_terms_all: chebi_terms_all[tokens[0]].relations.add(tokens[1])
-#
-#
-# reactome_reactions = {}
-# with open("Data/UniProt2ReactomeReactions.txt", "rt") as input_stream:
-#     for line in input_stream:
-#         tokens = line.strip().split("\t")
-#
-#         uniprot_id = "UNIPROT:" + tokens[0]
-#         if tokens[1] not in reactome_reactions: reactome_reactions[tokens[1]] = Term(tokens[1], f"Reactome reaction {tokens[1]}", {uniprot_id})
-#         else: reactome_reactions[tokens[1]].relations.add(uniprot_id)
+
+
+
+
+print("Readin reactome reactions")
+with open("Data/ChEBI2ReactomeReactions.txt", "rt") as input_stream:
+    for line in input_stream:
+        tokens = line.strip().split("\t")
+
+        if tokens[0] in chebi_terms_all: chebi_terms_all[tokens[0]].relations.add(tokens[1])
+
+
+reactome_reactions = {}
+with open("Data/UniProt2ReactomeReactions.txt", "rt") as input_stream:
+    for line in input_stream:
+        tokens = line.strip().split("\t")
+
+        uniprot_id = "UNIPROT:" + tokens[0]
+        if tokens[1] not in reactome_reactions: reactome_reactions[tokens[1]] = Term(tokens[1], f"Reactome reaction {tokens[1]}", {uniprot_id})
+        else: reactome_reactions[tokens[1]].relations.add(uniprot_id)
+
+
+
+
+
+
+
 
 
 disease_and_phenotype_terms = get_terms("Data/doid-base.obo", "DOID:", True)
@@ -1030,7 +1078,7 @@ for _, gene_term in gene_terms.items():
 
 
 
-go_terms = get_terms("Data/go-basic.obo", "GO:", True)
+go_terms = get_terms("Data/go-basic.obo", "GO:", upper = True, with_relationship = True)
 namespaces = {
     "biological_process": "Biological process",
     "cellular_component": "Cellular component",
@@ -1039,15 +1087,6 @@ namespaces = {
 for go_term_id, go_term in go_terms.items():
     go_term.namespace = {namespaces[n] if n in namespaces else n for n in go_term.namespace}
 
-
-if not os.path.exists("Data/LION.pkl.gz"):
-    ontology_terms, chebi_lipid_terms = get_lipid_terms()
-    with gzip.open("Data/LION.pkl.gz", 'wb') as output_stream:
-        pickle.dump([ontology_terms, chebi_lipid_terms], output_stream)
-else:
-    print("Reading LION pickle")
-    with gzip.open("Data/LION.pkl.gz") as input_stream:
-        ontology_terms, chebi_lipid_terms = pickle.load(input_stream)
 
 
 # do several organisms
@@ -1069,10 +1108,10 @@ for tax_name, tax_id in species.items():
     output.append(Term("MOEA:0000012", "Gene").to_string())
 
 
-    # reactome_tag = reactomes[tax_id]
-    # for reactome_id, reactome_term in reactome_reactions.items():
-    #     if reactome_id.find(reactome_tag) > -1:
-    #         output.append(reactome_term.to_string())
+    reactome_tag = reactomes[tax_id]
+    for reactome_id, reactome_term in reactome_reactions.items():
+        if reactome_id.find(reactome_tag) > -1:
+            output.append(reactome_term.to_string())
 
 
 

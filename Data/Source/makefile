@@ -1,6 +1,6 @@
 DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/chebi.obo.gz Data/rhea-reactions.txt.gz Data/rhea2uniprot_sprot.tsv Data/rhea2uniprot_trembl.tsv.gz Data/pathbank_all_metabolites.csv.zip Data/pathbank_all_proteins.csv.zip Data/mondo.obo Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz Data/hp.obo Data/genes_to_phenotype.txt Data/genes_to_disease.txt Data/Homo_sapiens.uniprot.tsv.gz Data/Homo_sapiens.all.tsv.gz Data/Mus_musculus.uniprot.tsv.gz Data/Mus_musculus.all.tsv.gz Data/HGNC.csv Data/uniprot.csv.gz Data/UniProt2Reactome_All_Levels.txt.gz Data/ChEBI2Reactome_All_Levels.txt.gz Data/Ensembl2Reactome_All_Levels.txt.gz Data/ReactomePathwaysRelation.txt
 
-SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Data/pathbank_to_uniprot.csv Data/chebi_to_pathway.csv Data/hgnc_to_mondo.csv
+SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Data/pathbank_to_uniprot.csv Data/chebi_to_pathway.csv Data/hgnc_to_mondo.csv ../CHEBI_synonyms.csv.gz Data/goa_uniprot.csv.gz
 
 ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz Data/Saccharomyces_cerevisiae.all.tsv.gz Data/Drosophila_melanogaster.all.tsv.gz Data/Rattus_norvegicus.all.tsv.gz Data/Bos_taurus.all.tsv.gz Data/Caenorhabditis_elegans.all.tsv.gz
 
@@ -145,6 +145,11 @@ Data/uniprot.csv.gz:
 	# revieved = True
 	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cec%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full%2Cxref_geneid%2Creviewed%2Ckeyword%2Ccc_function&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A405534%29+OR+%28taxonomy_id%3A3702%29%29"
 
+# GO
+Data/goa_uniprot_gcrp.gpa.gz:
+	wget --tries=10 -O Data/goa_uniprot_gcrp.gpa.gz "https://ftp.ebi.ac.uk/pub/databases/GO/goa/UNIPROT/goa_uniprot_gcrp.gpa.gz"
+
+
 
 
 ######## EXECUTE SCRIPTS ########
@@ -171,7 +176,13 @@ Data/chebi_to_pathway.csv: Data/pathbank_all_metabolites.csv.zip
 Data/hgnc_to_mondo.csv: Data/causal_gene_to_disease_association.all.tsv.gz Data/correlated_gene_to_disease_association.all.tsv.gz
 	python3 Scripts/hgnc_to_mondo.py
 
+# CHEBI
+../CHEBI_synonyms.csv.gz: Data/chebi.obo.gz
+	python3 Scripts/CHEBI_synonyms.py
 
+# GO
+Data/goa_uniprot.csv.gz: Data/goa_uniprot_gcrp.gpa.gz
+	python3 Scripts:goa_uniprot.py
 
 
 ######## CLEAN WORKSPACE ########
@@ -190,6 +201,7 @@ clean:
 	rm -f Data/Homo_sapiens.uniprot.tsv.gz
 	rm -f Data/hp.obo
 	rm -f Data/mondo.obo
+	rm -f ../CHEBI_synonyms.csv.gz
 	rm -f Data/pathbank_all_metabolites.csv.zip
 	rm -f Data/pathbank_all_proteins.csv.zip
 	rm -f Data/pathbank_to_uniprot.csv

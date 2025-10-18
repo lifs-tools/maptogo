@@ -36,7 +36,7 @@ from math import ceil
 from flask_restx import Api, Resource, fields
 
 
-INIT_ORGANISM = "9606"
+INIT_ORGANISM = "10090"
 
 correction_list = [
     {"value": "no", "label": "No correction"},
@@ -53,9 +53,9 @@ try:
     from organisms import organisms
 except Exception as e:
     organisms = {
-        'Homo sapiens': '9606',
-        #'Mus musculus': '10090',
-        #'Bacillus cereus': "405534",
+        #'Homo sapiens': '9606',
+        'Mus musculus': '10090',
+        # 'Bacillus cereus': "405534",
         # 'Saccharomyces cerevisiae': '4932',
         # 'Escherichia coli': '562',
         # 'Drosophila melanogaster': '7227',
@@ -264,6 +264,7 @@ CC0_LINK = html.A(
 
 
 sessions, examples = {}, {}
+logger.info("Loading examples table")
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
 for worksheet_name in xl.sheet_names:
     if worksheet_name[0] == "_": continue
@@ -375,7 +376,7 @@ api = Api(
 lipid_parser = LipidParser()
 enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
-    logger.info(f"loading {tax_name}")
+    logger.info(f"Loading {tax_name}")
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", tax_name, lipid_parser = lipid_parser)
 
 
@@ -2791,24 +2792,37 @@ def open_sankeyplot(
     background_transcripts = session.background_transcripts
     regulated_transcripts = session.regulated_transcripts
 
-    if switch_sankey_regulated_only:
-        regulated_molecules = (
-            rl if (rl := session.regulated_lipids) != None else set() |
-            rp if (rl := session.regulated_proteins) != None else set() |
-            rm if (rl := session.regulated_metabolites) != None else set() |
-            rt if (rl := session.regulated_transcripts) != None else set()
-        )
+    #if switch_sankey_regulated_only:
+    regulated_molecules = (
+        (regulated_lipids if regulated_lipids else set()) |
+        (regulated_proteins if regulated_proteins else set()) |
+        (regulated_metabolites if regulated_metabolites else set()) |
+        (regulated_transcripts if regulated_transcripts else set())
+    )
+
+
+
 
     flow_data = {}
     flow_data_id = {}
-    lipidome = session.background_lipids
+    max_path_length = 0
+    flow_layers = [TermType.INPUT_TERM]
     for target_term_id in selected_term_ids:
         target_term_id_single = target_term_id.split("|")[0]
         target_term = terms[target_term_id_single]
 
         for molecule in session.data[target_term_id_single].source_terms:
             if switch_sankey_regulated_only and molecule not in regulated_molecules: continue
-            path_layers = [[None, [{"Input molecules"}]]]
+
+            if regulated_lipids and molecule in background_lipids.keys():
+                input_molecule = "Input lipid"
+            elif regulated_proteins and molecule in background_proteins:
+                input_molecule = "Input protein"
+            elif regulated_metabolites and molecule in background_metabolites:
+                input_molecule = "Input metabolite"
+            elif regulated_transcripts and molecule in background_transcripts:
+                input_molecule = "Input transcript"
+            path_layers = [[TermType.INPUT_TERM, [{input_molecule}]]]
 
             # determine category path
             for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
@@ -2816,8 +2830,8 @@ def open_sankeyplot(
                 else: term_id = list(term.term_id)[0]
 
                 if not term_id in ontology.ontology_terms:
-                    if term_id in lipidome and type(lipidome[term_id]) == LipidAdduct:
-                        lipid_category = lipidome[term_id].get_lipid_string(LipidLevel.CATEGORY)
+                    if term_id in background_lipids and type(background_lipids[term_id]) == LipidAdduct:
+                        lipid_category = background_lipids[term_id].get_lipid_string(LipidLevel.CATEGORY)
                         if not path_layers or path_layers[-1][0] != TermType.LIPID_SPECIES:
                             path_layers.append((TermType.LIPID_SPECIES, [{lipid_category}]))
                         else:
@@ -2828,6 +2842,7 @@ def open_sankeyplot(
                     if term_type == TermType.LIPID_CLASS: term_type = TermType.LIPID_SPECIES
                     elif term_type in {TermType.UNREVIEWED_PROTEIN, TermType.ENSEMBLE_PROTEIN}: term_type = TermType.REVIEWED_PROTEIN
                     elif term_type == TermType.ENSEMBLE_GENE: term_type = TermType.GENE
+                    elif term_type == TermType.METABOLITE: term_type = TermType.LIPID_SPECIES
 
                     if term_type != TermType.UNCLASSIFIED_TERM:
                         if not path_layers or path_layers[-1][0] != term_type:
@@ -2842,24 +2857,30 @@ def open_sankeyplot(
                             path_layers[-1][1].append({ontology.ontology_terms[term_id].name})
 
             if len(path_layers) < 3: continue
+            max_path_length = max(max_path_length, len(path_layers))
+            flow_i = 0
             for pos in range(len(path_layers) - 1):
                 path_key_prev, layers_list_prev = path_layers[pos]
                 categories_prev = layers_list_prev[0] if type(path_key_prev) == TermType else layers_list_prev[-1]
                 path_key_next, layers_list_next = path_layers[pos + 1]
                 categories_next = layers_list_next[0] if type(path_key_next) == TermType else layers_list_next[-1]
 
+                while flow_i + 1 < len(flow_layers) and flow_layers[flow_i] != path_key_prev:
+                    flow_layers.insert(flow_i, path_key_prev)
+                    flow_i += 1
+
                 for category_next in categories_next:
                     if category_next not in flow_data_id:
-                        flow_data_id[category_next] = len(flow_data_id)
-                        flow_data[flow_data_id[category_next]] = {}
+                        flow_data_id[category_next] = [len(flow_data_id), path_key_next]
+                        flow_data[flow_data_id[category_next][0]] = {}
 
                 for category_prev in categories_prev:
                     if category_prev not in flow_data_id:
-                        flow_data_id[category_prev] = len(flow_data_id)
-                        flow_data[flow_data_id[category_prev]] = {}
-                    last_flow_data = flow_data[flow_data_id[category_prev]]
+                        flow_data_id[category_prev] = [len(flow_data_id), path_key_prev]
+                        flow_data[flow_data_id[category_prev][0]] = {}
+                    last_flow_data = flow_data[flow_data_id[category_prev][0]]
                     for category_next in categories_next:
-                        term_node_id = flow_data_id[category_next]
+                        term_node_id = flow_data_id[category_next][0]
                         if term_node_id not in last_flow_data:
                             last_flow_data[term_node_id] = 0
                         last_flow_data[term_node_id] += 1
@@ -2867,9 +2888,10 @@ def open_sankeyplot(
     pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
     fig_source, fig_target, fig_value = [], [], []
     node_colors, edge_colors = [], []
-    fig_label = sorted([f for f in flow_data_id], key = lambda f: flow_data_id[f])
+    fig_label = sorted([f for f in flow_data_id], key = lambda f: flow_data_id[f][0])
     for i, source_node in enumerate(fig_label):
-        source_node_id = flow_data_id[source_node]
+        source_node_id, path_key = flow_data_id[source_node]
+        print(source_node_id, path_key)
         node_colors.append(pastel_colors[i % len(pastel_colors)])
         edge_colors += [pastel_colors[i % len(pastel_colors)]] * len(flow_data[source_node_id])
         for target_node_id, value in flow_data[source_node_id].items():
@@ -2901,24 +2923,6 @@ def open_sankeyplot(
         autosize = True,
         height = None,
     )
-
-    #
-    # fig.add_trace(go.Sunburst(
-    #     ids = labels,
-    #     parents = parents,
-    #     labels = names,
-    #     values = values,
-    #     marker = dict(
-    #         colors = colors,
-    #         colorscale = None,
-    #         cmin = 0,
-    #         cmax = 1,
-    #         showscale = False,
-    #     ),
-    #     #textinfo = 'none',
-    #     customdata = custom_data,
-    #     hovertemplate="%{customdata}<extra></extra>",
-    # ))
 
     barplot_terms_wrapper_style["height"] = "80vh"
 

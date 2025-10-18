@@ -32,8 +32,8 @@ with gzip.open("Data/chebi.obo.gz", "rt") as obo:
             relation = line[35:].strip(" ")
             relations_conjugate.add(relation.replace("CHEBI:", ""))
 
-        elif line.startswith("is_a:"):
-            relations.add(line[6:].replace("CHEBI:", ""))
+        # elif line.startswith("is_a:"):
+        #     relations.add(line[6:].replace("CHEBI:", ""))
 
         elif line.startswith("property_value: http://purl.obolibrary.org/obo/chebi/inchikey"):
             inchikey = line[61:].split("\"")[1].split("-")[0]
