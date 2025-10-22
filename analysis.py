@@ -1,6 +1,5 @@
 import logging
 import os
-import traceback
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -34,6 +33,9 @@ import threading
 import freetype
 from math import ceil
 from flask_restx import Api, Resource, fields
+import traceback
+import requests
+import threading
 
 
 INIT_ORGANISM = "10090"
@@ -59,7 +61,7 @@ except Exception as e:
         # 'Saccharomyces cerevisiae': '4932',
         # 'Escherichia coli': '562',
         # 'Drosophila melanogaster': '7227',
-        # 'Rattus norvegicus': '10116',
+        'Rattus norvegicus': '10116',
         # 'Bos taurus': '9913',
         # 'Caenorhabditis elegans': '6239',
         # 'Pseudomonas aeruginosa': '287',
@@ -160,6 +162,23 @@ def get_path(nodes, node):
         path.append(current_node)
         current_node = nodes[current_node]
     return path[::-1]
+
+
+
+def analytics(action):
+    return
+
+    def send_action(recorded_action):
+        try:
+            url = "https://lifs-tools.org/matomo/matomo.php?idsite=17&rec=1&e_c=MOEA-1.0.0&e_a=" + recorded_action
+            response = requests.get(url, timeout = 5)
+        except Exception as e:
+            pass
+
+    logger.info(f"Recording action: {action}")
+    thread1 = threading.Thread(target = send_action, args = (action,))
+    thread1.start()
+
 
 
 
@@ -418,6 +437,7 @@ def get_aggrid_modal(name, molecule):
                 "fontSize": 12,
             },
         },
+        style = {"height": "500px"},
     )
 
 
@@ -883,6 +903,22 @@ def layout():
                 dmc.Text([
                     "- ",
                     html.A(
+                        "Human Phenotype Ontology",
+                        href = "https://hpo.jax.org/",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                    ": ",
+                    html.A(
+                        "License",
+                        href = "https://hpo.jax.org/license",
+                        target = "_blank",
+                        style = {"color": LINK_COLOR},
+                    ),
+                ]),
+                dmc.Text([
+                    "- ",
+                    html.A(
                         "LION",
                         href = "https://martijnmolenaar.github.io/lipidontology.com/faq.html",
                         target = "_blank",
@@ -1262,7 +1298,7 @@ def layout():
                                     dmc.Select(
                                         id = "select_molecule_handling",
                                         data = molecule_handling,
-                                        value = MOLECULE_HANDLING_IGNORE,
+                                        value = MOLECULE_HANDLING_REMOVE,
                                         label = "Handling of unrecognizable molecules:",
                                     ),
                                 ),
@@ -1572,14 +1608,14 @@ def check_user_input(
                     elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                         continue
                     else:
-                        return True, f"Lipid name '{lipid_name}' unrecognizable in background list! Maybe enable the 'Ignore unrecognizable molecules' option.", []
+                        return True, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
             lipidome[lipid_name] = lipid
 
         for lipid_name in regulated_lipids_list:
             if len(lipid_name) == 0: continue
             if lipid_name not in lipidome:
                 if ignore_unknown == MOLECULE_HANDLING_REMOVE: continue
-                return True, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", []
+                return True, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.", []
             regulated_lipids.add(lipid_name)
 
         if len(lipidome) == 0:
@@ -1597,7 +1633,7 @@ def check_user_input(
                 for lipid_name in left_lipids:
                     del lipidome[lipid_name]
             else:
-                return True, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", []
+                return True, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.", []
 
         target_set |= regulated_lipids
         background_list += [{"value": k, "label": k} for k in lipidome.keys()]
@@ -1614,7 +1650,7 @@ def check_user_input(
         proteome = set(protein for protein in all_proteins_list if len(protein) > 0)
         regulated_proteins = set(protein for protein in regulated_proteins_list if len(protein) > 0)
 
-        background_list += [{"value": p, "label": p + (' (' + ontology.proteins["UNIPROT:" + p].name + ')' if ("UNIPROT:" + p in ontology.proteins) else '')} for p in proteome]
+        background_list += [{"value": pp, "label": p + (' (' + ontology.proteins[pp].name + ')' if (pp in ontology.proteins) else '')} for p in proteome if (pp := "UNIPROT:" + p)]
         proteome = set(p.split("-")[0] for p in proteome)
         regulated_proteins = set(rp.split("-")[0] for rp in regulated_proteins)
         left_proteins = proteome - ontology.clean_protein_ids
@@ -1624,7 +1660,7 @@ def check_user_input(
             elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                 proteome -= left_proteins
             else:
-                return True, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", []
+                return True, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
 
         left_proteins = regulated_proteins - ontology.clean_protein_ids
         if len(left_proteins) > 0:
@@ -1633,14 +1669,14 @@ def check_user_input(
             elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                 regulated_proteins -= left_proteins
             else:
-                return True, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", []
+                return True, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
 
         left_proteins = regulated_proteins - proteome
         if len(left_proteins) > 0:
             if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                proteome -= left_proteins
+                regulated_proteins -= left_proteins
             else:
-                return True, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", []
+                return True, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.", []
 
         if len(proteome) == 0:
             return True, "No background protein left after protein recognition.", []
@@ -1676,7 +1712,7 @@ def check_user_input(
             elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                 metabolome -= left_metabolites
             else:
-                return True, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", []
+                return True, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
 
         left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
         left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
@@ -1686,12 +1722,12 @@ def check_user_input(
             elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                 regulated_metabolites -= left_metabolites
             else:
-                return True, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", []
+                return True, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
 
         left_metabolites = regulated_metabolites - metabolome
         if len(left_metabolites) > 0:
             if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                metabolome -= left_metabolites
+                regulated_metabolites -= left_metabolites
             else:
                 return True, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", []
 
@@ -1729,7 +1765,7 @@ def check_user_input(
             elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                 transcriptome -= left_transcripts
             else:
-                return True, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Ignore unrecognizable molecules' option.", []
+                return True, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
 
         left_transcripts = set(t for t in regulated_transcripts if t.split(".")[0] not in transcript_keys)
         if len(left_transcripts) > 0:
@@ -1738,12 +1774,12 @@ def check_user_input(
             elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
                 regulated_transcripts -= left_transcripts
             else:
-                return True, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Ignore unrecognizable molecules' option.", []
+                return True, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
 
         left_transcripts = regulated_transcripts - transcriptome
         if len(left_transcripts) > 0:
             if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                transcriptome -= left_transcripts
+                regulated_transcripts -= left_transcripts
             else:
                 return True, "The regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", []
         if len(transcriptome) == 0:
@@ -1916,6 +1952,7 @@ def run_enrichment(
         if with_transcripts: target_set |= session.regulated_transcripts
         background_list = no_update
 
+    analytics("enrichment_analysis")
     session.domains = set(domains)
     results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
     session.result = results
@@ -1996,7 +2033,9 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
 
     if len(multiselect_values) > 0:
         multiselect_values = set(multiselect_values)
-        data = [row for result, row in session.results if len(set(result.source_terms) & multiselect_values) > 0]
+        for r, d in session.results:
+            print(r.source_terms)
+        data = [row for result, row in session.results if not set(result.source_terms).isdisjoint(multiselect_values)]
     else:
         data = [row for _, row in session.results]
     return data, [], {}, False, ""

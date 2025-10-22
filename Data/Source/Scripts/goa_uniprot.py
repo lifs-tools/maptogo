@@ -1,5 +1,14 @@
 import gzip
 
+uniport_accs = set()
+with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
+    print("Readin uniprot")
+    for i, line in enumerate(infile):
+        if i == 0: continue
+        tokens = line.strip().split("\t")
+        if len(tokens) < 2: continue
+        uniport_accs.add(tokens[0])
+
 i = 0
 uniprot_to_go = {}
 with gzip.open("Data/goa_uniprot_gcrp.gpa.gz", "rt") as input_stream:

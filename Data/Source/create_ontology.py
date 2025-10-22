@@ -5,14 +5,6 @@ import sys
 import pickle
 import os
 
-uniport_accs = set()
-with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
-    print("Readin uniprot")
-    for i, line in enumerate(infile):
-        if i == 0: continue
-        tokens = line.strip().split("\t")
-        if len(tokens) < 2: continue
-        uniport_accs.add(tokens[0])
 
 
 
@@ -920,7 +912,7 @@ with open("Data/UniProt2ReactomeReactions.txt", "rt") as input_stream:
         tokens = line.strip().split("\t")
 
         uniprot_id = "UNIPROT:" + tokens[0]
-        if tokens[1] not in reactome_reactions: reactome_reactions[tokens[1]] = Term(tokens[1], f"Reactome reaction {tokens[1]}", {uniprot_id})
+        if tokens[1] not in reactome_reactions: reactome_reactions[tokens[1]] = Term(tokens[1], f"Reactome reaction {tokens[1]}", {uniprot_id, "MOEA:0000009"})
         else: reactome_reactions[tokens[1]].relations.add(uniprot_id)
 
 
@@ -1109,9 +1101,10 @@ for tax_name, tax_id in species.items():
 
 
     reactome_tag = reactomes[tax_id]
-    for reactome_id, reactome_term in reactome_reactions.items():
-        if reactome_id.find(reactome_tag) > -1:
-            output.append(reactome_term.to_string())
+    if reactome_tag:
+        for reactome_id, reactome_term in reactome_reactions.items():
+            if reactome_id.find(reactome_tag) > -1:
+                output.append(reactome_term.to_string())
 
 
 

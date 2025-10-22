@@ -318,6 +318,7 @@ class EnrichmentOntology:
             if protein_input_name not in self.proteins: continue
             protein_term = self.proteins[protein_input_name]
             parent_nodes = {protein_term: None}
+            #protein_input_name = protein_input_name[8:]
             all_parent_nodes[protein_input_name] = parent_nodes
             all_paths.append([protein_input_name, protein_term, parent_nodes])
 
@@ -366,13 +367,15 @@ class EnrichmentOntology:
         search_terms, num_background = session.search_terms, session.num_background
         enrichment_domains = set(enrichment_domains)
         result_list = [None] * len(search_terms)
+        len_target_set = len(target_set)
 
         try: # C++ implementation, just way faster
             side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
             for i, (term, term_molecules) in enumerate(search_terms.items()):
-                if not (term.domain & enrichment_domains): continue
+                if term.domain.isdisjoint(enrichment_domains): continue
                 target_number = len(term_molecules & target_set)
-                p_hyp = exact_fisher(target_number, len(term_molecules), len(target_set), num_background, side)
+
+                p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
                 if p_hyp == 0: continue
                 result_list[i] = OntologyResult(
                     term,
@@ -381,8 +384,8 @@ class EnrichmentOntology:
                     [
                         target_number,
                         len(term_molecules) - target_number,
-                        len(target_set) - target_number,
-                        num_background - len(term_molecules) - len(target_set) + target_number,
+                        len_target_set - target_number,
+                        num_background - len(term_molecules) - len_target_set + target_number,
                     ],
                 )
 
@@ -390,13 +393,13 @@ class EnrichmentOntology:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error("C++ implementation of fisher exact test failed.")
             for i, (term, term_molecules) in enumerate(search_terms.items()):
-                if not (term.domain & enrichment_domains): continue
+                if term.domain.isdisjoint(enrichment_domains): continue
                 target_number = len(term_molecules & target_set)
                 a, b, c, d = (
                     target_number,
                     len(term_molecules) - target_number,
-                    len(target_set) - target_number,
-                    num_background - len(term_molecules) - len(target_set) + target_number,
+                    len_target_set - target_number,
+                    num_background - len(term_molecules) - len_target_set + target_number,
                 )
                 p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
                 if p_hyp == 0: continue
