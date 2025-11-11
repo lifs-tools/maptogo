@@ -37,7 +37,6 @@ import traceback
 import requests
 import threading
 
-
 INIT_ORGANISM = "10090"
 
 correction_list = [
@@ -1452,7 +1451,7 @@ def layout():
                                 'field': "termid",
                                 "headerName": "Term ID",
                                 "cellRenderer": "TermIDRenderer",
-                                "maxWidth": 150,
+                                "maxWidth": 130,
                             },
                             {
                                 'field': "term",
@@ -1462,22 +1461,22 @@ def layout():
                             {
                                 'field': "count",
                                 "headerName": "Count",
-                                "width": 80,
+                                "width": 110,
                                 "headerTooltip": "Number of regulated associated molecules (Expected number of regulated associated molecules) / Number of all associated molecules",
                             },
                             {
                                 'field': "pvalue",
                                 "headerName": "p-value",
-                                "width": 100,
-                                "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(6) : ''"},
+                                "width": 80,
+                                "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
                                 "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
                             },
                             {
                                 'field': "log_odds_ratio",
-                                "headerName": "Log Odds ratio",
-                                "width": 100,
-                                "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(6) : ''"},
-                                "headerTooltip": "The log odds ratio determines how strong the association is (effect size). Positive: enriched; Zero: no enrichment; Negative: depleted.",
+                                "headerName": "Log odds",
+                                "width": 80,
+                                "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
+                                "headerTooltip": "The 'log odds ratio' determines how strong the association is (effect size). Positive: enriched; Zero: no enrichment; Negative: depleted.",
                             },
                         ],
                         rowData = [],
@@ -2033,8 +2032,6 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
 
     if len(multiselect_values) > 0:
         multiselect_values = set(multiselect_values)
-        for r, d in session.results:
-            print(r.source_terms)
         data = [row for result, row in session.results if not set(result.source_terms).isdisjoint(multiselect_values)]
     else:
         data = [row for _, row in session.results]
@@ -2845,7 +2842,10 @@ def open_sankeyplot(
     flow_data = {}
     flow_data_id = {}
     max_path_length = 0
-    flow_layers = [TermType.INPUT_TERM]
+
+    def get_flow_key(category, path_key):
+        return (category, tuple(sorted(list(path_key))) if type(path_key) != TermType else path_key)
+
     for target_term_id in selected_term_ids:
         target_term_id_single = target_term_id.split("|")[0]
         target_term = terms[target_term_id_single]
@@ -2897,29 +2897,28 @@ def open_sankeyplot(
 
             if len(path_layers) < 3: continue
             max_path_length = max(max_path_length, len(path_layers))
-            flow_i = 0
             for pos in range(len(path_layers) - 1):
                 path_key_prev, layers_list_prev = path_layers[pos]
                 categories_prev = layers_list_prev[0] if type(path_key_prev) == TermType else layers_list_prev[-1]
                 path_key_next, layers_list_next = path_layers[pos + 1]
                 categories_next = layers_list_next[0] if type(path_key_next) == TermType else layers_list_next[-1]
 
-                while flow_i + 1 < len(flow_layers) and flow_layers[flow_i] != path_key_prev:
-                    flow_layers.insert(flow_i, path_key_prev)
-                    flow_i += 1
-
                 for category_next in categories_next:
                     if category_next not in flow_data_id:
-                        flow_data_id[category_next] = [len(flow_data_id), path_key_next]
-                        flow_data[flow_data_id[category_next][0]] = {}
+                        kn = get_flow_key(category_next, path_key_next)
+                        if kn in flow_data_id: continue
+                        flow_data_id[kn] = len(flow_data_id)
+                        flow_data[flow_data_id[kn]] = {}
 
                 for category_prev in categories_prev:
-                    if category_prev not in flow_data_id:
-                        flow_data_id[category_prev] = [len(flow_data_id), path_key_prev]
-                        flow_data[flow_data_id[category_prev][0]] = {}
-                    last_flow_data = flow_data[flow_data_id[category_prev][0]]
+                    kp = get_flow_key(category_prev, path_key_prev)
+                    if kp not in flow_data_id:
+                        flow_data_id[kp] = len(flow_data_id)
+                        flow_data[flow_data_id[kp]] = {}
+                    last_flow_data = flow_data[flow_data_id[kp]]
                     for category_next in categories_next:
-                        term_node_id = flow_data_id[category_next][0]
+                        kn = get_flow_key(category_next, path_key_next)
+                        term_node_id = flow_data_id[kn]
                         if term_node_id not in last_flow_data:
                             last_flow_data[term_node_id] = 0
                         last_flow_data[term_node_id] += 1
@@ -2927,10 +2926,17 @@ def open_sankeyplot(
     pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
     fig_source, fig_target, fig_value = [], [], []
     node_colors, edge_colors = [], []
-    fig_label = sorted([f for f in flow_data_id], key = lambda f: flow_data_id[f][0])
-    for i, source_node in enumerate(fig_label):
-        source_node_id, path_key = flow_data_id[source_node]
-        print(source_node_id, path_key)
+    fig_label = sorted([flow for flow in flow_data_id], key = lambda f: flow_data_id[f])
+
+    # connect nodes for flow
+    start_nodes, layer_numeration = set(), {}
+    id_to_key = {}
+    for i, key in enumerate(fig_label):
+        (source_node_key, path_key) = key
+        layer_numeration[path_key] = 0
+        source_node_id = flow_data_id[key]
+        id_to_key[source_node_id] = key
+        if path_key == TermType.INPUT_TERM: start_nodes.add(key)
         node_colors.append(pastel_colors[i % len(pastel_colors)])
         edge_colors += [pastel_colors[i % len(pastel_colors)]] * len(flow_data[source_node_id])
         for target_node_id, value in flow_data[source_node_id].items():
@@ -2938,12 +2944,34 @@ def open_sankeyplot(
             fig_target.append(target_node_id)
             fig_value.append(value)
 
+    max_layer = 0
+    for key in fig_label:
+        source_node_id = flow_data_id[key]
+        queue = [(source_node_id, 0)]
+        visited = set()
+        while queue:
+            source_node_id, layer = queue.pop()
+            max_layer = max(max_layer, layer)
+            key = id_to_key[source_node_id]
+            if key in visited: continue
+            visited.add(key)
+            source_node_key, path_key = key
+            layer_numeration[path_key] = max(layer_numeration[path_key], layer)
+            for target_node_id, value in flow_data[source_node_id].items():
+                queue.append((target_node_id, layer + 1))
+
+    x_pos = [layer_numeration[path_key] / (max_layer - 1) for source_node_key, path_key in fig_label]
+    print(x_pos)
+    y_pos = [0] * len(fig_label)
+
     fig = go.Figure(
         go.Sankey(
-            arrangement = 'snap',
+            arrangement = 'fixed',
             node = dict(
-                label = fig_label,
-                align = "right",
+                label = [f[0] for f in fig_label],
+                #align = "justify",
+                x = x_pos,
+                y = y_pos,
                 color = node_colors,
                 pad = 20,
                 thickness = 40,

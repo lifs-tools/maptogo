@@ -45,11 +45,16 @@ except Exception as e:
     logger.error("Unable to load c++ library file(s)")
 
 
-CHEBI_synonym_table_filename = "Data/CHEBI_synonyms.csv.gz"
+CHEBI_synonym_table_filename = f"{current_path}/Data/CHEBI_synonyms.csv.gz"
 CHEBI_synonym_table = {}
 
+
 if os.path.isfile(CHEBI_synonym_table_filename):
-    CHEBI_synonym_table = {tokens[0].lower(): tokens[1] for line in gzip.open("Data/CHEBI_synonyms.csv.gz").read().decode("utf8").split("\n") if len(line) > 0 and (tokens := line.split("\t")) and len(tokens) >= 2}
+    logger.info("Reading ChEBI synonyms table")
+    with gzip.open(CHEBI_synonym_table_filename, "rt") as input_stream:
+        CHEBI_synonym_table = {tokens[0].lower(): tokens[1] for line in input_stream.read().split("\n") if len(line) > 0 and (tokens := line.split("\t")) and len(tokens) >= 2}
+else:
+    logger.warning("No ChEBI synonyms table found")
 
 def time_elapsed(func):
     def wrapper(*args, **kwargs):
@@ -258,7 +263,8 @@ class EnrichmentOntology:
 
             lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
             lipid_name = lipid.get_lipid_string()
-            lipid_name_class = lipid.get_extended_class()
+            lipid_name_class = lipid.get_lipid_string(LipidLevel.CLASS)
+            #lipid_name_class = lipid.get_extended_class()
             parent_nodes = {}
             all_parent_nodes[lipid_input_name] = parent_nodes
             lipid_term = self.lipids[lipid_name] if lipid_name in self.lipids else None
@@ -318,7 +324,6 @@ class EnrichmentOntology:
             if protein_input_name not in self.proteins: continue
             protein_term = self.proteins[protein_input_name]
             parent_nodes = {protein_term: None}
-            #protein_input_name = protein_input_name[8:]
             all_parent_nodes[protein_input_name] = parent_nodes
             all_paths.append([protein_input_name, protein_term, parent_nodes])
 

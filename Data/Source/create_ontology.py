@@ -4,8 +4,15 @@ import gzip
 import sys
 import pickle
 import os
+import pandas as pd
+import zipfile
 
-
+with zipfile.ZipFile("Data/BioDolphin_vr1.1.zip") as z:
+    with z.open("BioDolphin_vr1.1/BioDolphin_vr1.1.txt") as f:
+        df_dolphin = pd.read_csv(f, sep = "\t")
+        df_dolphin = df_dolphin[["BioDolphinID", "protein_UniProt_ID", "lipid_ChEBI"]]
+        df_dolphin = df_dolphin[df_dolphin["protein_UniProt_ID"].str.len() > 0]
+        df_dolphin = df_dolphin[df_dolphin["lipid_ChEBI"].str.len() > 0]
 
 
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
@@ -162,14 +169,17 @@ else:
     species = {
         'Homo sapiens': "9606",
         'Mus musculus': "10090",
+        'Rattus norvegicus': "10116",
     }
     ensembl_files = [
         ("Data/Homo_sapiens.uniprot.tsv.gz", "9606", "Data/Homo_sapiens.all.tsv.gz"),
         ("Data/Mus_musculus.uniprot.tsv.gz", "10090", "Data/Mus_musculus.all.tsv.gz"),
+        ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116", "Data/Rattus_norvegicus.all.tsv.gz"),
     ]
     reactomes = {
         "9606": "HSA",
         "10090": "MMU",
+        "10116": "RNO",
     }
 
 species_set = set(species.values())
@@ -376,7 +386,6 @@ def get_lipid_terms():
                 except:
                     if lipid_name.startswith(UNDEFINED): continue
                     if lipid_name in lipid_class_terms:
-                        if "lipid_name" == "PC": print(lipid_name, lipid_name in lipid_class_terms, tokens[0])
                         for lipid_class_term in lipid_class_terms[lipid_name]:
                             for chebi_id in tokens[0].split(" | "):
                                 lipid_class_term.relations.add("CHEBI:" + chebi_id)
@@ -1099,8 +1108,37 @@ for tax_name, tax_id in species.items():
     output.append(Term("MOEA:0000011", "Ensembl gene").to_string())
     output.append(Term("MOEA:0000012", "Gene").to_string())
 
-
     reactome_tag = reactomes[tax_id]
+    chebi_terms_organism = chebi_terms_organisms[tax_id]
+
+    # KEGG
+    try:
+        kegg_to_uniprot = {"KEGG:" + t[0]: (t[1], set(t[2:])) for line in open(f"Data/kegg_to_uniprot_{reactome_tag.lower()}.csv").read().split("\n") if (t := line.split("\t")) and len(t) > 1}
+        kegg_to_chebi = {"KEGG:" + t[0]: (t[1], set(t[2:])) for line in open(f"Data/kegg_to_chebi_{reactome_tag.lower()}.csv").read().split("\n") if (t := line.split("\t")) and len(t) > 1}
+
+
+        for kegg_id, (kegg_pathway_name, chebi_ids) in kegg_to_chebi.items():
+            for chebi_id in chebi_ids:
+                chebi_id_clean = chebi_id[6:]
+                if chebi_id_clean not in chebi_terms_organism: chebi_terms_organism[chebi_id_clean] = {kegg_id}
+                else: chebi_terms_organism[chebi_id_clean].add(kegg_id)
+
+        for kegg_id, (kegg_pathway_name, uniprot_ids) in kegg_to_uniprot.items():
+            output.append(Term(kegg_id, kegg_pathway_name, _namespace = "KEGG").to_string())
+            for uniprot_id in uniprot_ids:
+                if uniprot_id in uniprot_data:
+                    uniprot_data[uniprot_id].relations.add(kegg_id)
+    except Exception as e:
+        print(e)
+
+
+    for i, row in df_dolphin[df_dolphin["protein_UniProt_ID"].isin(list(uniprot_terms_organisms[tax_id].keys()))].iterrows():
+        output.append(Term("BD:" + row["BioDolphinID"], f"Interaction {row["BioDolphinID"]}", {"UNIPROT:" + row["protein_UniProt_ID"], "MOEA:0000009"}).to_string())
+        chebi_id = row["lipid_ChEBI"][6:]
+        if chebi_id not in chebi_terms_organism: chebi_terms_organism[chebi_id] = {"BD:" + row["BioDolphinID"]}
+        else: chebi_terms_organism[chebi_id].add("BD:" + row["BioDolphinID"])
+
+
     if reactome_tag:
         for reactome_id, reactome_term in reactome_reactions.items():
             if reactome_id.find(reactome_tag) > -1:
@@ -1109,7 +1147,7 @@ for tax_name, tax_id in species.items():
 
 
     chebi_terms = {t: c.copy() for t, c in chebi_terms_all.items()}
-    for chebi_term, pathway_terms in chebi_terms_organisms[tax_id].items():
+    for chebi_term, pathway_terms in chebi_terms_organism.items():
         if chebi_term not in chebi_terms: continue
         chebi_terms[chebi_term].relations |= pathway_terms
 
