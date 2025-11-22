@@ -54,6 +54,9 @@ function get_url(term_id){
     else if (term_id.startsWith("LM")){
         return "https://www.lipidmaps.org/databases/lmsd/" + term_id;
     }
+    else if (term_id.startsWith("UNIPROT:")){
+        return "https://www.uniprot.org/uniprotkb/" + term_id.split(":")[1];
+    }
     return "";
 }
 
@@ -67,6 +70,9 @@ dagcomponentfuncs.TermIDRenderer = function (props) {
     var unique_key = 0;
     for (var term_id of term_ids){
         var href = get_url(term_id);
+        if (term_id.startsWith("UNIPROT:")){
+            term_id = term_id.split(":")[1];
+        }
 
         if (reacts.length > 0){
             reacts.push(
@@ -111,7 +117,6 @@ dagcomponentfuncs.TermRenderer = function (props) {
         });
         setData();
     }
-
 
     return React.createElement(
         "div",

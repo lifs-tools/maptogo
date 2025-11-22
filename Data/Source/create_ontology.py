@@ -1089,6 +1089,13 @@ for go_term_id, go_term in go_terms.items():
     go_term.namespace = {namespaces[n] if n in namespaces else n for n in go_term.namespace}
 
 
+for uniprot_term in uniprot_data.values():
+    if "Enzyme" in uniprot_term.categories:
+        if "MOEA:0000005" in uniprot_term.relations:
+            uniprot_term.namespace.add("Enzymatic activity (Swiss-Prot)")
+        uniprot_term.namespace.add("Enzymatic activity (Swiss-Prot + TrEMBL)")
+
+
 
 # do several organisms
 for tax_name, tax_id in species.items():
