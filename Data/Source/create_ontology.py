@@ -1118,25 +1118,25 @@ for tax_name, tax_id in species.items():
     reactome_tag = reactomes[tax_id]
     chebi_terms_organism = chebi_terms_organisms[tax_id]
 
-    # KEGG
-    try:
-        kegg_to_uniprot = {"KEGG:" + t[0]: (t[1], set(t[2:])) for line in open(f"Data/kegg_to_uniprot_{reactome_tag.lower()}.csv").read().split("\n") if (t := line.split("\t")) and len(t) > 1}
-        kegg_to_chebi = {"KEGG:" + t[0]: (t[1], set(t[2:])) for line in open(f"Data/kegg_to_chebi_{reactome_tag.lower()}.csv").read().split("\n") if (t := line.split("\t")) and len(t) > 1}
-
-
-        for kegg_id, (kegg_pathway_name, chebi_ids) in kegg_to_chebi.items():
-            for chebi_id in chebi_ids:
-                chebi_id_clean = chebi_id[6:]
-                if chebi_id_clean not in chebi_terms_organism: chebi_terms_organism[chebi_id_clean] = {kegg_id}
-                else: chebi_terms_organism[chebi_id_clean].add(kegg_id)
-
-        for kegg_id, (kegg_pathway_name, uniprot_ids) in kegg_to_uniprot.items():
-            output.append(Term(kegg_id, kegg_pathway_name, _namespace = "KEGG").to_string())
-            for uniprot_id in uniprot_ids:
-                if uniprot_id in uniprot_data:
-                    uniprot_data[uniprot_id].relations.add(kegg_id)
-    except Exception as e:
-        print(e)
+    # # KEGG
+    # try:
+    #     kegg_to_uniprot = {"KEGG:" + t[0]: (t[1], set(t[2:])) for line in open(f"Data/kegg_to_uniprot_{reactome_tag.lower()}.csv").read().split("\n") if (t := line.split("\t")) and len(t) > 1}
+    #     kegg_to_chebi = {"KEGG:" + t[0]: (t[1], set(t[2:])) for line in open(f"Data/kegg_to_chebi_{reactome_tag.lower()}.csv").read().split("\n") if (t := line.split("\t")) and len(t) > 1}
+    #
+    #
+    #     for kegg_id, (kegg_pathway_name, chebi_ids) in kegg_to_chebi.items():
+    #         for chebi_id in chebi_ids:
+    #             chebi_id_clean = chebi_id[6:]
+    #             if chebi_id_clean not in chebi_terms_organism: chebi_terms_organism[chebi_id_clean] = {kegg_id}
+    #             else: chebi_terms_organism[chebi_id_clean].add(kegg_id)
+    #
+    #     for kegg_id, (kegg_pathway_name, uniprot_ids) in kegg_to_uniprot.items():
+    #         output.append(Term(kegg_id, kegg_pathway_name, _namespace = "KEGG").to_string())
+    #         for uniprot_id in uniprot_ids:
+    #             if uniprot_id in uniprot_data:
+    #                 uniprot_data[uniprot_id].relations.add(kegg_id)
+    # except Exception as e:
+    #     print(e)
 
 
     for i, row in df_dolphin[df_dolphin["protein_UniProt_ID"].isin(list(uniprot_terms_organisms[tax_id].keys()))].iterrows():

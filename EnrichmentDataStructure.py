@@ -15,6 +15,22 @@ import os
 import csv
 from enum import Enum
 
+try:
+    @profile
+    def test_dummy():
+        pass
+
+except Exception as e:
+    def profile(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = func(*args, **kwargs)
+            end_time = time.time()
+            logger.info(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
+            return result
+        return wrapper
+
+
 class TermType(Enum):
     # Undefined / non-inferable lipid level
     LIPID_CLASS = 1                 # special handling
@@ -56,15 +72,6 @@ if os.path.isfile(CHEBI_synonym_table_filename):
 else:
     logger.warning("No ChEBI synonyms table found")
 
-def time_elapsed(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        logger.info(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
-        return result
-    return wrapper
-
 
 class SessionEntry:
     def __init__(self):
@@ -89,6 +96,7 @@ class SessionEntry:
         self.background_list = []
         self.min_pvalue = "0.0001"
         self.max_pvalue = "0.05"
+        self.ui = {}
 
 
 
@@ -96,6 +104,7 @@ class OntologyTerm:
     def __init__(self, _term_id, _name, _relations, _domain = None, _categories = None):
         if _domain == None: _domain = set()
         if _categories == None: _categories = set()
+
 
         self.term_id = sorted(list(_term_id) if type(_term_id) in {list, set} else list(_term_id.split("|")))
         self.term_id_str = "|".join(sorted(list(self.term_id)))
@@ -107,6 +116,9 @@ class OntologyTerm:
 
     def get_term_id(self, space = False):
         return " | ".join(sorted(list(self.term_id)))
+
+
+
 
 
 
@@ -134,7 +146,7 @@ class OntologyResult:
 
 
 class EnrichmentOntology:
-    #@profile
+    @profile
     def __init__(self, file_name, ontology_name, lipid_parser):
         self.lipid_parser = lipid_parser
         self.ontology_terms = {}
@@ -244,8 +256,7 @@ class EnrichmentOntology:
         logger.info(f"Loaded '{self.ontology_name}' with {len(self.ontology_terms)} terms.")
 
 
-    #@profile
-    @time_elapsed
+    @profile
     def set_background(self, session, lipid_dict = {}, protein_set = set(), metabolite_set = set(), transcript_set = {}):
         session.search_terms = defaultdict(list)
         session.all_parent_nodes = {}
@@ -365,7 +376,7 @@ class EnrichmentOntology:
             search_terms[term] = set(term_molecules)
 
 
-    @time_elapsed
+    @profile
     def enrichment_analysis(self, session, target_set, enrichment_domains, term_regulation = "greater"):
         if len(target_set) == 0 or session.num_background < 2 or len(enrichment_domains) == 0: return []
 
@@ -375,7 +386,7 @@ class EnrichmentOntology:
         len_target_set = len(target_set)
 
         try: # C++ implementation, just way faster
-            side = 0 if term_regulation == "two-sided" else (1 if term_regulation == "less" else 2)
+            side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
             for i, (term, term_molecules) in enumerate(search_terms.items()):
                 if term.domain.isdisjoint(enrichment_domains): continue
                 target_number = len(term_molecules & target_set)
