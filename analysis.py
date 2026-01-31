@@ -48,12 +48,12 @@ def get_git_info():
     try:
         # Get short commit hash
         commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"]
+            ["git", "-C", current_path, "rev-parse", "HEAD"]
         ).decode("utf-8").strip()
 
         # Get branch name
         branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"]
+            ["git", "-C", current_path, "rev-parse", "--abbrev-ref", "HEAD"]
         ).decode("utf-8").strip()
     except Exception:
         commit = "unknown"
