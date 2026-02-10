@@ -314,7 +314,7 @@ sessions, examples = {}, {}
 logger.info("Loading examples table")
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
 for worksheet_name in xl.sheet_names:
-    if worksheet_name[0] == "_": continue
+    if worksheet_name[0] in {"_", "#"}: continue
     df = xl.parse(worksheet_name)
     worksheet = {
         "bgl": [], "regl": [],
