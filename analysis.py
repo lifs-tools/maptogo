@@ -9,6 +9,8 @@ logging.basicConfig(
 )
 logger.info("Started enrichment server")
 
+VERSION_NUMBER = "1.0.0"
+
 
 import dash
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table, ctx
@@ -194,11 +196,9 @@ def get_path(nodes, node):
 
 
 def analytics(action):
-    return
-
     def send_action(recorded_action):
         try:
-            url = "https://lifs-tools.org/matomo/matomo.php?idsite=17&rec=1&e_c=MOEA-1.0.0&e_a=" + recorded_action
+            url = f"https://lifs-tools.org/matomo/matomo.php?idsite=17&rec=1&e_c=MAPtoGO-{VERSION_NUMBER}&e_a={recorded_action}"
             response = requests.get(url, timeout = 5)
         except Exception as e:
             pass
@@ -2517,6 +2517,7 @@ def download_table(
         pd.DataFrame({"Ensembl": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
 
     writer._save()
+    analytics("download_results")
 
     return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), False, ""
 
@@ -4180,6 +4181,7 @@ class EnrichmentResource(Resource):
     def post(self):
 
         logger.info(f"New API access: enrichment")
+        analytics("api_enrichment_analysis")
 
         try:
             data = api.payload  # JSON body
