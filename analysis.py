@@ -2083,7 +2083,7 @@ def run_enrichment(
     num_enrichment_terms = "Entries: 0"
 
     if session_id not in sessions:
-        return "", [], [], {}, True, "Your session has expired. Please refresh the website. 1",  histogram_disabled, [], [], num_enrichment_terms
+        return "", [], [], {}, True, "Your session has expired. Please refresh the website.",  histogram_disabled, [], [], num_enrichment_terms
 
     logger.info(f"Enrichment session: {session_id}")
     session = sessions[session_id]
@@ -2239,7 +2239,7 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website. 2",
+            "Your session has expired. Please refresh the website.",
             num_enrichment_terms,
         )
 
@@ -2327,7 +2327,7 @@ def update_background(
     if session_id not in sessions:
         return (
             True,
-            "Your session has expired. Please refresh the website. 3",
+            "Your session has expired. Please refresh the website.",
             f"Entries: {num_all_lipids}",
             f"Entries: {num_regulated_lipids}",
             f"Entries: {num_all_proteins}",
@@ -2399,7 +2399,7 @@ def download_table(
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website. 4",
+            "Your session has expired. Please refresh the website.",
         )
 
     session = sessions[session_id]
@@ -2680,7 +2680,7 @@ def open_term_window(
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website. 5",
+            "Your session has expired. Please refresh the website.",
             "",
             "",
         )
@@ -2856,7 +2856,7 @@ def open_sunburstplot(
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website. 6",
+            "Your session has expired. Please refresh the website.",
             no_update,
             no_update,
             no_update,
@@ -3051,7 +3051,7 @@ def open_sankeyplot(
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website. 7",
+            "Your session has expired. Please refresh the website.",
             no_update,
             no_update,
             no_update,
@@ -3304,7 +3304,7 @@ def open_barplot(
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website. 8",
+            "Your session has expired. Please refresh the website.",
             no_update,
             no_update,
         )
@@ -3801,7 +3801,7 @@ def open_histogram(
             no_update,
             no_update,
             True,
-            "Your session has expired. Please refresh the website. 9",
+            "Your session has expired. Please refresh the website.",
             no_update,
             no_update,
         )
@@ -3979,39 +3979,39 @@ def show_molecule_term_path(
     organism,
 ):
     if session_id not in sessions:
-        return True, "Your session has expired. Please refresh the website. 10", ""
+        return True, "Your session has expired. Please refresh the website.", ""
 
     ontology = enrichment_ontologies[organism]
     if target_term_id not in ontology.ontology_terms:
-        return True, "Your session has expired. Please refresh the website. 11", ""
+        return True, "Your session has expired. Please refresh the website.", ""
 
     target_term = ontology.ontology_terms[target_term_id]
     if target_term not in sessions[session_id].search_terms:
-        return True, "Your session has expired. Please refresh the website. 12", ""
+        return True, "Your session has expired. Please refresh the website.", ""
 
     trigger = callback_context.triggered[0]["prop_id"].split(".")[0]
     if trigger == "term_lipids_modal_grid":
         row_index = int(renderer_data_lipids["rowId"])
         if len(row_data_lipids) <= row_index:
-            return True, "Your session has expired. Please refresh the website. 13", ""
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = row_data_lipids[row_index]["molecule_id"]
 
     elif trigger == "term_proteins_modal_grid":
         row_index = int(renderer_data_proteins["rowId"])
         if len(row_data_proteins) <= row_index:
-            return True, "Your session has expired. Please refresh the website. 15", ""
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = row_data_proteins[row_index]["molecule_id"]
 
     elif trigger == "term_metabolites_modal_grid":
         row_index = int(renderer_data_metabolites["rowId"])
         if len(row_data_metabolites) <= row_index:
-            return True, "Your session has expired. Please refresh the website. 16", ""
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = row_data_metabolites[row_index]["molecule_id"]
 
     elif trigger == "term_transcripts_modal_grid":
         row_index = int(renderer_data_transcripts["rowId"])
         if len(row_data_transcripts) <= row_index:
-            return True, "Your session has expired. Please refresh the website. 17", ""
+            return True, "Your session has expired. Please refresh the website.", ""
         molecule = row_data_transcripts[row_index]["molecule_id"]
 
     term_path = []
