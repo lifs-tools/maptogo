@@ -3,3 +3,21 @@ Gene Ontology (GO) enrichment analysis is commonly used to interpret genomics, t
 
 ## Running instance
 A **MAPtoGO** instance with 11 predefined model organism knowledge graphs can be accessed from our portal [[https://lifs-tools.org/maptogo|https://lifs-tools.org/maptogo]].
+
+## Building and running locally
+To build and run the **MAPtoGO** Docker image locally, follow these steps:
+
+1. Clone the repository:
+   ```bash
+   git clone
+   cd maptogo
+   ```
+2. Build the Docker image:
+   ```bash
+   docker build -t maptogo:latest .
+   ```
+3. Run the Docker container:
+   ```bash
+   docker run -p 8040:8040 maptogo:latest
+   ```
+4. Access the application in your web browser at `http://localhost:8040`.
