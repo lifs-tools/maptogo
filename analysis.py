@@ -11,9 +11,6 @@ logger.info("Started enrichment server")
 
 VERSION_NUMBER = "1.0.0"
 
-DEPLOYMENT_PATH = os.environ.get("DEPLOYMENT_PATH", "/")
-
-
 import dash
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table, ctx
 from flask import session as uuid_session
@@ -411,7 +408,7 @@ example_options = html.Div(
 )
 
 # Create the Dash app
-app = Dash("app", update_title = None, requests_pathname_prefix=DEPLOYMENT_PATH)
+app = Dash("app", update_title = None)
 app.server.secret_key = "ce7a4618ff121b96faea2c896421ba5e"
 app.title = APPLICATION_SHORT_TITLE
 
