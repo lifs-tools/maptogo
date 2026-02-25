@@ -522,7 +522,7 @@ def layout():
         html.Div([
             dmc.Group([
                 dmc.Image(
-                    src = f"/assets/golipids.png",
+                    src = dash.get_app().get_asset_url(f"golipids.png"),
                     style = {"width": "48px"},
                 ),
                 html.Div(
