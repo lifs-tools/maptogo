@@ -14,7 +14,7 @@ VERSION_NUMBER = "1.0.0"
 
 import dash
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table, ctx
-from flask import session as uuid_session
+from flask import request, session as uuid_session
 import dash_mantine_components as dmc
 import plotly.graph_objs as go
 import dash_ag_grid as dag
@@ -40,6 +40,11 @@ from math import ceil
 from flask_restx import Api, Resource, fields
 import traceback
 import requests
+import socket
+from urllib3.connection import HTTPSConnection
+from urllib3.util import ssl_
+from requests.adapters import HTTPAdapter
+from urllib3.poolmanager import PoolManager
 import threading
 import subprocess
 from datetime import datetime
@@ -66,7 +71,7 @@ def get_git_info():
 
     return f"Built on {timestamp} from commit {commit} on branch {branch}"
 
-INIT_ORGANISM = "10090"
+INIT_ORGANISM = "NCBITaxon:10090"
 APPLICATION_SHORT_TITLE = "MAPtoGO"
 APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
 
@@ -82,22 +87,24 @@ correction_list = [
 ]
 
 try:
-    from organisms import organisms
+    from Config import *
 except Exception as e:
+    logger.warning("No config file found, using defaults")
     organisms = {
-        #'Homo sapiens': '9606',
-        'Mus musculus': '10090',
-        # 'Bacillus cereus': "405534",
-        # 'Saccharomyces cerevisiae': '4932',
-        # 'Escherichia coli': '562',
-        # 'Drosophila melanogaster': '7227',
-        #'Rattus norvegicus': '10116',
-        # 'Bos taurus': '9913',
-        # 'Caenorhabditis elegans': '6239',
-        # 'Pseudomonas aeruginosa': '287',
-        # 'Arabidopsis thaliana': '3702',
+        'Homo sapiens': 'NCBITaxon:9606',
+        'Mus musculus': 'NCBITaxon:10090',
+        # 'Bacillus cereus': "NCBITaxon:405534",
+        # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
+        # 'Escherichia coli': 'NCBITaxon:562',
+        # 'Drosophila melanogaster': 'NCBITaxon:7227',
+        #'Rattus norvegicus': 'NCBITaxon:10116',
+        # 'Bos taurus': 'NCBITaxon:9913',
+        # 'Caenorhabditis elegans': 'NCBITaxon:6239',
+        # 'Pseudomonas aeruginosa': 'NCBITaxon:287',
+        # 'Arabidopsis thaliana': 'NCBITaxon:3702',
     }
-
+    MATOMO_TOKEN = None
+    MATOMO_ADDRESS = None
 
 
 def shorten_label(label, max_len = 10):
@@ -195,18 +202,47 @@ def get_path(nodes, node):
 
 
 
-def analytics(action):
+_original_create_connection = socket.create_connection
+def create_ipv4_connection(address, *args, **kwargs):
+    host, port = address
+    # resolve only IPv4 addresses
+    infos = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+    af, socktype, proto, canonname, sa = infos[0]
+    sock = socket.socket(af, socktype, proto)
+    sock.settimeout(kwargs.get("timeout"))
+    sock.connect(sa)
+    return sock
+socket.create_connection = create_ipv4_connection
+
+
+
+def analytics(action, session):
     def send_action(recorded_action):
+        if MATOMO_ADDRESS == None: return
+
         try:
-            url = f"https://lifs-tools.org/matomo/matomo.php?idsite=17&rec=1&e_c=MAPtoGO-{VERSION_NUMBER}&e_a={recorded_action}"
-            response = requests.get(url, timeout = 5)
+            if MATOMO_TOKEN == None:
+                url = f"{MATOMO_ADDRESS}?idsite=17&rec=1&e_c=MAPtoGO-{VERSION_NUMBER}&e_a={recorded_action}"
+                response = requests.get(url, timeout = 2)
+
+            else:
+                payload = {
+                    "idsite": 17,
+                    "rec": 1,
+                    "cip": session.cip,
+                    "e_c": f"MAPtoGO-{VERSION_NUMBER}",
+                    "e_a": recorded_action,
+                    "token_auth": MATOMO_TOKEN,
+                }
+                response = requests.post(MATOMO_ADDRESS, data=payload, timeout = 2)
+
         except Exception as e:
+            logger.warning(e)
             pass
 
     logger.info(f"Recording action: {action}")
     thread1 = threading.Thread(target = send_action, args = (action,))
     thread1.start()
-
 
 
 
@@ -415,9 +451,14 @@ app.title = APPLICATION_SHORT_TITLE
 
 
 @app.server.before_request
-def set_uid():
+def set_udata():
     if "uid" not in uuid_session:
         uuid_session["uid"] = str(uuid.uuid4())
+
+    if "cip" not in uuid_session:
+        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        client_ip = ".".join(client_ip.split(".")[:-1]) + ".0"
+        uuid_session["cip"] = client_ip
 
 
 api = Api(
@@ -432,7 +473,8 @@ lipid_parser = LipidParser()
 enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
     logger.info(f"Loading {tax_name}")
-    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id}.gz", tax_name, lipid_parser = lipid_parser)
+    tax_id_number = tax_id.replace("NCBITaxon:", "")
+    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name, lipid_parser = lipid_parser)
 
 
 def get_aggrid_modal(name, molecule):
@@ -1951,7 +1993,7 @@ def check_user_input(
 def load_uid(_):
     session_id = uuid_session.get("uid")
     if session_id not in sessions:
-        sessions[session_id] = SessionEntry()
+        sessions[session_id] = SessionEntry(uuid_session.get("cip"))
         logger.info(f"New session: {session_id}")
         return (session_id, *([no_update] * 30))
 
@@ -2165,7 +2207,7 @@ def run_enrichment(
         if with_transcripts: target_set |= session.regulated_transcripts
         background_list = no_update
 
-    analytics("enrichment_analysis")
+    analytics("enrichment_analysis", session)
     session.domains = set(domains)
     results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
     session.result = results
@@ -2517,7 +2559,7 @@ def download_table(
         pd.DataFrame({"Ensembl": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
 
     writer._save()
-    analytics("download_results")
+    analytics("download_results", session)
 
     return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), False, ""
 
@@ -4138,9 +4180,9 @@ enrichment_model = api.model("Enrichment", {
         example = [],
     ),
     "organism_taxonomy": fields.String(
-        description = "Select organism (Taxonomic number), default: '9606' (Homo sapiens)",
+        description = "Select organism (Taxonomic number), default: 'NCBITaxon:9606' (Homo sapiens)",
         enum = [v for k, v in organisms.items()],
-        example = "10090",
+        example = "NCBITaxon:10090",
     ),
     "domains": fields.List(
         fields.String,
@@ -4181,7 +4223,6 @@ class EnrichmentResource(Resource):
     def post(self):
 
         logger.info(f"New API access: enrichment")
-        analytics("api_enrichment_analysis")
 
         try:
             data = api.payload  # JSON body
@@ -4211,7 +4252,7 @@ class EnrichmentResource(Resource):
             if type(regulated_transcripts) != list:
                 return {"error_message": "'regulated_transcripts' needs to be a list", "result": []}, 422
 
-            organism_api = data.get("organism_taxonomy", "9606")
+            organism_api = data.get("organism_taxonomy", "NCBITaxon:9606")
             domains_api = data.get("domains", ["biological_process"])
             accepted_domains = {d.lower().replace(" ", "_"): d for d in enrichment_ontologies[INIT_ORGANISM].domains}
             pvalue_correction_api = data.get("pvalue_correction", "fdr_bh")
@@ -4310,12 +4351,15 @@ class EnrichmentResource(Resource):
                 background_list,
             ) = molecule_tables
 
-            session = SessionEntry()
+            session = SessionEntry(uuid_session.get("cip"))
             session.time = time.time()
             session.use_bounded_fatty_acyls = bounded_fatty_acyls_api
             ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome, transcript_set = transcriptome)
             session.ontology = ontology
             session.data_loaded = True
+
+
+            analytics("api_enrichment_analysis", session)
 
             session.background_lipids = lipidome if with_lipids else None
             session.regulated_lipids = regulated_lipids if with_lipids else None

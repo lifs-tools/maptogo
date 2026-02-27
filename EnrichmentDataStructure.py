@@ -74,7 +74,7 @@ else:
 
 
 class SessionEntry:
-    def __init__(self):
+    def __init__(self, cip = "0.0.0.0"):
         self.time = time.time()
         self.data = None
         self.results = []
@@ -97,6 +97,7 @@ class SessionEntry:
         self.min_pvalue = "0.0001"
         self.max_pvalue = "0.05"
         self.ui = {}
+        self.cip = cip
 
 
 
