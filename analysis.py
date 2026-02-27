@@ -11,7 +11,6 @@ logger.info("Started enrichment server")
 
 VERSION_NUMBER = "1.0.0"
 
-
 import dash
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table, ctx
 from flask import request, session as uuid_session
@@ -565,7 +564,7 @@ def layout():
         html.Div([
             dmc.Group([
                 dmc.Image(
-                    src = f"/assets/golipids.png",
+                    src = dash.get_app().get_asset_url(f"golipids.png"),
                     style = {"width": "48px"},
                 ),
                 html.Div(
