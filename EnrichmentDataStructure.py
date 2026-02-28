@@ -1,3 +1,30 @@
+"""
+MIT License
+
+Copyright (c) 2026 Dominik Kopczynski  -  dominik.kopczynski {at} univie.ac.at
+                   Cristina Coman  -  cristina.coman {at} univie.ac.at
+                   Nils Hoffmann  -  n.hoffmann {at} fz-juelich.de
+                   Robert Ahrends  -  robert.ahrends {at} univie.ac.at
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import gzip
 from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
@@ -13,6 +40,7 @@ import pickle
 import os
 import csv
 from enum import Enum
+from statsmodels.stats.multitest import multipletests
 
 
 lipid_parser = LipidParser()
@@ -350,7 +378,7 @@ class OntologyResult:
 
 
 class EnrichmentOntology:
-    def __init__(self, file_name, ontology_name):
+    def __init__(self, file_name, ontology_name = "undefined"):
         self.ontology_terms = {}
         self.lipids = {}
         self.lipid_classes = {}
@@ -580,7 +608,7 @@ class EnrichmentOntology:
         return search_terms, all_parent_nodes
 
 
-    def enrichment_analysis(self, search_terms, num_background, target_set, enrichment_domains, term_regulation = "greater"):
+    def enrichment_analysis(self, search_terms, num_background, target_set, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
         if len(target_set) == 0 or num_background < 2 or len(enrichment_domains) == 0: return []
 
         enrichment_domains = set(enrichment_domains)
@@ -628,4 +656,10 @@ class EnrichmentOntology:
                     [a, b, c, d]
                 )
 
-        return [result for result in result_list if result != None]
+        results = [result for result in result_list if result != None]
+        if multiple_test_correction != "no" and len(results) > 1:
+            pvalues = [r.pvalue for r in results]
+            pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
+            for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
+        results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
+        return results
