@@ -25,7 +25,7 @@ import io
 from scipy.cluster.hierarchy import linkage, leaves_list, dendrogram
 from scipy.spatial.distance import squareform
 from statsmodels.stats.multitest import multipletests
-from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry, OntologyTerm, TermType
+from EnrichmentDataStructure import *
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.parser.Parser import LipidParser
@@ -47,6 +47,34 @@ from urllib3.poolmanager import PoolManager
 import threading
 import subprocess
 from datetime import datetime
+
+
+
+class SessionEntry:
+    def __init__(self, cip = "0.0.0.0"):
+        self.time = time.time()
+        self.data = None
+        self.results = []
+        self.data_loaded = False
+        self.search_terms = {}
+        self.all_parent_nodes = {}
+        self.num_background = 0
+        self.use_bounded_fatty_acyls = False
+        self.ontology = None
+        self.domains = None
+        self.background_lipids = None
+        self.regulated_lipids = None
+        self.background_proteins = None
+        self.regulated_proteins = None
+        self.background_metabolites = None
+        self.regulated_metabolites = None
+        self.background_transcripts = None
+        self.regulated_transcripts = None
+        self.background_list = []
+        self.min_pvalue = "0.0001"
+        self.max_pvalue = "0.05"
+        self.ui = {}
+        self.cip = cip
 
 
 
@@ -165,11 +193,6 @@ LIPIDS_COLOR = "#A3DC9A"
 PROTEINS_COLOR = "#DEE791"
 METABOLITES_COLOR = "#FFF9BD"
 TRANSCRIPTS_COLOR = "#FFD6BA"
-
-MOLECULE_HANDLING_ERROR = "molecule_handling_error"
-MOLECULE_HANDLING_REMOVE = "molecule_handling_remove"
-MOLECULE_HANDLING_IGNORE = "molecule_handling_ignore"
-
 
 
 regulated_molecule_handling = [
@@ -468,12 +491,11 @@ api = Api(
     doc = "/api/docs"
 )
 
-lipid_parser = LipidParser()
 enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
     logger.info(f"Loading {tax_name}")
     tax_id_number = tax_id.replace("NCBITaxon:", "")
-    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name, lipid_parser = lipid_parser)
+    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
 
 
 def get_aggrid_modal(name, molecule):
@@ -1704,256 +1726,6 @@ def organism_changed(organism, domain_values):
 
 
 
-def check_user_input(
-    omics_included,
-    omics_lists,
-    ontology,
-    ignore_unrecognizable_molecules,
-    ignore_unknown,
-):
-    with_lipids, with_proteins, with_metabolites, with_transcripts = omics_included
-    target_set = set()
-    lipidome, regulated_lipids = {}, set()
-    proteome, regulated_proteins = set(), set()
-    metabolome, regulated_metabolites = set(), set()
-    transcriptome, regulated_transcripts = set(), set()
-    background_list = []
-
-    (
-        all_lipids_list,
-        regulated_lipids_list,
-        all_proteins_list,
-        regulated_proteins_list,
-        all_metabolites_list,
-        regulated_metabolites_list,
-        all_transcripts_list,
-        regulated_transcripts_list,
-    ) = omics_lists
-
-    if with_lipids:
-        if type(all_lipids_list) == str: all_lipids_list = all_lipids_list.split("\n")
-        elif len(all_lipids_list) == 0:
-            return True, "Please paste lipid names into the first text area.", []
-        if type(regulated_lipids_list) == str: regulated_lipids_list = regulated_lipids_list.split("\n")
-        elif len(regulated_lipids_list) == 0:
-            return True, "Please paste lipid names into the second text area.", []
-
-        for lipid_name in all_lipids_list:
-            if len(lipid_name) == 0: continue
-            try:
-                lipid = lipid_parser.parse(lipid_name)
-            except Exception as e:
-                lower_lipid_name = lipid_name.lower()
-                if lower_lipid_name in ontology.unspecific_lipids:
-                    lipid = ontology.unspecific_lipids[lower_lipid_name]
-                else:
-                    if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                        lipid = None
-                    elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                        continue
-                    else:
-                        return True, f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
-            lipidome[lipid_name] = lipid
-
-        for lipid_name in regulated_lipids_list:
-            if len(lipid_name) == 0: continue
-            if lipid_name not in lipidome:
-                if ignore_unknown == MOLECULE_HANDLING_REMOVE: continue
-                return True, f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.", []
-            regulated_lipids.add(lipid_name)
-
-        if len(lipidome) == 0:
-            return True, "No background lipid left after lipid recognition.", []
-
-        if len(regulated_lipids) == 0:
-            return True, "No regulated lipid left after lipid recognition.", []
-
-        if len(regulated_lipids) > len(lipidome):
-            return True, "Length of regulated lipid list must be smaller than background list.", []
-
-        left_lipids = regulated_lipids - lipidome.keys()
-        if len(left_lipids) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                for lipid_name in left_lipids:
-                    del lipidome[lipid_name]
-            else:
-                return True, "The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.", []
-
-        target_set |= regulated_lipids
-        background_list += [{"value": k, "label": k} for k in lipidome.keys()]
-
-    if with_proteins:
-        if type(all_proteins_list) == str: all_proteins_list = all_proteins_list.split("\n")
-        elif len(all_proteins_list) == 0:
-            return True, "Please paste protein accession into the first text area.", []
-
-        if type(regulated_proteins_list) == str: regulated_proteins_list = regulated_proteins_list.split("\n")
-        elif len(regulated_proteins_list) == 0:
-            return True, "Please paste protein accessions into the second text area.", []
-
-        proteome = set(protein for protein in all_proteins_list if len(protein) > 0)
-        regulated_proteins = set(protein for protein in regulated_proteins_list if len(protein) > 0)
-
-        background_list += [{"value": pp, "label": p + (' (' + ontology.proteins[pp].name + ')' if (pp in ontology.proteins) else '')} for p in proteome if (pp := "UNIPROT:" + p)]
-        proteome = set(p.split("-")[0] for p in proteome)
-        regulated_proteins = set(rp.split("-")[0] for rp in regulated_proteins)
-        left_proteins = proteome - ontology.clean_protein_ids
-        if len(left_proteins) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                proteome -= left_proteins
-            else:
-                return True, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
-
-        left_proteins = regulated_proteins - ontology.clean_protein_ids
-        if len(left_proteins) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                regulated_proteins -= left_proteins
-            else:
-                return True, "The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
-
-        left_proteins = regulated_proteins - proteome
-        if len(left_proteins) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                regulated_proteins -= left_proteins
-            else:
-                return True, "The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.", []
-
-        if len(proteome) == 0:
-            return True, "No background protein left after protein recognition.", []
-
-        if len(regulated_proteins) == 0:
-            return True, "No regulated protein left after protein recognition.", []
-
-        if len(regulated_proteins) > len(proteome):
-            return True, "Length of regulated protein list must be smaller than background list.", []
-
-        proteome = set([f"UNIPROT:{protein}" for protein in proteome])
-        regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
-        target_set |= regulated_proteins
-
-    if with_metabolites:
-        if type(all_metabolites_list) == str: all_metabolites_list = all_metabolites_list.split("\n")
-        elif len(all_metabolites_list) == 0:
-            return True, "Please paste metabolite ChEBI Ids into the first text area.", []
-
-        if type(regulated_metabolites_list) == str: regulated_metabolites_list = regulated_metabolites_list.split("\n")
-        elif len(regulated_metabolites_list) == 0:
-            return True, "Please paste metabolite ChEBI Ids into the second text area.", []
-
-        metabolome = set(metabolite for metabolite in all_metabolites_list if len(metabolite) > 0)
-        regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list if len(metabolite) > 0)
-
-        background_list += [{"value": m, "label": m} for m in metabolome]
-        left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
-        left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
-        if len(left_metabolites) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                metabolome -= left_metabolites
-            else:
-                return True, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
-
-        left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
-        left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
-        if len(left_metabolites) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                regulated_metabolites -= left_metabolites
-            else:
-                return True, "The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
-
-        left_metabolites = regulated_metabolites - metabolome
-        if len(left_metabolites) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                regulated_metabolites -= left_metabolites
-            else:
-                return True, "The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", []
-
-        if len(metabolome) == 0:
-            return True, "No background metabolite left after metabolite recognition.", []
-
-        if len(regulated_metabolites) == 0:
-            return True, "No regulated metabolite left after metabolite recognition.", []
-
-        if len(regulated_metabolites) > len(metabolome):
-            return True, "Length of regulated metabolite list must be smaller than background list.", []
-
-        metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
-        regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
-        target_set |= regulated_metabolites
-
-    if with_transcripts:
-        if type(all_transcripts_list) == str: all_transcripts_list = all_transcripts_list.split("\n")
-        elif len(all_transcripts_list) == 0:
-            return True, "Please paste transcript ensembl Ids into the first text area.", []
-
-        if type(regulated_transcripts_list) == str: regulated_transcripts_list = regulated_transcripts_list.split("\n")
-        elif len(regulated_transcripts_list) == 0:
-            return True, "Please paste transcript ensembl Ids into the second text area.", []
-
-        transcriptome = set(transcript for transcript in all_transcripts_list if len(transcript) > 0)
-        regulated_transcripts = set(transcript for transcript in regulated_transcripts_list if len(transcript) > 0)
-
-        background_list += [{"value": t, "label": t + (' (' + ontology.transcripts[tt].name + ')' if (tt in ontology.transcripts) else '')} for t in transcriptome if (tt := t.split(".")[0])]
-        transcript_keys = set(ontology.transcripts.keys())
-        left_transcripts = set(t for t in transcriptome if t.split(".")[0] not in transcript_keys)
-        if len(left_transcripts) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                transcriptome -= left_transcripts
-            else:
-                return True, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
-
-        left_transcripts = set(t for t in regulated_transcripts if t.split(".")[0] not in transcript_keys)
-        if len(left_transcripts) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                regulated_transcripts -= left_transcripts
-            else:
-                return True, "The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.", []
-
-        left_transcripts = regulated_transcripts - transcriptome
-        if len(left_transcripts) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                regulated_transcripts -= left_transcripts
-            else:
-                return True, "The regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.", []
-        if len(transcriptome) == 0:
-            return True, "No background transcript left after transcript recognition.", []
-
-        if len(regulated_transcripts) == 0:
-            return True, "No regulated transcript left after transcript recognition.", []
-
-        if len(regulated_transcripts) > len(transcriptome):
-            return True, "Length of regulated transcript list must be smaller than background list.", []
-
-        target_set |= regulated_transcripts
-
-    molecule_tables = [
-        target_set,
-        lipidome,
-        regulated_lipids,
-        proteome,
-        regulated_proteins,
-        metabolome,
-        regulated_metabolites,
-        transcriptome,
-        regulated_transcripts,
-        background_list,
-    ]
-
-    return False, "", molecule_tables
-
-
-
 @app.callback(
     Output("sessionid", "children", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
@@ -2031,8 +1803,8 @@ def load_uid(_):
 
     return (
         session_id,
-        False,
-        "",
+        no_update,
+        no_update,
         f"Entries: {num_all_lipids}",
         f"Entries: {num_regulated_lipids}",
         f"Entries: {num_all_proteins}",
@@ -2159,31 +1931,39 @@ def run_enrichment(
             regulated_transcripts_list,
         ]
 
-        do_activate_alert, error_message, molecule_tables = check_user_input(
-            omics_included,
-            omics_lists,
-            ontology,
-            ignore_unrecognizable_molecules,
-            ignore_unknown,
-        )
-
-        if do_activate_alert:
-            return "", [], [], {}, do_activate_alert, error_message, histogram_disabled, [], [], num_enrichment_terms
+        try:
+            (
+                target_set,
+                lipidome,
+                regulated_lipids,
+                proteome,
+                regulated_proteins,
+                metabolome,
+                regulated_metabolites,
+                transcriptome,
+                regulated_transcripts,
+                background_list,
+            ) = check_user_input(
+                omics_included,
+                omics_lists,
+                ontology,
+                ignore_unrecognizable_molecules,
+                ignore_unknown,
+            )
+        except Exception as error_message:
+            return "", [], [], {}, True, str(error_message), histogram_disabled, [], [], num_enrichment_terms
 
         (
-            target_set,
-            lipidome,
-            regulated_lipids,
-            proteome,
-            regulated_proteins,
-            metabolome,
-            regulated_metabolites,
-            transcriptome,
-            regulated_transcripts,
-            background_list,
-        ) = molecule_tables
-
-        ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome, transcript_set = transcriptome)
+            session.search_terms,
+            session.all_parent_nodes,
+        ) = ontology.set_background(
+            lipid_dict = lipidome,
+            protein_set = proteome,
+            metabolite_set = metabolome,
+            transcript_set = transcriptome,
+            use_bounded_fatty_acyls = session.use_bounded_fatty_acyls,
+        )
+        session.num_background = len(lipidome) + len(proteome) + len(metabolome) + len(transcriptome)
         session.ontology = ontology
         session.data_loaded = True
 
@@ -2208,7 +1988,7 @@ def run_enrichment(
 
     analytics("enrichment_analysis", session)
     session.domains = set(domains)
-    results = ontology.enrichment_analysis(session, target_set, domains, term_regulation)
+    results = ontology.enrichment_analysis(session.search_terms, session.num_background, target_set, domains, term_regulation)
     session.result = results
 
     if correction_method != "no" and len(results) > 1:
@@ -2247,8 +2027,8 @@ def run_enrichment(
         data,
         [],
         {},
-        False,
-        "",
+        no_update,
+        no_update,
         histogram_disabled,
         background_list,
         [],
@@ -2295,7 +2075,7 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
         data = [row for result, row in session.results if not set(result.source_terms).isdisjoint(multiselect_values)]
     else:
         data = [row for _, row in session.results]
-    return data, [], {}, False, "", f"Entries: {len(data)}"
+    return data, [], {}, no_update, no_update, f"Entries: {len(data)}"
 
 
 
@@ -2402,10 +2182,9 @@ def update_background(
     session.ui["select_test_method"] = select_test_method
     session.ui["select_domains"] = select_domains
 
-
     return (
-        False,
-        "",
+        no_update,
+        no_update,
         f"Entries: {num_all_lipids}",
         f"Entries: {num_regulated_lipids}",
         f"Entries: {num_all_proteins}",
@@ -2560,7 +2339,7 @@ def download_table(
     writer._save()
     analytics("download_results", session)
 
-    return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), False, ""
+    return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), no_update, no_update
 
 
 
@@ -2843,8 +2622,8 @@ def open_term_window(
         not with_metabolites,
         not with_transcripts,
         tab_value,
-        False,
-        "",
+        no_update,
+        no_update,
         "",
         contingency_table,
     )
@@ -3037,8 +2816,8 @@ def open_sunburstplot(
         fig,
         "70%",
         barplot_terms_wrapper_style,
-        False,
-        "",
+        no_update,
+        no_update,
         barplot_controls_style,
         sunburst_controls_style,
         sankey_controls_style,
@@ -3124,9 +2903,6 @@ def open_sankeyplot(
         (regulated_metabolites if regulated_metabolites else set()) |
         (regulated_transcripts if regulated_transcripts else set())
     )
-
-
-
 
     flow_data = {}
     flow_data_id = {}
@@ -3286,8 +3062,8 @@ def open_sankeyplot(
         fig,
         "90%",
         barplot_terms_wrapper_style,
-        False,
-        "",
+        no_update,
+        no_update,
         barplot_controls_style,
         sunburst_controls_style,
         sankey_controls_style,
@@ -3361,7 +3137,6 @@ def open_barplot(
     with_proteins = background_proteins != None
     with_metabolites = background_metabolites != None
     with_transcripts = background_transcripts != None
-
 
     multiomics = sum([with_lipids + with_proteins + with_metabolites + with_transcripts]) > 1
     barplot_controls_style["display"] = "block"
@@ -3799,8 +3574,8 @@ def open_barplot(
         fig,
         CIRCLE_WIDTH * 2 + 50,
         barplot_terms_wrapper_style,
-        False,
-        "",
+        no_update,
+        no_update,
         barplot_controls_style,
         sunburst_controls_style,
         sankey_controls_style,
@@ -3877,8 +3652,8 @@ def open_histogram(
         fig,
         "90%",
         barplot_terms_wrapper_style,
-        False,
-        "",
+        no_update,
+        no_update,
         barplot_controls_style,
         sunburst_controls_style,
         sankey_controls_style,
@@ -4129,7 +3904,7 @@ def show_molecule_term_path(
                 },
             ),
         )
-    return False, "", term_path
+    return no_update, no_update, term_path
 
 
 
@@ -4260,9 +4035,6 @@ class EnrichmentResource(Resource):
             non_background_molecules_api = data.get("non_background_molecules", MOLECULE_HANDLING_REMOVE)
             bounded_fatty_acyls_api = data.get("bounded_fatty_acyls", False)
 
-            if type(organism_api) not in {str, int} or (type(organism_api) == str and not organism_api.isnumeric()):
-                return {"error_message": "'organism_taxonomy' must be a (string) number", "result": []}, 422
-
             if str(organism_api) not in organisms.values():
                 return {"error_message": f"'organism_taxonomy' must be one of {set(organisms.values())}", "result": []}, 422
             organism_api = str(organism_api)
@@ -4326,40 +4098,46 @@ class EnrichmentResource(Resource):
             ]
 
             ontology = enrichment_ontologies[organism_api]
-            check_failed, error_message, molecule_tables = check_user_input(
-                omics_included,
-                omics_lists,
-                ontology,
-                unrecognizable_molecules_api,
-                non_background_molecules_api,
-            )
 
-            if check_failed:
-                return {"error_message": error_message, "result": []}, 422
-
-            (
-                target_set,
-                lipidome,
-                regulated_lipids,
-                proteome,
-                regulated_proteins,
-                metabolome,
-                regulated_metabolites,
-                transcriptome,
-                regulated_transcripts,
-                background_list,
-            ) = molecule_tables
+            try:
+                (
+                    target_set,
+                    lipidome,
+                    regulated_lipids,
+                    proteome,
+                    regulated_proteins,
+                    metabolome,
+                    regulated_metabolites,
+                    transcriptome,
+                    regulated_transcripts,
+                    background_list,
+                ) = check_user_input(
+                    omics_included,
+                    omics_lists,
+                    ontology,
+                    unrecognizable_molecules_api,
+                    non_background_molecules_api,
+                )
+            except Exception as error_message:
+                return {"error_message": str(error_message), "result": []}, 422
 
             session = SessionEntry(uuid_session.get("cip"))
             session.time = time.time()
             session.use_bounded_fatty_acyls = bounded_fatty_acyls_api
-            ontology.set_background(session, lipid_dict = lipidome, protein_set = proteome, metabolite_set = metabolome, transcript_set = transcriptome)
+            (
+                session.search_terms,
+                session.all_parent_nodes,
+            ) = ontology.set_background(
+                lipid_dict = lipidome,
+                protein_set = proteome,
+                metabolite_set = metabolome,
+                transcript_set = transcriptome,
+                use_bounded_fatty_acyls = session.use_bounded_fatty_acyls,
+            )
+            session.num_background = len(lipidome) + len(proteome) + len(metabolome) + len(transcriptome)
             session.ontology = ontology
             session.data_loaded = True
-
-
             analytics("api_enrichment_analysis", session)
-
             session.background_lipids = lipidome if with_lipids else None
             session.regulated_lipids = regulated_lipids if with_lipids else None
             session.background_proteins = proteome if with_proteins else None
@@ -4372,7 +4150,7 @@ class EnrichmentResource(Resource):
             session.background_list = background_list
 
             session.domains = set(domains_api)
-            results = ontology.enrichment_analysis(session, target_set, domains_api, term_representation_api)
+            results = ontology.enrichment_analysis(session.search_terms, session.num_background, target_set, domains_api, term_representation_api)
             session.result = results
 
             if pvalue_correction_api != "no" and len(results) > 1:
@@ -4399,6 +4177,7 @@ class EnrichmentResource(Resource):
             return {"error_message": "", "result": result_data}, 200
 
         except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
             return {"error_message": f"{e}", "result": []}, 500
 
 
