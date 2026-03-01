@@ -1,16 +1,30 @@
-from EnrichmentDataStructure import EnrichmentOntology, current_path, SessionEntry
+from EnrichmentDataStructure import *
+import time
+
+def profile(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
+        return result
+    return wrapper
+
+#@profile
+def m():
+    ontology = EnrichmentOntology(f"Data/ontology_10090.gz", "Homo sapiens")
+
+m()
+
+exit()
+
+
+
 from pygoslin.parser.Parser import LipidParser
 import time
 
 lipid_parser = LipidParser()
 session = SessionEntry()
-
-
-ontology = EnrichmentOntology(f"Data/ontology_9606.gz", "Homo sapiens", lipid_parser = lipid_parser)
-
-exit()
-
-
 test_data = {}
 lipid_dict = {}
 protein_set = set()

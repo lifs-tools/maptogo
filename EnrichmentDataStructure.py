@@ -39,6 +39,7 @@ import traceback
 import pickle
 import os
 import csv
+import sys
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
 
@@ -335,22 +336,23 @@ def check_user_input(
     )
 
 
+EXCLUDE_TERMS = {"", "external"}
 
 class OntologyTerm:
-    def __init__(self, _term_id, _name, _relations, _domain = None, _categories = None):
-        if _domain == None: _domain = set()
-        if _categories == None: _categories = set()
+    __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories", "synonyms")
 
-        self.term_id = sorted(list(_term_id) if type(_term_id) in {list, set} else list(_term_id.split("|")))
-        self.term_id_str = "|".join(sorted(list(self.term_id)))
-        self.term_type = TermType.UNCLASSIFIED_TERM
+    def __init__(self, _term_id, _name, _relations, _synonyms, _domain, _categories):
+        self.term_type = TermType(int(_relations[moea_pos + 5 : moea_pos + 12])) if (moea_pos := _relations.find("MOEA:00000")) > -1 else TermType.UNCLASSIFIED_TERM
+        self.term_id = sorted(_term_id.split("|"))
+        self.term_id_str = "|".join(sorted(self.term_id))
         self.name = _name
-        self.relations = sorted([r for r in _relations if r != ""])
-        self.domain = (set(_domain) if type(_domain) in {list, set} else set(_domain.split("|"))) - {"", "external"}
-        self.categories = (set(_categories) if type(_categories) in {list, set} else set(_categories.split("|"))) - {""}
+        self.domain = set(_domain.split("|")) - EXCLUDE_TERMS
+        self.relations = sorted(r for r in _relations.split("|") if r != "")
+        self.categories = set(_categories.split("|")) - EXCLUDE_TERMS
+        self.synonyms = _synonyms.split("|")
 
     def get_term_id(self, space = False):
-        return " | ".join(sorted(list(self.term_id)))
+        return " | ".join(sorted(self.term_id))
 
 
 
@@ -395,24 +397,15 @@ class EnrichmentOntology:
         self.unspecific_lipids = {}
 
         try:
-            with gzip.open(file_name, "rt") as file_stream:
-                lines = file_stream.read().split("\n")
-                tokens_list = [l.split("\t") for l in lines if len(l) > 0]
-                for tokens in tokens_list:
-                    term_id, name, relations, synonyms, domain, categories = tokens
-                    relations_split = relations.split("|")
-                    synonyms = synonyms.split("|")
-                    moea_pos = relations.find("MOEA:00000")
-                    term_type = TermType(int(relations[moea_pos + 5 : moea_pos + 12])) if moea_pos > -1 else TermType.UNCLASSIFIED_TERM
-
-                    term = OntologyTerm(term_id, name, relations_split, domain, categories)
-                    term.term_type = term_type
-                    str_term_id = term.term_id_str
-                    match term_type:
+            csv.field_size_limit(sys.maxsize)
+            with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
+                for term in [OntologyTerm(*row) for row in csv.reader(f, delimiter = "\t") if len(row) == 6]:
+                    str_term_id, name = term.term_id_str, term.name
+                    match term.term_type:
                         case TermType.LIPID_CLASS: # lipid class
                             if name not in self.lipid_classes: self.lipid_classes[name] = []
                             self.lipid_classes[name].append(term)
-                            for synonym in synonyms:
+                            for synonym in term.synonyms:
                                 if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
                                 self.lipid_classes[synonym].append(term)
 
@@ -421,12 +414,12 @@ class EnrichmentOntology:
 
                         case TermType.CARBON_CHAIN: # carbon chain
                             if name not in self.carbon_chains: self.carbon_chains[name] = term
-                            for synonym in synonyms:
+                            for synonym in term.synonyms:
                                 self.carbon_chains[synonym] = term
 
                         case TermType.UNSPECIFIC_LIPID:
                             if name.lower() not in self.unspecific_lipids: self.unspecific_lipids[name.lower()] = term
-                            for synonym in synonyms:
+                            for synonym in term.synonyms:
                                 if synonym.lower() not in self.unspecific_lipids:
                                     self.unspecific_lipids[synonym.lower()] = term
 
@@ -444,13 +437,8 @@ class EnrichmentOntology:
                         case TermType.METABOLITE: # metabolite
                             if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
 
-
-                    for d in domain.split("|"):
-                        if len(d) > 0 and d != "external":
-                            self.domains.add(d)
-
-                    for t_id in term_id.split("|"):
-                        self.ontology_terms[t_id] = term
+                    for d in term.domain: self.domains.add(d)
+                    for t_id in term.term_id: self.ontology_terms[t_id] = term
 
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))

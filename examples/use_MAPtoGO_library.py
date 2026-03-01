@@ -47,13 +47,13 @@ organism_taxonomy = df["Organism"][0]
 
 
 ## load correct ontology
-print("Load correct ontology")
+print(f"Load {organism_taxonomy} ontology")
 ontology = EnrichmentOntology(f"../Data/ontology_{organism_taxonomy.split(":")[1]}.gz")
 
 
 
 ## define which omics layer is included in analysis (lipidomics, proteomics, metabolomics, transcriptomics)
-omics_included = [True, False, True, False]
+omics_included = [True, True, True, False]
 omics_lists = [
     background_lipids_list,
     regulated_lipids_list,
