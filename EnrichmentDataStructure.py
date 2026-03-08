@@ -42,6 +42,7 @@ import csv
 import sys
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
+from itertools import groupby
 
 
 lipid_parser = LipidParser()
@@ -337,17 +338,16 @@ def check_user_input(
 
 
 EXCLUDE_TERMS = {"", "external"}
-
 class OntologyTerm:
     __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories", "synonyms")
 
     def __init__(self, _term_id, _name, _relations, _synonyms, _domain, _categories):
         self.term_type = TermType(int(_relations[moea_pos + 5 : moea_pos + 12])) if (moea_pos := _relations.find("MOEA:00000")) > -1 else TermType.UNCLASSIFIED_TERM
         self.term_id = sorted(_term_id.split("|"))
-        self.term_id_str = "|".join(sorted(self.term_id))
+        self.term_id_str = "|".join(self.term_id)
         self.name = _name
         self.domain = set(_domain.split("|")) - EXCLUDE_TERMS
-        self.relations = sorted(r for r in _relations.split("|") if r != "")
+        self.relations = _relations.split("|")
         self.categories = set(_categories.split("|")) - EXCLUDE_TERMS
         self.synonyms = _synonyms.split("|")
 
@@ -378,7 +378,6 @@ class OntologyResult:
 
 
 
-
 class EnrichmentOntology:
     def __init__(self, file_name, ontology_name = "undefined"):
         self.ontology_terms = {}
@@ -400,6 +399,9 @@ class EnrichmentOntology:
             csv.field_size_limit(sys.maxsize)
             with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
                 for term in [OntologyTerm(*row) for row in csv.reader(f, delimiter = "\t") if len(row) == 6]:
+                    for d in term.domain: self.domains.add(d)
+                    for t_id in term.term_id: self.ontology_terms[t_id] = term
+
                     str_term_id, name = term.term_id_str, term.name
                     match term.term_type:
                         case TermType.LIPID_CLASS: # lipid class
@@ -437,8 +439,6 @@ class EnrichmentOntology:
                         case TermType.METABOLITE: # metabolite
                             if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
 
-                    for d in term.domain: self.domains.add(d)
-                    for t_id in term.term_id: self.ontology_terms[t_id] = term
 
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
@@ -446,7 +446,7 @@ class EnrichmentOntology:
 
         self.clean_protein_ids = set([key.replace("UNIPROT:", "") for key in self.proteins.keys()])
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
-        self.metabolite_names = {term.name.lower(): term for _, term in self.metabolites.items()}
+        self.metabolite_names = {term.name.lower(): term for term in self.metabolites.values()}
         for synonym, term_id in CHEBI_synonym_table.items():
             if term_id in self.metabolites:
                 self.metabolite_names[synonym] = self.metabolites[term_id]
@@ -463,12 +463,21 @@ class EnrichmentOntology:
             logger.error(e)
 
         # clean up ontology
-        for term_id, term in self.ontology_terms.items():
-            if not term.relations or type(term.relations[0]) == OntologyTerm: continue
-            term.relations = sorted(
-                {self.ontology_terms[t] for t in term.relations if t in self.ontology_terms},
-                key = lambda term: term.term_id_str
-            )
+        try:
+            ontology_keys, ontology_terms = set(self.ontology_terms), self.ontology_terms
+            for term in self.ontology_terms.values():
+                if not term.relations or type(term.relations[0]) == OntologyTerm: continue
+                term.relations = [
+                    k for k, _ in groupby(
+                        sorted(
+                            [ontology_terms[t] for t in term.relations if t in ontology_keys],
+                            key = lambda term: term.term_id_str
+                        )
+                    )
+                ]
+        except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
+            logger.error(e)
 
 
     def set_background(

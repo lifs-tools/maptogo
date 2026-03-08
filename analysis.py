@@ -66,10 +66,6 @@ from flask_restx import Api, Resource, fields
 import traceback
 import requests
 import socket
-from urllib3.connection import HTTPSConnection
-from urllib3.util import ssl_
-from requests.adapters import HTTPAdapter
-from urllib3.poolmanager import PoolManager
 import threading
 import subprocess
 from datetime import datetime
@@ -521,10 +517,7 @@ enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
     logger.info(f"Loading {tax_name}")
     tax_id_number = tax_id.replace("NCBITaxon:", "")
-    start_time = time.time()
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
-    end_time = time.time()
-    print(f"Time elapsed for '{tax_name}': {end_time - start_time}s")
 
 def get_aggrid_modal(name, molecule):
     return dag.AgGrid(
