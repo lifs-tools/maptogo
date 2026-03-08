@@ -267,6 +267,7 @@ def analytics(action, session):
         try:
             if MATOMO_TOKEN == None:
                 url = f"{MATOMO_ADDRESS}?idsite=17&rec=1&e_c=MAPtoGO-{VERSION_NUMBER}&e_a={recorded_action}"
+                logger.debug(f"Sending analytics data to Matomo without token: {url}")
                 response = requests.get(url, timeout = 2)
 
             else:
@@ -278,6 +279,7 @@ def analytics(action, session):
                     "e_a": recorded_action,
                     "token_auth": MATOMO_TOKEN,
                 }
+                logger.debug(f"Sending analytics data to Matomo with token: {payload['idsite']} {payload['e_c']} {payload['e_a']}")
                 response = requests.post(MATOMO_ADDRESS, data=payload, timeout = 2)
 
         except Exception as e:
@@ -504,14 +506,17 @@ def set_udata():
         client_ip = ".".join(client_ip.split(".")[:-1]) + ".0"
         uuid_session["cip"] = client_ip
 
-
 api = Api(
     app.server,
     version = "1.0",
     title = f"{APPLICATION_TITLE} - REST API",
     description = "Application programming interface for the GO multiomics analysis platform",
-    doc = "/api/docs"
+    doc = app.get_relative_path("/api/docs"),
+    prefix = app.get_relative_path("")
 )
+api.static_url_path = app.get_relative_path("/swaggerui")
+
+logger.info(f"Deploying swagger-ui at {app.get_relative_path('/api/docs')}, setting prefix to: {app.get_relative_path('')}, static url path to: {app.get_relative_path('/swaggerui')}")
 
 enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
@@ -646,7 +651,7 @@ def layout():
                         "REST API",
                     ),
                     id = "api_link",
-                    href = "/api/docs",
+                    href = dash.get_app().get_relative_path("/api/docs"),
                     target = "_blank",
                     style = {"textDecoration": "none", "color": LINK_COLOR, "cursor": "pointer"},
                 ),
