@@ -1934,6 +1934,9 @@ def run_enrichment(
     if len(domains) == 0:
         return "", [], [], {}, True, "No domain(s) selected.", histogram_disabled, [], [], num_enrichment_terms
 
+    if organism is None or organism not in enrichment_ontologies:
+        return "", [], [], {}, True, "No organism selected.", histogram_disabled, [], [], num_enrichment_terms
+    
     ontology = enrichment_ontologies[organism]
     target_set = set()
     lipidome, regulated_lipids = {}, set()
