@@ -53,6 +53,7 @@ ontology = EnrichmentOntology(f"../Data/ontology_{organism_taxonomy.split(":")[1
 
 
 ## define which omics layer is included in analysis (lipidomics, proteomics, metabolomics, transcriptomics)
+# in this example, we only use lipidomics, proteomics, and metabolomics data, for your case, please adjust
 omics_included = [True, True, True, False]
 omics_lists = [
     background_lipids_list,
@@ -115,16 +116,19 @@ print("Set enrichment background")
 
 ## run enrichment analysis
 print("Run enrichment analysis")
-# possible domains: "Biological process", "Cellular component", "Disease", "Metabolic and signalling pathway", "Molecular function", "Phenotype", "Physical or chemical properties"
+# possible domains: "Biological process", "Cellular component", "Disease", "Metabolic and signalling pathway", "Molecular function", "Phenotype", "Physical or chemical properties", or any combination
 domains = {"Biological process"}
 
-# possible term_regulation: "greater", "less", "two-sided"
+# possible term_regulation:
+# "greater" -> significant biomolocules are overrepresented in domain term (default)
+# "less" -> significant biomolocules are underrepresented in domain term, means no effect on the term
+# "two-sided" -> either way
 term_regulation = "greater"
 
 # possible multiple_test_correction:
 # "no" -> No correction
 # "bonferroni" -> Bonferroni
-# "fdr_bh" -> Benjamini/Hochberg
+# "fdr_bh" -> Benjamini/Hochberg (default)
 # "fdr_by" -> Benjamini/Yekutieli
 # "holm-sidak" -> Step down method using Sidak adjustment
 # "holm" -> Step-down method using Bonferroni adjustments
@@ -145,10 +149,10 @@ results = ontology.enrichment_analysis(
 ### printing the results in p-value reverse order
 for result in results[::-1]:
     expected = round((result.fisher_data[0] + result.fisher_data[1]) * (result.fisher_data[0] + result.fisher_data[2]) / sum(result.fisher_data))
-    print("domain", " | ".join(result.term.domain))
-    print("term", result.term.name)
-    print("termid", result.term.term_id_str)
-    print("count", f"{result.fisher_data[0]} ({expected}) / {len(result.source_terms)}")
-    print("pvalue", result.pvalue_corrected)
-    print("log_odds_ratio", result.lor)
+    print("domain:", " | ".join(result.term.domain))
+    print("term:", result.term.name)
+    print("termid:", result.term.term_id_str)
+    print("count:", f"{result.fisher_data[0]} ({expected}) / {len(result.source_terms)}")
+    print("pvalue:", result.pvalue_corrected)
+    print("log_odds_ratio:", result.lor)
     print()

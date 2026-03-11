@@ -351,6 +351,9 @@ class OntologyTerm:
         self.categories = set(_categories.split("|")) - EXCLUDE_TERMS
         self.synonyms = _synonyms.split("|")
 
+        if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0:
+            self.categories = {"Unclassified reaction"}
+
     def get_term_id(self, space = False):
         return " | ".join(sorted(self.term_id))
 

@@ -1,5 +1,5 @@
 curl -X 'POST' \
-  'https://lipidomics.at:8040/api/enrichment' \
+  'https://maptogo.lifs-tools.org/api/enrichment' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -4678,7 +4678,7 @@ curl -X 'POST' \
   ],
   "background_transcripts": [],
   "regulated_transcripts": [],
-  "organism_taxonomy": "10090",
+  "organism_taxonomy": "NCBITaxon:10090",
   "domains": [
     "biological_process"
   ],

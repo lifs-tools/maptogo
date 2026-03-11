@@ -69,6 +69,7 @@ import socket
 import threading
 import subprocess
 from datetime import datetime
+from collections import defaultdict, deque
 
 
 
@@ -191,18 +192,19 @@ for font_size in range(1, 23):
         char_sizes_font.append((face.glyph.advance.x >> 6) * 0.1 * font_size)
 
 
-
 hash_function = hashlib.new('sha256')
 LINK_COLOR = "#2980B9"
 SESSION_DURATION_TIME = 60 * 60 * 2 # two hours
 domain_colors = {
-    "Biological process": ["#F09EA7", "#e5a9b0"],
-    "Cellular component": ["#F6CA94", "#eac9a0"],
-    "Disease": ["#FAFABE", "#f3f3c5"],
-    "Metabolic and signalling pathway": ["#C1EBC0", "#c9e3c8"],
-    "Molecular function": ["#C7CAFF", "#cdcff9"],
-    "Phenotype": ["#CDABEB", "#ccb5e1"],
-    "Physical or chemical properties": ["#F6C2FA", "#f0c9f3"],
+    "Biological process": ["#FFB3BA", "#F6C0C5"],
+    "Cellular component": ["#BAFFC9", "#C7F6D4"],
+    "Disease": ["#BAE1FF", "#C7E2F6"],
+    "Metabolic and signalling pathway": ["#FFD1BA", "#F6D8C7"],
+    "Molecular function": ["#BAFFF1", "#C7F6EE"],
+    "Phenotype": ["#D1BAFF", "#D8C7F6"],
+    "Physical or chemical properties": ["#FFFFBA", "#F6F6C7"],
+    "Enzymatic activity (Swiss-Prot)": ["#F6D4C7", "#f0c9f3"],
+    "Enzymatic activity (Swiss-Prot + TrEMBL)": ["#BAFFD1", "#C7F6D8"],
 }
 REGULATED_COLOR = "#F49E4C"
 ASSOCIATED_COLOR = "#87BCDE"
@@ -1651,6 +1653,7 @@ def layout():
                                 "headerName": "p-value",
                                 "width": 80,
                                 "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
+                                "filter": "agNumberColumnFilter",
                                 "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
                             },
                             {
@@ -1658,6 +1661,7 @@ def layout():
                                 "headerName": "Log odds",
                                 "width": 80,
                                 "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
+                                "filter": "agNumberColumnFilter",
                                 "headerTooltip": "The 'log odds ratio' determines how strong the association is (effect size). Positive: enriched; Zero: no enrichment; Negative: depleted.",
                             },
                         ],
@@ -2695,6 +2699,7 @@ def open_sunburstplot(
             no_update,
             no_update,
             no_update,
+            no_update,
         )
 
     session = sessions[session_id]
@@ -2918,13 +2923,45 @@ def open_sankeyplot(
         (regulated_transcripts if regulated_transcripts else set())
     )
 
-    flow_data = {}
-    flow_data_id = {}
-    max_path_length = 0
+    pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
+    def compute_layers(n_nodes, source, target):
+        # Build graph
+        incoming = defaultdict(set)
+        outgoing = defaultdict(set)
 
-    def get_flow_key(category, path_key):
-        return (category, tuple(sorted(list(path_key))) if type(path_key) != TermType else path_key)
+        for s, t in zip(source, target):
+            outgoing[s].add(t)
+            incoming[t].add(s)
 
+        # Kahn's algorithm (topological layering)
+        layer = {i: 0 for i in range(n_nodes)}
+        queue = deque()
+
+        # Start with nodes with no incoming edges
+        for i in range(n_nodes):
+            if not incoming[i]:
+                queue.append(i)
+
+        while queue:
+            node = queue.popleft()
+            for child in outgoing[node]:
+                layer[child] = max(layer[child], layer[node] + 1)
+                incoming[child].remove(node)
+                if not incoming[child]:
+                    queue.append(child)
+
+        return layer
+
+
+
+    # Example data
+    # fig_labels = ["A", "B", "C", "D", "E", "F", "G"]
+    # fig_source = [0, 0, 1, 2, 3, 5, 5]
+    # fig_target = [1, 2, 3, 4, 4, 4, 6]
+    # fig_value =  [5, 3, 4, 2, 6, 3, 1]
+
+    sankey_data = {}
+    sankey_data_ids = {}
     for target_term_id in selected_term_ids:
         target_term_id_single = target_term_id.split("|")[0]
         target_term = terms[target_term_id_single]
@@ -2940,22 +2977,19 @@ def open_sankeyplot(
                 input_molecule = "Input metabolite"
             elif regulated_transcripts and molecule in background_transcripts:
                 input_molecule = "Input transcript"
-            path_layers = [[TermType.INPUT_TERM, [{input_molecule}]]]
 
-            # determine category path
+            path_layers = [[TermType.INPUT_TERM, [input_molecule]]]
+
             for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
-                if type(term) == str: term_id = term
-                else: term_id = list(term.term_id)[0]
+                term_id = term if type(term) == str else term.term_id[0]
 
                 if not term_id in ontology.ontology_terms:
                     if term_id in background_lipids and type(background_lipids[term_id]) == LipidAdduct:
                         lipid_category = background_lipids[term_id].get_lipid_string(LipidLevel.CATEGORY)
-                        if not path_layers or path_layers[-1][0] != TermType.LIPID_SPECIES:
-                            path_layers.append((TermType.LIPID_SPECIES, [{lipid_category}]))
-                        else:
-                            path_layers[-1][1].append({lipid_category})
+                        if path_layers[-1][0] != TermType.LIPID_SPECIES:
+                            path_layers.append([TermType.LIPID_SPECIES, [lipid_category]])
 
-                if term_id in ontology.ontology_terms:
+                else:
                     term_type = ontology.ontology_terms[term_id].term_type
                     if term_type == TermType.LIPID_CLASS: term_type = TermType.LIPID_SPECIES
                     elif term_type in {TermType.UNREVIEWED_PROTEIN, TermType.ENSEMBLE_PROTEIN}: term_type = TermType.REVIEWED_PROTEIN
@@ -2964,92 +2998,61 @@ def open_sankeyplot(
 
                     if term_type != TermType.UNCLASSIFIED_TERM:
                         if not path_layers or path_layers[-1][0] != term_type:
-                            path_layers.append((term_type, [ontology.ontology_terms[term_id].categories]))
-                        else:
-                            path_layers[-1][1].append(ontology.ontology_terms[term_id].categories)
+                            if len(terms[term_id].categories) > 0:
+                                path_layers.append([term_type, list(terms[term_id].categories)])
+                            else:
+                                path_layers.append([term_type, [terms[term_id].name]])
 
                     else:
-                        if not path_layers or path_layers[-1][0] != ontology.ontology_terms[term_id].domain:
-                            path_layers.append((ontology.ontology_terms[term_id].domain, [{ontology.ontology_terms[term_id].name}]))
+                        if path_layers[-1][0] != TermType.UNCLASSIFIED_TERM:
+                            path_layers.append([TermType.UNCLASSIFIED_TERM, [terms[term_id].name]])
                         else:
-                            path_layers[-1][1].append({ontology.ontology_terms[term_id].name})
+                            path_layers[-1][1] = [ontology.ontology_terms[term_id].name]
 
-            if len(path_layers) < 3: continue
-            max_path_length = max(max_path_length, len(path_layers))
-            for pos in range(len(path_layers) - 1):
-                path_key_prev, layers_list_prev = path_layers[pos]
-                categories_prev = layers_list_prev[0] if type(path_key_prev) == TermType else layers_list_prev[-1]
-                path_key_next, layers_list_next = path_layers[pos + 1]
-                categories_next = layers_list_next[0] if type(path_key_next) == TermType else layers_list_next[-1]
+            if len(path_layers) < 2: continue
+            for i, path_layer in enumerate(path_layers):
+                layer_term = path_layer[0]
+                for layer_category in path_layer[1]:
+                    if (sankey_key := (layer_term, layer_category)) not in sankey_data:
+                        sankey_data[sankey_key] = {}
+                        sankey_data_ids[sankey_key] = len(sankey_data_ids)
 
-                for category_next in categories_next:
-                    if category_next not in flow_data_id:
-                        kn = get_flow_key(category_next, path_key_next)
-                        if kn in flow_data_id: continue
-                        flow_data_id[kn] = len(flow_data_id)
-                        flow_data[flow_data_id[kn]] = {}
+                    if i == 0: continue
+                    layer_term_prev = path_layers[i - 1][0]
+                    for layer_category_prev in path_layers[i - 1][1]:
+                        sankey_key_prev = (layer_term_prev, layer_category_prev)
+                        if sankey_key not in sankey_data[sankey_key_prev]:
+                            sankey_data[sankey_key_prev][sankey_key] = 0
+                        else: sankey_data[sankey_key_prev][sankey_key] += 1
 
-                for category_prev in categories_prev:
-                    kp = get_flow_key(category_prev, path_key_prev)
-                    if kp not in flow_data_id:
-                        flow_data_id[kp] = len(flow_data_id)
-                        flow_data[flow_data_id[kp]] = {}
-                    last_flow_data = flow_data[flow_data_id[kp]]
-                    for category_next in categories_next:
-                        kn = get_flow_key(category_next, path_key_next)
-                        term_node_id = flow_data_id[kn]
-                        if term_node_id not in last_flow_data:
-                            last_flow_data[term_node_id] = 0
-                        last_flow_data[term_node_id] += 1
 
-    pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
-    fig_source, fig_target, fig_value = [], [], []
-    node_colors, edge_colors = [], []
-    fig_label = sorted([flow for flow in flow_data_id], key = lambda f: flow_data_id[f])
+    fig_labels = []
+    fig_source = []
+    fig_target = []
+    fig_value =  []
+    for source, targets in sankey_data.items():
+        (source_term, source_category) = source
+        fig_labels.append(source_category)
+        source_id = sankey_data_ids[source]
+        for target, count in targets.items():
+            fig_source.append(source_id)
+            fig_target.append(sankey_data_ids[target])
+            fig_value.append(count)
 
-    # connect nodes for flow
-    start_nodes, layer_numeration = set(), {}
-    id_to_key = {}
-    for i, key in enumerate(fig_label):
-        (source_node_key, path_key) = key
-        layer_numeration[path_key] = 0
-        source_node_id = flow_data_id[key]
-        id_to_key[source_node_id] = key
-        if path_key == TermType.INPUT_TERM: start_nodes.add(key)
-        node_colors.append(pastel_colors[i % len(pastel_colors)])
-        edge_colors += [pastel_colors[i % len(pastel_colors)]] * len(flow_data[source_node_id])
-        for target_node_id, value in flow_data[source_node_id].items():
-            fig_source.append(source_node_id)
-            fig_target.append(target_node_id)
-            fig_value.append(value)
-
-    max_layer = 0
-    for key in fig_label:
-        source_node_id = flow_data_id[key]
-        queue = [(source_node_id, 0)]
-        visited = set()
-        while queue:
-            source_node_id, layer = queue.pop()
-            max_layer = max(max_layer, layer)
-            key = id_to_key[source_node_id]
-            if key in visited: continue
-            visited.add(key)
-            source_node_key, path_key = key
-            layer_numeration[path_key] = max(layer_numeration[path_key], layer)
-            for target_node_id, value in flow_data[source_node_id].items():
-                queue.append((target_node_id, layer + 1))
-
-    x_pos = [layer_numeration[path_key] / (max_layer - 1) for source_node_key, path_key in fig_label]
-    y_pos = [0] * len(fig_label)
+    n_nodes = len(set(fig_source) | set(fig_target))
+    layers = compute_layers(n_nodes, fig_source, fig_target)
+    max_layer = max(layers.values())
+    # Normalize x positions between 0 and 1
+    node_x = [layers[i] / max_layer for i in range(n_nodes)]
+    node_colors = [pastel_colors[i % len(pastel_colors)] for i in range(n_nodes)]
+    edge_colors = [pastel_colors[s % len(pastel_colors)] for s in fig_source]
 
     fig = go.Figure(
         go.Sankey(
             arrangement = 'fixed',
             node = dict(
-                label = [f[0] for f in fig_label],
-                #align = "justify",
-                x = x_pos,
-                y = y_pos,
+                label = fig_labels,
+                x = node_x,
                 color = node_colors,
                 pad = 20,
                 thickness = 40,
