@@ -127,6 +127,19 @@ def get_git_info():
 
     return f"Built on {timestamp} from commit {commit} on branch {branch}"
 
+
+def get_latest_tag():
+    try:
+        tag = subprocess.check_output(
+            ["git", "describe", "--tags", "--abbrev=0"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+        return tag
+    except subprocess.CalledProcessError:
+        return "v0.9.9"
+
+
+
 correction_list = [
     {"value": "no", "label": "No correction"},
     {"value": "bonferroni", "label": "Bonferroni"},
@@ -1085,7 +1098,7 @@ def layout():
 
             html.P([
                 dmc.Title("Version", order = 4),
-                dmc.Text(f"Current version: v1.0.0 ({get_git_info()})"),
+                dmc.Text(f"Current version: {get_latest_tag()} ({get_git_info()})"),
             ]),
 
             html.P([
