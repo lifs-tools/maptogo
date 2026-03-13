@@ -131,7 +131,7 @@ def get_git_info():
 def get_latest_tag():
     try:
         tag = subprocess.check_output(
-            ["git", "describe", "--tags", "--abbrev=0"],
+            ["git", "-C", current_path, "describe", "--tags", "--abbrev=0"],
             stderr=subprocess.DEVNULL
         ).decode().strip()
         return tag
