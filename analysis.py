@@ -73,6 +73,11 @@ from collections import defaultdict, deque
 
 
 
+INIT_ORGANISM = "NCBITaxon:10090"
+APPLICATION_SHORT_TITLE = "MAPtoGO"
+APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
+
+
 class SessionEntry:
     def __init__(self, cip = "0.0.0.0"):
         self.time = time.time()
@@ -98,6 +103,7 @@ class SessionEntry:
         self.max_pvalue = "0.05"
         self.ui = {}
         self.cip = cip
+        self.sankey_data = None
 
 
 
@@ -120,10 +126,6 @@ def get_git_info():
     timestamp = datetime.now().isoformat(timespec="milliseconds")
 
     return f"Built on {timestamp} from commit {commit} on branch {branch}"
-
-INIT_ORGANISM = "NCBITaxon:10090"
-APPLICATION_SHORT_TITLE = "MAPtoGO"
-APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
 
 correction_list = [
     {"value": "no", "label": "No correction"},
@@ -260,6 +262,72 @@ def create_ipv4_connection(address, *args, **kwargs):
     return sock
 socket.create_connection = create_ipv4_connection
 
+
+class ItemCounter:
+    def __init__(self, first_item = None):
+        self.counter = {}
+        if first_item != None: self.counter[first_item] = 1
+
+    def add(self, item):
+        if item not in self.counter: self.counter[item] = 1
+        else: self.counter[item] += 1
+
+    def __getitem__(self, item):
+        if item in self.counter: return self.counter[item]
+        return None
+
+    def merge(self, foreign_counter):
+        for item, count in foreign_counter.counter.items():
+            if item in self.counter: self.counter[item] += count
+            else: self.counter[item] = count
+
+
+def get_term_link(ontology, term_id):
+    if term_id in ontology.ontology_terms:
+        if term_id.startswith("GO:"):
+            return "https://www.ebi.ac.uk/QuickGO/term/" + term_id
+
+        elif term_id.startswith("SMP"):
+            return "https://pathbank.org/view/" + term_id
+
+        elif term_id.startswith("LION:") or term_id.startswith("CAT:"):
+            return "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
+
+        elif term_id.startswith("RHEA:"):
+            return f"https://www.rhea-db.org/rhea/{term_id[5:]}"
+
+        elif term_id.startswith("UNIPROT:"):
+            return f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
+
+        elif term_id.startswith("CHEBI:"):
+            return f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
+
+        elif term_id.startswith("DOID:"):
+            return f"https://disease-ontology.org/?id={term_id}"
+
+        elif term_id.startswith("MONDO:"):
+            return f"https://monarchinitiative.org/{term_id}"
+
+        elif term_id.startswith("HGNC:"):
+            return f"https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/{term_id}"
+
+        elif term_id.startswith("HP:"):
+            return f"https://hpo.jax.org/browse/term/{term_id}"
+
+        elif term_id.startswith("NCBI:"):
+            return f"https://www.ncbi.nlm.nih.gov/gene/{term_id.split(':')[1]}"
+
+        elif term_id.startswith("ENS") or term_id.startswith("WBGene") or term_id.startswith("FBgn"):
+            return f"https://www.ensembl.org/id/{term_id}"
+
+        elif term_id.startswith("R-"):
+            return f"https://reactome.org/PathwayBrowser/#/{term_id}"
+
+        elif term_id.startswith("LM"):
+            return f"https://www.lipidmaps.org/databases/lmsd/{term_id}"
+
+    else:
+        return ""
 
 
 def analytics(action, session):
@@ -785,7 +853,6 @@ def layout():
             size = "60%",
         ),
         dmc.Modal(
-            #title = "Load",
             id = "barplot_terms_modal",
             zIndex = 10000,
             children = [
@@ -882,15 +949,96 @@ def layout():
                     id = "sunburst_controls",
                     style = {"marginTop": "10px"},
                 ),
+            ],
+            size = "90%",
+        ),
+        dmc.Modal(
+            id = "sankey_modal",
+            zIndex = 10000,
+            children = [
                 html.Div(
-                    dmc.Switch(
-                        id = "switch_sankey_regulated_only",
-                        checked = False,
-                        label = "Regulated molecules only",
-                        style = {"paddingBottom": "8px", "paddingRight": "2px"},
-                    ),
-                    id = "sankey_controls",
-                    style = {"marginTop": "10px"},
+                    style={
+                        "display": "flex",
+                        "flexDirection": "row",
+                        #"height": "100vh",   # full height
+                    },
+                    children=[
+                        html.Div(
+                            dcc.Graph(
+                                id = "sankey_graph",
+                                config = {**plotly_config, **{"responsive": True}},
+                                style = {
+                                    "height": "100%",
+                                    "width": "100%",
+                                },
+                            ),
+                            id = "sankey_graph_wrapper",
+                            style = {
+                                "resize": "both",
+                                "overflow": "hidden",
+                                "width": "100%",
+                                "height": "70vh",
+                                "flex": "1",
+                            }
+                        ),
+                        html.Div(
+                            style={
+                                "flex": "1",
+                                "padding": "10px",
+                                "minWidth": "250px",
+                            },
+                            children=[
+                                html.Div(
+                                    style={
+                                        "display": "flex",
+                                        "justifyContent": "space-between",
+                                        "alignItems": "center",
+                                        "marginBottom": "0px",
+                                    },
+                                    children=[
+                                        dmc.Title(
+                                            "Node entries",
+                                            order = 5,
+                                            style = {"margin": "0px"},
+                                        ),
+                                        dmc.ActionIcon(
+                                            DashIconify(icon = "material-symbols:download-rounded", width = 20),
+                                            id = "icon_download_sankey_entries",
+                                            title = "Download table",
+                                            disabled = True,
+                                        ),
+                                    ],
+                                ),
+
+                                dag.AgGrid(
+                                    id = "sankey_entries",
+                                    columnDefs= [
+                                        {
+                                            "headerName": "Entry",
+                                            "field": "termid",
+                                            "cellRenderer": "TermIDRenderer",
+                                        },
+                                        {
+                                            "headerName": "Count",
+                                            "field": "count",
+                                            "filter": "agNumberColumnFilter",
+                                            "maxWidth": 100,
+                                        },
+                                    ],
+                                    rowData = [],
+                                    columnSize = "responsiveSizeToFit",
+                                    defaultColDef={"sortable": True, "filter": True, "resizable": True},
+                                    style={"width": "100%", "height": "100%"},
+                                )
+                            ],
+                        ),
+                    ],
+                ),
+                dmc.Switch(
+                    id = "switch_sankey_regulated_only",
+                    checked = False,
+                    label = "Regulated molecules only",
+                    style = {"paddingBottom": "8px", "paddingRight": "2px"},
                 ),
             ],
             size = "90%",
@@ -2234,7 +2382,7 @@ def update_background(
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
-def download_table(
+def download_results_table(
     _,
     graph_enrichment_results,
     selected_rows,
@@ -2366,6 +2514,53 @@ def download_table(
     analytics("download_results", session)
 
     return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), no_update, no_update
+
+
+
+@callback(
+    Output("loading_output", "children", allow_duplicate = True),
+    Output("download_data", "data", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Input("icon_download_sankey_entries", "n_clicks"),
+    State("sankey_entries", "virtualRowData"),
+    State("sessionid", "children"),
+    prevent_initial_call = True,
+)
+def download_entries_table(_, sankey_entries_results, session_id):
+    if session_id not in sessions:
+        return (
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website.",
+        )
+
+    session = sessions[session_id]
+    session.time = time.time()
+    ontology = session.ontology
+    domains = []
+    term_ids = []
+    terms = []
+    counts = []
+    pvalues = []
+    lors = []
+
+    if len(sankey_entries_results) == 0:
+        raise exceptions.PreventUpdate
+
+    for entry in sankey_entries_results:
+        term_id = entry["termid"]
+        entry["term name"] = "" if term_id not in ontology.ontology_terms else ontology.ontology_terms[term_id].name
+
+    df = pd.DataFrame(sankey_entries_results)
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine = 'xlsxwriter')
+    df.to_excel(writer, sheet_name = "Sankey entries", index = False)
+    writer._save()
+    analytics("download_sankey_entries", session)
+
+    return "", dcc.send_bytes(output.getvalue(), "Sankey_entries.xlsx"), no_update, no_update
 
 
 
@@ -2665,7 +2860,6 @@ def open_term_window(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
-    Output("sankey_controls", "style", allow_duplicate = True),
     Output("barplot_numberinput_max_pvalue", "value", allow_duplicate = True),
     Output("barplot_numberinput_min_pvalue", "value", allow_duplicate = True),
     Input("sunburst_results", "n_clicks"),
@@ -2676,7 +2870,6 @@ def open_term_window(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
-    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
@@ -2689,7 +2882,6 @@ def open_sunburstplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
-    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
     if session_id == None or n_clicks == None:
@@ -2703,7 +2895,6 @@ def open_sunburstplot(
             no_update,
             True,
             "Your session has expired. Please refresh the website.",
-            no_update,
             no_update,
             no_update,
             no_update,
@@ -2738,7 +2929,6 @@ def open_sunburstplot(
 
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "block"
-    sankey_controls_style["display"] = "none"
     fig = go.Figure()
     ontology = session.ontology
     domains = session.domains
@@ -2847,7 +3037,6 @@ def open_sunburstplot(
         no_update,
         barplot_controls_style,
         sunburst_controls_style,
-        sankey_controls_style,
         no_update,
         no_update,
     )
@@ -2855,17 +3044,13 @@ def open_sunburstplot(
 
 
 @callback(
-    Output("barplot_terms_modal", "opened", allow_duplicate = True),
-    Output("barplot_terms", "figure", allow_duplicate = True),
-    Output("barplot_terms_modal", "size", allow_duplicate = True),
-    Output("barplot_terms_wrapper", "style", allow_duplicate = True),
+    Output("sankey_modal", "opened", allow_duplicate = True),
+    Output("sankey_graph", "figure", allow_duplicate = True),
+    Output("sankey_graph_wrapper", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
-    Output("barplot_controls", "style", allow_duplicate = True),
-    Output("sunburst_controls", "style", allow_duplicate = True),
-    Output("sankey_controls", "style", allow_duplicate = True),
-    Output("barplot_numberinput_max_pvalue", "value", allow_duplicate = True),
-    Output("barplot_numberinput_min_pvalue", "value", allow_duplicate = True),
+    Output("sankey_entries", "rowData", allow_duplicate = True),
+    Output("icon_download_sankey_entries", "disabled", allow_duplicate = True),
     Input("sankey_results", "n_clicks"),
     Input("switch_sankey_regulated_only", "checked"),
     State("graph_enrichment_results", "virtualRowData"),
@@ -2873,7 +3058,6 @@ def open_sunburstplot(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
-    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
@@ -2885,7 +3069,6 @@ def open_sankeyplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
-    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
     if session_id == None or n_clicks == None or switch_sankey_regulated_only == None:
@@ -2896,11 +3079,8 @@ def open_sankeyplot(
             no_update,
             no_update,
             no_update,
-            no_update,
             True,
             "Your session has expired. Please refresh the website.",
-            no_update,
-            no_update,
             no_update,
             no_update,
         )
@@ -2912,7 +3092,6 @@ def open_sankeyplot(
 
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "none"
-    sankey_controls_style["display"] = "block"
 
     background_lipids = session.background_lipids
     regulated_lipids = session.regulated_lipids
@@ -2960,14 +3139,6 @@ def open_sankeyplot(
 
         return layer
 
-
-
-    # Example data
-    # fig_labels = ["A", "B", "C", "D", "E", "F", "G"]
-    # fig_source = [0, 0, 1, 2, 3, 5, 5]
-    # fig_target = [1, 2, 3, 4, 4, 4, 6]
-    # fig_value =  [5, 3, 4, 2, 6, 3, 1]
-
     sankey_data = {}
     sankey_data_ids = {}
     for target_term_id in selected_term_ids:
@@ -2986,7 +3157,7 @@ def open_sankeyplot(
             elif regulated_transcripts and molecule in background_transcripts:
                 input_molecule = "Input transcript"
 
-            path_layers = [[TermType.INPUT_TERM, [input_molecule]]]
+            path_layers = [[TermType.INPUT_TERM, [input_molecule], ItemCounter(molecule)]]
 
             for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
                 term_id = term if type(term) == str else term.term_id[0]
@@ -2995,7 +3166,9 @@ def open_sankeyplot(
                     if term_id in background_lipids and type(background_lipids[term_id]) == LipidAdduct:
                         lipid_category = background_lipids[term_id].get_lipid_string(LipidLevel.CATEGORY)
                         if path_layers[-1][0] != TermType.LIPID_SPECIES:
-                            path_layers.append([TermType.LIPID_SPECIES, [lipid_category]])
+                            path_layers.append([TermType.LIPID_SPECIES, [lipid_category], ItemCounter(term_id)])
+                        else:
+                            path_layers[-1][2].add(term_id)
 
                 else:
                     term_type = ontology.ontology_terms[term_id].term_type
@@ -3007,23 +3180,31 @@ def open_sankeyplot(
                     if term_type != TermType.UNCLASSIFIED_TERM:
                         if not path_layers or path_layers[-1][0] != term_type:
                             if len(terms[term_id].categories) > 0:
-                                path_layers.append([term_type, list(terms[term_id].categories)])
+                                path_layers.append([term_type, list(terms[term_id].categories), ItemCounter(term_id)])
                             else:
-                                path_layers.append([term_type, [terms[term_id].name]])
+                                path_layers.append([term_type, [terms[term_id].name], ItemCounter(term_id)])
+                        else:
+                            path_layers[-1][2].add(term_id)
+
 
                     else:
                         if path_layers[-1][0] != TermType.UNCLASSIFIED_TERM:
-                            path_layers.append([TermType.UNCLASSIFIED_TERM, [terms[term_id].name]])
+                            path_layers.append([TermType.UNCLASSIFIED_TERM, [terms[term_id].name], ItemCounter(term_id)])
                         else:
                             path_layers[-1][1] = [ontology.ontology_terms[term_id].name]
+                            path_layers[-1][2].add(term_id)
 
             if len(path_layers) < 2: continue
             for i, path_layer in enumerate(path_layers):
-                layer_term = path_layer[0]
-                for layer_category in path_layer[1]:
+                layer_term, layer_categories, term_ids = path_layer
+                for layer_category in layer_categories:
                     if (sankey_key := (layer_term, layer_category)) not in sankey_data:
                         sankey_data[sankey_key] = {}
-                        sankey_data_ids[sankey_key] = len(sankey_data_ids)
+                        item_counter = ItemCounter()
+                        item_counter.merge(term_ids)
+                        sankey_data_ids[sankey_key] = [len(sankey_data_ids), item_counter]
+                    else:
+                        sankey_data_ids[sankey_key][1].merge(term_ids)
 
                     if i == 0: continue
                     layer_term_prev = path_layers[i - 1][0]
@@ -3038,13 +3219,15 @@ def open_sankeyplot(
     fig_source = []
     fig_target = []
     fig_value =  []
+    session.sankey_data = []
     for source, targets in sankey_data.items():
         (source_term, source_category) = source
         fig_labels.append(source_category)
-        source_id = sankey_data_ids[source]
+        session.sankey_data.append(sankey_data_ids[source][1])
+        source_id = sankey_data_ids[source][0]
         for target, count in targets.items():
             fig_source.append(source_id)
-            fig_target.append(sankey_data_ids[target])
+            fig_target.append(sankey_data_ids[target][0])
             fig_value.append(count)
 
     n_nodes = len(set(fig_source) | set(fig_target))
@@ -3057,7 +3240,6 @@ def open_sankeyplot(
 
     fig = go.Figure(
         go.Sankey(
-            arrangement = 'fixed',
             node = dict(
                 label = fig_labels,
                 x = node_x,
@@ -3079,22 +3261,55 @@ def open_sankeyplot(
         autosize = True,
         height = None,
     )
-
     barplot_terms_wrapper_style["height"] = "80vh"
 
     return (
         True,
         fig,
-        "90%",
         barplot_terms_wrapper_style,
         no_update,
         no_update,
-        barplot_controls_style,
-        sunburst_controls_style,
-        sankey_controls_style,
-        no_update,
-        no_update,
+        [],
+        True,
     )
+
+
+
+@app.callback(
+    Output("sankey_entries", "rowData"),
+    Output("icon_download_sankey_entries", "disabled", allow_duplicate = True),
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Input("sankey_graph", "clickData"),
+    State("sessionid", "children"),
+    prevent_initial_call = True,
+)
+def sankey_node_clicked(clickData, session_id):
+    if session_id == None or not clickData:
+        raise exceptions.PreventUpdate
+
+    if session_id not in sessions:
+        return (
+            no_update,
+            no_update,
+            True,
+            "Your session has expired. Please refresh the website.",
+        )
+    session = sessions[session_id]
+
+    point = clickData["points"][0]
+    entries_list = []
+    if "pointNumber" in point:
+        idx = point["pointNumber"]
+        if session.sankey_data != None and idx < len(session.sankey_data):
+            entries_list = sorted([
+                {
+                    "termid": k,
+                    "count": v,
+                } for k, v in session.sankey_data[idx].counter.items()
+            ], key = lambda x: x["termid"])
+
+    return entries_list, False, no_update, no_update
 
 
 
@@ -3107,7 +3322,6 @@ def open_sankeyplot(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
-    Output("sankey_controls", "style", allow_duplicate = True),
     Input("chart_results", "n_clicks"),
     Input("barplot_numberinput_connect_ths", "value"),
     Input("barplot_numberinput_font_size", "value"),
@@ -3118,7 +3332,6 @@ def open_sankeyplot(
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
-    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
@@ -3133,7 +3346,6 @@ def open_barplot(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
-    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
     if session_id == None or jaccard_ths == None or n_clicks == None or font_size == None or bar_label not in {"id", "name"} or bar_sorting not in {BAR_SORTING_PVALUE, BAR_SORTING_SIMILARITY} or type(jaccard_ths) not in {float, int}:
@@ -3166,7 +3378,6 @@ def open_barplot(
     multiomics = sum([with_lipids + with_proteins + with_metabolites + with_transcripts]) > 1
     barplot_controls_style["display"] = "block"
     sunburst_controls_style["display"] = "none"
-    sankey_controls_style["display"] = "none"
 
     fig = go.Figure()
     id_position = {row["termid"]: i for i, row in enumerate(row_data)}
@@ -3603,7 +3814,6 @@ def open_barplot(
         no_update,
         barplot_controls_style,
         sunburst_controls_style,
-        sankey_controls_style,
     )
 
 
@@ -3617,12 +3827,10 @@ def open_barplot(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
-    Output("sankey_controls", "style", allow_duplicate = True),
     Input("histogram_results", "n_clicks"),
     State("sessionid", "children"),
     State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
-    State("sankey_controls", "style"),
     State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
@@ -3631,7 +3839,6 @@ def open_histogram(
     session_id,
     barplot_controls_style,
     sunburst_controls_style,
-    sankey_controls_style,
     barplot_terms_wrapper_style,
 ):
 
@@ -3651,7 +3858,6 @@ def open_histogram(
     results = sessions[session_id].result
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "none"
-    sankey_controls_style["display"] = "none"
 
     fig = go.Figure()
     fig.add_trace(
@@ -3681,67 +3887,79 @@ def open_histogram(
         no_update,
         barplot_controls_style,
         sunburst_controls_style,
-        sankey_controls_style,
     )
 
 
+def graph_config_code(graph_type):
+    return """
+function (graph_config) {
+    graph_config.modeBarButtonsToAdd.push({
+        name: 'download_png',
+        title: 'Download as png',
+        icon: {
+            width: 24,
+            height: 24,
+            path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
+        },
+        click: function(gd) {
+            Plotly.downloadImage(gd, {format: "png", filename: "%s"});
+        }
+    });
+
+    graph_config.modeBarButtonsToAdd.push({
+        name: 'download_svg',
+        title: 'Download as svg',
+        icon: {
+            width: 24,
+            height: 24,
+            path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
+        },
+        click: function(gd) {
+            Plotly.downloadImage(gd, {format: "svg", filename: "%s"});
+        }
+    });
+
+    graph_config.modeBarButtonsToAdd.push({
+        name: 'download_html',
+        title: 'Download as standalone interactive html',
+        icon: {
+            width: 24,
+            height: 24,
+            path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
+        },
+        click: function(gd) {
+            var gd_figure = {
+                data: gd.data,
+                layout: gd.layout
+            };
+            var html_download_trigger = document.getElementById('html_download_trigger');
+            var gd_str = JSON.stringify(gd_figure);
+            var _setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+            _setter.call(html_download_trigger, gd_str);
+            var ev = new Event('input', { bubbles: true });
+            html_download_trigger.dispatchEvent(ev);
+        }
+    });
+    return window.dash_clientside.no_update;
+}
+""" % (graph_type, graph_type)
+
 
 clientside_callback(
-    """
-    function (graph_config) {
-        graph_config.modeBarButtonsToAdd.push({
-            name: 'download_png',
-            title: 'Download as png',
-            icon: {
-                width: 24,
-                height: 24,
-                path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
-            },
-            click: function(gd) {
-                Plotly.downloadImage(gd, {format: "png", filename: "barplot"});
-            }
-        });
-
-        graph_config.modeBarButtonsToAdd.push({
-            name: 'download_svg',
-            title: 'Download as svg',
-            icon: {
-                width: 24,
-                height: 24,
-                path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
-            },
-            click: function(gd) {
-                Plotly.downloadImage(gd, {format: "svg", filename: "barplot"});
-            }
-        });
-
-        graph_config.modeBarButtonsToAdd.push({
-            name: 'download_html',
-            title: 'Download as standalone interactive html',
-            icon: {
-                width: 24,
-                height: 24,
-                path: 'M22.71 6.29a1 1 0 0 0-1.42 0L20 7.59V2a1 1 0 0 0-2 0v5.59l-1.29-1.3a1 1 0 0 0-1.42 1.42l3 3a1 1 0 0 0 .33.21a.94.94 0 0 0 .76 0a1 1 0 0 0 .33-.21l3-3a1 1 0 0 0 0-1.42M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h8a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l4.3 4.3Zm13-1a.9.9 0 0 1-.18.53L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21Z',
-            },
-            click: function(gd) {
-                var gd_figure = {
-                    data: gd.data,
-                    layout: gd.layout
-                };
-                var html_download_trigger = document.getElementById('html_download_trigger');
-                var gd_str = JSON.stringify(gd_figure);
-                var _setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-                _setter.call(html_download_trigger, gd_str);
-                var ev = new Event('input', { bubbles: true });
-                html_download_trigger.dispatchEvent(ev);
-            }
-        });
-        return window.dash_clientside.no_update;
-    }
-    """,
+    graph_config_code("barplot"),
     Output("barplot_terms", "config"),
     Input("barplot_terms", "config"),
 )
+
+
+clientside_callback(
+    graph_config_code("sankey"),
+    Output("sankey_graph", "config"),
+    Input("sankey_graph", "config"),
+)
+
+
+
 
 
 
@@ -3860,52 +4078,10 @@ def show_molecule_term_path(
         if type(term) == str: term_id = term
         else: term_id = list(term.term_id)[0]
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
-        href, term_name = ".", ""
 
+        href = get_term_link(ontology, term_id)
         if term_id in ontology.ontology_terms:
             term_name = term.name if type(term) == OntologyTerm else ontology.ontology_terms[term_id].name
-            if term_id.startswith("GO:"):
-                href = "https://www.ebi.ac.uk/QuickGO/term/" + term_id
-
-            elif term_id.startswith("SMP"):
-                href = "https://pathbank.org/view/" + term_id
-
-            elif term_id.startswith("LION:") or term_id.startswith("CAT:"):
-                href = "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
-
-            elif term_id.startswith("RHEA:"):
-                href = f"https://www.rhea-db.org/rhea/{term_id[5:]}"
-
-            elif term_id.startswith("UNIPROT:"):
-                href = f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
-
-            elif term_id.startswith("CHEBI:"):
-                href = f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
-
-            elif term_id.startswith("DOID:"):
-                href = f"https://disease-ontology.org/?id={term_id}"
-
-            elif term_id.startswith("MONDO:"):
-                href = f"https://monarchinitiative.org/{term_id}"
-
-            elif term_id.startswith("HGNC:"):
-                href = f"https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/{term_id}"
-
-            elif term_id.startswith("HP:"):
-                href = f"https://hpo.jax.org/browse/term/{term_id}"
-
-            elif term_id.startswith("NCBI:"):
-                href = f"https://www.ncbi.nlm.nih.gov/gene/{term_id.split(':')[1]}"
-
-            elif term_id.startswith("ENS") or term_id.startswith("WBGene") or term_id.startswith("FBgn"):
-                href = f"https://www.ensembl.org/id/{term_id}"
-
-            elif term_id.startswith("R-"):
-                href = f"https://reactome.org/PathwayBrowser/#/{term_id}"
-
-            elif term_id.startswith("LM"):
-                href = f"https://www.lipidmaps.org/databases/lmsd/{term_id}"
-
         else:
             term_name = term_id
 
