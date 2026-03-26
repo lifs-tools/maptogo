@@ -35,6 +35,8 @@ logging.basicConfig(
     format = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
 )
 logger.info("Started enrichment server")
+logging.getLogger("flask_swagger_ui").setLevel(logging.ERROR)
+logging.getLogger("swagger_ui").setLevel(logging.ERROR)
 
 VERSION_NUMBER = "1.0.0"
 
@@ -3193,7 +3195,7 @@ def open_sankeyplot(
                     if term_type != TermType.UNCLASSIFIED_TERM:
                         if not path_layers or path_layers[-1][0] != term_type:
                             if len(terms[term_id].categories) > 0:
-                                path_layers.append([term_type, list(terms[term_id].categories), ItemCounter(term_id)])
+                                path_layers.append([term_type, terms[term_id].categories, ItemCounter(term_id)])
                             else:
                                 path_layers.append([term_type, [terms[term_id].name], ItemCounter(term_id)])
                         else:

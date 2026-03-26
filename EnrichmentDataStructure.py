@@ -348,7 +348,7 @@ class OntologyTerm:
         self.name = _name
         self.domain = set(_domain.split("|")) - EXCLUDE_TERMS
         self.relations = _relations.split("|")
-        self.categories = set(_categories.split("|")) - EXCLUDE_TERMS
+        self.categories = [c for c in _categories.split("|") if c not in EXCLUDE_TERMS]
         self.synonyms = _synonyms.split("|")
 
         if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0:
