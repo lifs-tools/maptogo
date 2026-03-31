@@ -1,7 +1,11 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+import EnrichmentDataStructure  as EDS
+
 from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
 import gzip
-import sys
 import pickle
 import os
 import pandas as pd
@@ -208,17 +212,18 @@ class Term:
     def joining(self, a_set):
         return "|".join(sorted(list(a_set)))
 
-    def to_string(self, term_positions = None):
-        if term_positions:
-            visited, relations = set(), []
-            for relation in sorted(self.relations):
-                if relation in term_positions:
-                    p = term_positions[relation]
-                    if p not in visited:
-                        visited.add(p)
-                        relations.append(str(p))
-            return f"{self.joining(self.id)}\t{self.name}\t{'|'.join(relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}"
-        return f"{self.joining(self.id)}\t{self.name}\t{self.joining(self.relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}"
+    def to_string(self, term_positions):
+        visited, relations = set(), []
+        for relation in sorted(self.relations):
+            if relation in term_positions:
+                p = term_positions[relation]
+                if p not in visited:
+                    visited.add(p)
+                    relations.append(str(p))
+        relations_str = self.joining(self.relations)
+        moea_pos = relations_str.find("MOEA:00000")
+        term_type = EDS.TermType(int(relations_str[moea_pos + 5 : moea_pos + 12])) if moea_pos > -1 else EDS.TermType.UNCLASSIFIED_TERM
+        return f"{self.joining(self.id)}\t{self.name}\t{term_type.value}\t{'|'.join(relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}"
 
 
     def copy(self):

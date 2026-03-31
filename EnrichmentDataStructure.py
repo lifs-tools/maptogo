@@ -363,33 +363,25 @@ def split_integers(s: str, delim: str = "|") -> list[int]:
     return result
 
 
-EXCLUDE_TERMS = {"", "external"}
 class OntologyTerm:
     __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories", "synonyms")
 
-    def __init__(self, _term_id, _name, _relations, _synonyms, _domain, _categories):
-        self.term_type = TermType.UNCLASSIFIED_TERM
-        self.term_id = tuple(sorted(_term_id.split("|")))
-        self.term_id_str = "|".join(self.term_id)
+    def __init__(self, _term_id, _name, _term_type, _relations, _synonyms, _domain, _categories):
+        self.term_type = TermType(int(_term_type))
+        self.term_id = _term_id.split("|")
+        self.term_id_str = _term_id
         self.name = _name
         self.relations = [int(p) for p in _relations.split("|")] if len(_relations) > 0 else []
         self.synonyms = _synonyms.split("|")
-        self.domain = {d for d in _domain.split("|") if d not in EXCLUDE_TERMS}
-        self.categories = [c for c in _categories.split("|") if c not in EXCLUDE_TERMS]
+        self.domain = {d for d in _domain.split("|")} if len(_domain) > 0 else set()
+        self.categories = [c for c in _categories.split("|")] if len(_categories) > 0 else []
 
         if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0:
-            self.categories = {"Unclassified reaction"}
+            self.categories = ["Unclassified reaction"]
 
 
     def post_processing(self, ontology, term_list):
         self.relations = [term_list[p] for p in self.relations]
-        for relation in self.relations:
-            if (moea_pos := relation.term_id_str.find("MOEA:00000")) > -1:
-                try:
-                    self.term_type = TermType(int(relation.term_id_str[moea_pos + 5 : moea_pos + 12]))
-                except:
-                    pass
-                break
 
         for t_id in self.term_id: ontology.ontology_terms[t_id] = self
         term_id_str, _name = self.term_id_str, self.name
@@ -479,7 +471,7 @@ class EnrichmentOntology:
         ontology_terms = self.ontology_terms
         try:
             with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
-                term_list = [OntologyTerm(*row) for line in f if (row := line.strip("\n").split("\t"))]
+                term_list = [OntologyTerm(*line.strip("\n").split("\t")) for line in f]
             for term in term_list: term.post_processing(self, term_list)
 
         except Exception as e:

@@ -38,7 +38,7 @@ logger.info("Started enrichment server")
 logging.getLogger("flask_swagger_ui").setLevel(logging.ERROR)
 logging.getLogger("swagger_ui").setLevel(logging.ERROR)
 
-VERSION_NUMBER = "1.0.0"
+DEFAULT_VERSION_NUMBER = "1.0.0"
 
 import dash
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table, ctx
@@ -72,16 +72,28 @@ import threading
 import subprocess
 from datetime import datetime
 from collections import defaultdict, deque
-
+import configparser
 
 
 INIT_ORGANISM = "NCBITaxon:10090"
 APPLICATION_SHORT_TITLE = "MAPtoGO"
 APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
 
+if os.path.exists(f"{current_path}/maptogo.ini"):
+    ini_config = configparser.ConfigParser()
+    ini_config.read(f"{current_path}/maptogo.ini")
+else:
+    ini_config = {
+        "git": {
+            "commit": "-",
+            "branch": "-",
+            "timestamp": "-",
+            "version": DEFAULT_VERSION_NUMBER,
+        }
+    }
 
 class SessionEntry:
-    def __init__(self, cip = "0.0.0.0"):
+    def __init__(self):
         self.time = time.time()
         self.data = None
         self.results = []
@@ -104,41 +116,16 @@ class SessionEntry:
         self.min_pvalue = "0.0001"
         self.max_pvalue = "0.05"
         self.ui = {}
-        self.cip = cip
         self.sankey_data = None
 
 
 
 def get_git_info():
-    try:
-        # Get short commit hash
-        commit = subprocess.check_output(
-            ["git", "-C", current_path, "rev-parse", "HEAD"]
-        ).decode("utf-8").strip()
-
-        # Get branch name
-        branch = subprocess.check_output(
-            ["git", "-C", current_path, "rev-parse", "--abbrev-ref", "HEAD"]
-        ).decode("utf-8").strip()
-    except Exception:
-        commit = "unknown"
-        branch = "unknown"
-
-    # Current timestamp in ISO 8601 format
-    timestamp = datetime.now().isoformat(timespec="milliseconds")
-
-    return f"Built on {timestamp} from commit {commit} on branch {branch}"
+    return f"Built on {ini_config['git']['timestamp']} from commit {ini_config['git']['commit']} on branch {ini_config['git']['branch']}"
 
 
 def get_latest_tag():
-    try:
-        tag = subprocess.check_output(
-            ["git", "-C", current_path, "describe", "--tags", "--abbrev=0"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-        return tag
-    except subprocess.CalledProcessError:
-        return "v0.9.9"
+    return ini_config['git']['version']
 
 
 
@@ -345,27 +332,12 @@ def get_term_link(ontology, term_id):
         return ""
 
 
-def analytics(action, session):
+def analytics(action):
     def send_action(recorded_action):
-        if MATOMO_ADDRESS == None: return
-
         try:
-            if MATOMO_TOKEN == None:
-                url = f"{MATOMO_ADDRESS}?idsite=17&rec=1&e_c=MAPtoGO-{VERSION_NUMBER}&e_a={recorded_action}"
-                logger.debug(f"Sending analytics data to Matomo without token: {url}")
-                response = requests.get(url, timeout = 2)
-
-            else:
-                payload = {
-                    "idsite": 17,
-                    "rec": 1,
-                    "cip": session.cip,
-                    "e_c": f"MAPtoGO-{VERSION_NUMBER}",
-                    "e_a": recorded_action,
-                    "token_auth": MATOMO_TOKEN,
-                }
-                logger.debug(f"Sending analytics data to Matomo with token: {payload['idsite']} {payload['e_c']} {payload['e_a']}")
-                response = requests.post(MATOMO_ADDRESS, data=payload, timeout = 2)
+            url = f"https://lifs-tools.org/matomo/matomo.php?idsite=17&rec=1&e_c=MAPtoGO-{ini_config["git"]["version"]}&e_a={recorded_action}"
+            logger.debug(f"Sending analytics data to Matomo without token: {url}")
+            response = requests.get(url, timeout = 2)
 
         except Exception as e:
             logger.warning(e)
@@ -586,11 +558,6 @@ def set_udata():
     if "uid" not in uuid_session:
         uuid_session["uid"] = str(uuid.uuid4())
 
-    if "cip" not in uuid_session:
-        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-        client_ip = ".".join(client_ip.split(".")[:-1]) + ".0"
-        uuid_session["cip"] = client_ip
-
 api = Api(
     app.server,
     version = "1.0",
@@ -682,6 +649,7 @@ def layout():
         dcc.Download(id = "download_data"),
         dmc.TextInput(id = "html_download_trigger", style = {"display": "none"}),
         html.Div("", id = "sessionid", style = {"display": "none"}),
+        html.Div("", id = "analytics", style = {"display": "none"}),
         dcc.Location(id="url"),
         dcc.Loading(
             id = "loading_field",
@@ -1957,7 +1925,7 @@ def organism_changed(organism, domain_values):
 def load_uid(_):
     session_id = uuid_session.get("uid")
     if session_id not in sessions:
-        sessions[session_id] = SessionEntry(uuid_session.get("cip"))
+        sessions[session_id] = SessionEntry()
         logger.info(f"New session: {session_id}")
         return (session_id, *([no_update] * 30))
 
@@ -2041,6 +2009,7 @@ def load_uid(_):
     Output("multiselect_filter_molecules", "data", allow_duplicate = True),
     Output("multiselect_filter_molecules", "value", allow_duplicate = True),
     Output("num_enrichment_terms", "children", allow_duplicate = True),
+    Output("analytics", "children", allow_duplicate = True),
     Input("button_run_enrichment", "n_clicks"),
     State("textarea_all_lipids", "value"),
     State("textarea_regulated_lipids", "value"),
@@ -2096,13 +2065,13 @@ def run_enrichment(
     session.time = time.time()
 
     if not with_lipids and not with_proteins and not with_metabolites and not with_transcripts:
-        return "", [], [], {}, True, "No omics data is selected.", histogram_disabled, [], [], num_enrichment_terms
+        return "", [], [], {}, True, "No omics data is selected.", histogram_disabled, [], [], num_enrichment_terms, no_update
 
     if len(domains) == 0:
-        return "", [], [], {}, True, "No domain(s) selected.", histogram_disabled, [], [], num_enrichment_terms
+        return "", [], [], {}, True, "No domain(s) selected.", histogram_disabled, [], [], num_enrichment_terms, no_update
 
     if organism is None or organism not in enrichment_ontologies:
-        return "", [], [], {}, True, "No organism selected.", histogram_disabled, [], [], num_enrichment_terms
+        return "", [], [], {}, True, "No organism selected.", histogram_disabled, [], [], num_enrichment_terms, no_update
     
     ontology = enrichment_ontologies[organism]
     target_set = set()
@@ -2147,7 +2116,7 @@ def run_enrichment(
                 ignore_unknown,
             )
         except Exception as error_message:
-            return "", [], [], {}, True, str(error_message), histogram_disabled, [], [], num_enrichment_terms
+            return "", [], [], {}, True, str(error_message), histogram_disabled, [], [], num_enrichment_terms, no_update
 
         (
             session.search_terms,
@@ -2182,7 +2151,6 @@ def run_enrichment(
         if with_transcripts: target_set |= session.regulated_transcripts
         background_list = no_update
 
-    analytics("enrichment_analysis", session)
     session.domains = set(domains)
     results = ontology.enrichment_analysis(session.search_terms, session.num_background, target_set, domains, term_regulation, correction_method)
     session.result = results
@@ -2222,6 +2190,7 @@ def run_enrichment(
         background_list,
         [],
         num_enrichment_terms,
+        "enrichment_analysis",
     )
 
 
@@ -2391,6 +2360,7 @@ def update_background(
     Output("download_data", "data", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("analytics", "children", allow_duplicate = True),
     Input("icon_download_results", "n_clicks"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
@@ -2409,6 +2379,7 @@ def download_results_table(
             no_update,
             True,
             "Your session has expired. Please refresh the website.",
+            no_update,
         )
 
     session = sessions[session_id]
@@ -2528,7 +2499,13 @@ def download_results_table(
     writer._save()
     analytics("download_results", session)
 
-    return "", dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"), no_update, no_update
+    return (
+        "",
+        dcc.send_bytes(output.getvalue(), "GO_multiomics_results.xlsx"),
+        no_update,
+        no_update,
+        "download_results",
+    )
 
 
 
@@ -2537,6 +2514,7 @@ def download_results_table(
     Output("download_data", "data", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("analytics", "children", allow_duplicate = True),
     Input("icon_download_sankey_entries", "n_clicks"),
     State("sankey_entries", "virtualRowData"),
     State("sessionid", "children"),
@@ -2549,6 +2527,7 @@ def download_entries_table(_, sankey_entries_results, session_id):
             no_update,
             True,
             "Your session has expired. Please refresh the website.",
+            no_update,
         )
 
     session = sessions[session_id]
@@ -2573,9 +2552,14 @@ def download_entries_table(_, sankey_entries_results, session_id):
     writer = pd.ExcelWriter(output, engine = 'xlsxwriter')
     df.to_excel(writer, sheet_name = "Sankey entries", index = False)
     writer._save()
-    analytics("download_sankey_entries", session)
 
-    return "", dcc.send_bytes(output.getvalue(), "Sankey_entries.xlsx"), no_update, no_update
+    return (
+        "",
+        dcc.send_bytes(output.getvalue(), "Sankey_entries.xlsx"),
+        no_update,
+        no_update,
+        "download_sankey_entries",
+    )
 
 
 
@@ -3974,6 +3958,30 @@ clientside_callback(
 )
 
 
+clientside_callback(
+    """
+function (recorded_action) {
+    var url = "https://lifs-tools.org/matomo/matomo.php?idsite=17&rec=1&e_c=MAPtoGO-%s&e_a=" + recorded_action;
+    console.log(url);
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                console.log("ok");
+            }
+        }
+    };
+    xhr.send();
+    return "";
+}
+    """ % ini_config["git"]["version"],
+    Output("analytics", "children", allow_duplicate = True),
+    Input("analytics", "children"),
+    prevent_initial_call = True,
+)
+
+
 
 
 
@@ -4337,7 +4345,7 @@ class EnrichmentResource(Resource):
             except Exception as error_message:
                 return {"error_message": str(error_message), "result": []}, 422
 
-            session = SessionEntry(uuid_session.get("cip"))
+            session = SessionEntry()
             session.time = time.time()
             session.use_bounded_fatty_acyls = bounded_fatty_acyls_api
             (
@@ -4353,7 +4361,7 @@ class EnrichmentResource(Resource):
             session.num_background = len(lipidome) + len(proteome) + len(metabolome) + len(transcriptome)
             session.ontology = ontology
             session.data_loaded = True
-            analytics("api_enrichment_analysis", session)
+            analytics("api_enrichment_analysis")
             session.background_lipids = lipidome if with_lipids else None
             session.regulated_lipids = regulated_lipids if with_lipids else None
             session.background_proteins = proteome if with_proteins else None
