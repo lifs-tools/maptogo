@@ -57,6 +57,9 @@ function get_url(term_id){
     else if (term_id.startsWith("UNIPROT:")){
         return "https://www.uniprot.org/uniprotkb/" + term_id.split(":")[1];
     }
+    else if (term_id.startsWith("CHEBI:")){
+        return "https://www.ebi.ac.uk/chebi/" + term_id;
+    }
     return "";
 }
 

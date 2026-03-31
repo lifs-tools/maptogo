@@ -1,7 +1,11 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+import EnrichmentDataStructure  as EDS
+
 from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
 import gzip
-import sys
 import pickle
 import os
 import pandas as pd
@@ -208,8 +212,18 @@ class Term:
     def joining(self, a_set):
         return "|".join(sorted(list(a_set)))
 
-    def to_string(self):
-        return f"{self.joining(self.id)}\t{self.name}\t{self.joining(self.relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}\n"
+    def to_string(self, term_positions):
+        visited, relations = set(), []
+        for relation in sorted(self.relations):
+            if relation in term_positions:
+                p = term_positions[relation]
+                if p not in visited:
+                    visited.add(p)
+                    relations.append(str(p))
+        relations_str = self.joining(self.relations)
+        moea_pos = relations_str.find("MOEA:00000")
+        term_type = EDS.TermType(int(relations_str[moea_pos + 5 : moea_pos + 12])) if moea_pos > -1 else EDS.TermType.UNCLASSIFIED_TERM
+        return f"{self.joining(self.id)}\t{self.name}\t{term_type.value}\t{'|'.join(relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}"
 
 
     def copy(self):
@@ -1100,20 +1114,20 @@ for uniprot_term in uniprot_data.values():
 # do several organisms
 for tax_name, tax_id in species.items():
     print(tax_id)
-    output = []
-    for go_id, term in go_terms.items():
-        output.append(term.to_string())
 
-    # adding all remaining categories for multiomics ontology
-    output.append(Term("MOEA:0000004", "Unspecific lipid").to_string())
-    output.append(Term("MOEA:0000005", "Uniprot protein swissprot").to_string())
-    output.append(Term("MOEA:0000006", "Uniprot protein trembl").to_string())
-    output.append(Term("MOEA:0000007", "Ensembl protein").to_string())
-    output.append(Term("MOEA:0000008", "ChEBI metabolite").to_string())
-    output.append(Term("MOEA:0000009", "Generic reaction").to_string())
-    output.append(Term("MOEA:0000010", "Ensembl transcript").to_string())
-    output.append(Term("MOEA:0000011", "Ensembl gene").to_string())
-    output.append(Term("MOEA:0000012", "Gene").to_string())
+    terms = []
+    terms.append(Term("MOEA:0000004", "Unspecific lipid"))
+    terms.append(Term("MOEA:0000005", "Uniprot protein swissprot"))
+    terms.append(Term("MOEA:0000006", "Uniprot protein trembl"))
+    terms.append(Term("MOEA:0000007", "Ensembl protein"))
+    terms.append(Term("MOEA:0000008", "ChEBI metabolite"))
+    terms.append(Term("MOEA:0000009", "Generic reaction"))
+    terms.append(Term("MOEA:0000010", "Ensembl transcript"))
+    terms.append(Term("MOEA:0000011", "Ensembl gene"))
+    terms.append(Term("MOEA:0000012", "Gene"))
+
+    for go_id, term in go_terms.items():
+        terms.append(term)
 
     reactome_tag = reactomes[tax_id]
     chebi_terms_organism = chebi_terms_organisms[tax_id]
@@ -1139,18 +1153,17 @@ for tax_name, tax_id in species.items():
     #     print(e)
 
 
-    for i, row in df_dolphin[df_dolphin["protein_UniProt_ID"].isin(list(uniprot_terms_organisms[tax_id].keys()))].iterrows():
-        output.append(Term("BD:" + row["BioDolphinID"], f"Interaction {row["BioDolphinID"]}", {"UNIPROT:" + row["protein_UniProt_ID"], "MOEA:0000009"}).to_string())
-        chebi_id = row["lipid_ChEBI"][6:]
-        if chebi_id not in chebi_terms_organism: chebi_terms_organism[chebi_id] = {"BD:" + row["BioDolphinID"]}
-        else: chebi_terms_organism[chebi_id].add("BD:" + row["BioDolphinID"])
+    # for i, row in df_dolphin[df_dolphin["protein_UniProt_ID"].isin(list(uniprot_terms_organisms[tax_id].keys()))].iterrows():
+    #     output.append(Term("BD:" + row["BioDolphinID"], f"Interaction {row["BioDolphinID"]}", {"UNIPROT:" + row["protein_UniProt_ID"], "MOEA:0000009"}).to_string())
+    #     chebi_id = row["lipid_ChEBI"][6:]
+    #     if chebi_id not in chebi_terms_organism: chebi_terms_organism[chebi_id] = {"BD:" + row["BioDolphinID"]}
+    #     else: chebi_terms_organism[chebi_id].add("BD:" + row["BioDolphinID"])
 
 
     if reactome_tag:
         for reactome_id, reactome_term in reactome_reactions.items():
             if reactome_id.find(reactome_tag) > -1:
-                output.append(reactome_term.to_string())
-
+                terms.append(reactome_term)
 
 
     chebi_terms = {t: c.copy() for t, c in chebi_terms_all.items()}
@@ -1162,18 +1175,18 @@ for tax_name, tax_id in species.items():
     if tax_id in pathway_terms_organisms:
         pathway_terms = pathway_terms_organisms[tax_id]
         for pathway_id, pathway_term in pathway_terms.items():
-            output.append(pathway_term.to_string())
+            terms.append(pathway_term)
 
 
     protein_terms = uniprot_terms_organisms[tax_id]
     for _, protein_term in protein_terms.items():
-        output.append(protein_term.to_string())
+        terms.append(protein_term)
 
 
     if tax_id in ensembl_terms_organisms:
         ensembl_terms = ensembl_terms_organisms[tax_id]
         for _, ensembl_term in ensembl_terms.items():
-            output.append(ensembl_term.to_string())
+            terms.append(ensembl_term)
 
 
     if tax_id in gene_term_organisms:
@@ -1181,40 +1194,42 @@ for tax_name, tax_id in species.items():
         for _, gene_term in gene_term_organisms[tax_id].items():
             if gene_term in written_genes: continue
             written_genes.add(gene_term)
-            output.append(gene_term.to_string())
+            terms.append(gene_term)
 
 
     # create organism-specific rhea terms
     if tax_id in rhea_terms_organisms:
         for _, rhea_term in rhea_terms_organisms[tax_id].items():
-            output.append(rhea_term.to_string())
+            terms.append(rhea_term)
 
 
     for _, chebi_term in chebi_terms.items():
-        output.append(chebi_term.to_string())
+        terms.append(chebi_term)
 
     # diseases and phenotypes
     written_diseases = set()
     for _, disease_term in disease_and_phenotype_terms.items():
         if disease_term in written_diseases: continue
         written_diseases.add(disease_term)
-        output.append(disease_term.to_string())
+        terms.append(disease_term)
 
 
     for lipid_name, term in chebi_lipid_terms.items():
-        output.append(term.to_string())
+        terms.append(term)
 
 
     for lipid_maps_id, term in lipid_maps_terms.items():
-        output.append(term.to_string())
+        terms.append(term)
 
 
     for term_id, term in ontology_terms.items():
-        output.append(term.to_string())
+        terms.append(term)
 
+    term_positions = {term_id: i for i, term in enumerate(terms) for term_id in term.id}
+    output = [term.to_string(term_positions) for term in terms]
 
     with gzip.open(f"../ontology_{tax_id}.gz", "wb") as gz_output:
-        gzip_out = "".join(output).encode("utf8")
+        gzip_out = "\n".join(output).encode("utf8")
         print("writing", len(gzip_out))
         gz_output.write(gzip_out)
 

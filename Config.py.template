@@ -11,5 +11,3 @@ organisms = {
     'Pseudomonas aeruginosa': '287',
     'Arabidopsis thaliana': '3702',
 }
-MATOMO_ADDRESS = None  # "https://abcde.com/matomo/matomo.php" # exchange with TRUE address
-MATOMO_TOKEN = None  # exchange with TRUE string token

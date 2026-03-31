@@ -38,11 +38,22 @@ from collections import defaultdict
 import traceback
 import pickle
 import os
-import csv
 import sys
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
 from itertools import groupby
+import time
+from collections import defaultdict
+
+
+def maptogo_profile(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        logger.info(f"Time elapsed for function '{func.__name__}': {end_time - start_time}s")
+        return result
+    return wrapper
 
 
 lipid_parser = LipidParser()
@@ -337,22 +348,83 @@ def check_user_input(
     )
 
 
-EXCLUDE_TERMS = {"", "external"}
+def split_integers(s: str, delim: str = "|") -> list[int]:
+    result = []
+    current = 0
+
+    for c in s:
+        if c == delim:
+            result.append(current)
+            current = 0
+        else:
+            current = current * 10 + (ord(c) - 48)  # fast digit conversion
+
+    result.append(current)  # last number
+    return result
+
+
 class OntologyTerm:
     __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories", "synonyms")
 
-    def __init__(self, _term_id, _name, _relations, _synonyms, _domain, _categories):
-        self.term_type = TermType(int(_relations[moea_pos + 5 : moea_pos + 12])) if (moea_pos := _relations.find("MOEA:00000")) > -1 else TermType.UNCLASSIFIED_TERM
-        self.term_id = sorted(_term_id.split("|"))
-        self.term_id_str = "|".join(self.term_id)
+    def __init__(self, _term_id, _name, _term_type, _relations, _synonyms, _domain, _categories):
+        self.term_type = TermType(int(_term_type))
+        self.term_id = _term_id.split("|")
+        self.term_id_str = _term_id
         self.name = _name
-        self.domain = set(_domain.split("|")) - EXCLUDE_TERMS
-        self.relations = _relations.split("|")
-        self.categories = set(_categories.split("|")) - EXCLUDE_TERMS
+        self.relations = [int(p) for p in _relations.split("|")] if len(_relations) > 0 else []
         self.synonyms = _synonyms.split("|")
+        self.domain = {d for d in _domain.split("|")} if len(_domain) > 0 else set()
+        self.categories = [c for c in _categories.split("|")] if len(_categories) > 0 else []
 
-    def get_term_id(self, space = False):
-        return " | ".join(sorted(self.term_id))
+        if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0:
+            self.categories = ["Unclassified reaction"]
+
+
+    def post_processing(self, ontology, term_list):
+        self.relations = [term_list[p] for p in self.relations]
+
+        for t_id in self.term_id: ontology.ontology_terms[t_id] = self
+        term_id_str, _name = self.term_id_str, self.name
+        ontology.domains |= self.domain
+        match self.term_type:
+            case TermType.LIPID_CLASS: # lipid class
+                if _name not in ontology.lipid_classes: ontology.lipid_classes[_name] = []
+                ontology.lipid_classes[_name].append(self)
+                for synonym in self.synonyms:
+                    if synonym not in ontology.lipid_classes: ontology.lipid_classes[synonym] = []
+                    ontology.lipid_classes[synonym].append(self)
+
+            case TermType.LIPID_SPECIES: # lipid species
+                if _name not in ontology.lipids: ontology.lipids[_name] = self
+
+            case TermType.CARBON_CHAIN: # carbon chain
+                if _name not in ontology.carbon_chains: ontology.carbon_chains[_name] = self
+                for synonym in self.synonyms:
+                    ontology.carbon_chains[synonym] = self
+
+            case TermType.UNSPECIFIC_LIPID:
+                if _name.lower() not in ontology.unspecific_lipids: ontology.unspecific_lipids[_name.lower()] = self
+                for synonym in self.synonyms:
+                    if synonym.lower() not in ontology.unspecific_lipids:
+                        ontology.unspecific_lipids[synonym.lower()] = self
+
+            case TermType.REVIEWED_PROTEIN: # reviewed protein
+                if term_id_str not in ontology.proteins:
+                    ontology.proteins[term_id_str] = self
+                    ontology.reviewed_proteins.add(term_id_str)
+
+            case TermType.UNREVIEWED_PROTEIN: # unreviewed protein
+                if term_id_str not in ontology.proteins: ontology.proteins[term_id_str] = self
+
+            case TermType.ENSEMBLE_PROTEIN | TermType.ENSEMBLE_TRANSCRIPT | TermType.ENSEMBLE_GENE: # ensemble
+                if term_id_str not in ontology.transcripts: ontology.transcripts[term_id_str] = self
+
+            case TermType.METABOLITE: # metabolite
+                if term_id_str not in ontology.metabolites: ontology.metabolites[term_id_str] = self
+
+
+    def get_term_id(self, space = True):
+        return " | ".join(self.term_id) if space else self.term_id_str
 
 
 
@@ -374,11 +446,12 @@ class OntologyResult:
         self.fisher_data = _fisher
 
         if min(_fisher) < 0:
-            logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher}")
+            logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher}")
 
 
 
 class EnrichmentOntology:
+    @maptogo_profile
     def __init__(self, file_name, ontology_name = "undefined"):
         self.ontology_terms = {}
         self.lipids = {}
@@ -395,50 +468,11 @@ class EnrichmentOntology:
         self.reviewed_proteins = set()
         self.unspecific_lipids = {}
 
+        ontology_terms = self.ontology_terms
         try:
-            csv.field_size_limit(sys.maxsize)
             with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
-                for term in [OntologyTerm(*row) for row in csv.reader(f, delimiter = "\t") if len(row) == 6]:
-                    for d in term.domain: self.domains.add(d)
-                    for t_id in term.term_id: self.ontology_terms[t_id] = term
-
-                    str_term_id, name = term.term_id_str, term.name
-                    match term.term_type:
-                        case TermType.LIPID_CLASS: # lipid class
-                            if name not in self.lipid_classes: self.lipid_classes[name] = []
-                            self.lipid_classes[name].append(term)
-                            for synonym in term.synonyms:
-                                if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
-                                self.lipid_classes[synonym].append(term)
-
-                        case TermType.LIPID_SPECIES: # lipid species
-                            if name not in self.lipids: self.lipids[name] = term
-
-                        case TermType.CARBON_CHAIN: # carbon chain
-                            if name not in self.carbon_chains: self.carbon_chains[name] = term
-                            for synonym in term.synonyms:
-                                self.carbon_chains[synonym] = term
-
-                        case TermType.UNSPECIFIC_LIPID:
-                            if name.lower() not in self.unspecific_lipids: self.unspecific_lipids[name.lower()] = term
-                            for synonym in term.synonyms:
-                                if synonym.lower() not in self.unspecific_lipids:
-                                    self.unspecific_lipids[synonym.lower()] = term
-
-                        case TermType.REVIEWED_PROTEIN: # reviewed protein
-                            if str_term_id not in self.proteins:
-                                self.proteins[str_term_id] = term
-                                self.reviewed_proteins.add(str_term_id)
-
-                        case TermType.UNREVIEWED_PROTEIN: # unreviewed protein
-                            if str_term_id not in self.proteins: self.proteins[str_term_id] = term
-
-                        case TermType.ENSEMBLE_PROTEIN | TermType.ENSEMBLE_TRANSCRIPT | TermType.ENSEMBLE_GENE: # ensemble
-                            if str_term_id not in self.transcripts: self.transcripts[str_term_id] = term
-
-                        case TermType.METABOLITE: # metabolite
-                            if str_term_id not in self.metabolites: self.metabolites[str_term_id] = term
-
+                term_list = [OntologyTerm(*line.strip("\n").split("\t")) for line in f]
+            for term in term_list: term.post_processing(self, term_list)
 
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
@@ -457,24 +491,7 @@ class EnrichmentOntology:
                 if len(line) < 2: continue
                 tokens = line.split("\t")
                 if len(tokens) < 2 or tokens[0] not in self.ontology_terms or tokens[1] not in self.ontology_terms: continue
-                self.ontology_terms[tokens[0]].relations.append(tokens[1])
-        except Exception as e:
-            logger.error("".join(traceback.format_tb(e.__traceback__)))
-            logger.error(e)
-
-        # clean up ontology
-        try:
-            ontology_keys, ontology_terms = set(self.ontology_terms), self.ontology_terms
-            for term in self.ontology_terms.values():
-                if not term.relations or type(term.relations[0]) == OntologyTerm: continue
-                term.relations = [
-                    k for k, _ in groupby(
-                        sorted(
-                            [ontology_terms[t] for t in term.relations if t in ontology_keys],
-                            key = lambda term: term.term_id_str
-                        )
-                    )
-                ]
+                self.ontology_terms[tokens[0]].relations.append(ontology_terms[tokens[1]])
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error(e)
