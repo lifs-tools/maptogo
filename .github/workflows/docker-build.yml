@@ -51,6 +51,7 @@ jobs:
         commit=${SHORT_COMMIT}
         branch=${BRANCH}
         timestamp=${TIMESTAMP}
+        version=${IMAGE_TAG}
         EOF
         cat maptogo.ini
 
