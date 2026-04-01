@@ -75,6 +75,7 @@ import gc
 INIT_ORGANISM = "NCBITaxon:10090"
 APPLICATION_SHORT_TITLE = "MAPtoGO"
 APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
+TEXTFIELD_HEIGHT = "350px"
 
 if os.path.exists(f"{current_path}/maptogo.ini"):
     ini_config = configparser.ConfigParser()
@@ -1290,7 +1291,8 @@ def layout():
         children = [
             html.Div([
                 dmc.Switch(
-                    "Bla blab lab",
+                    "Separate between up / down regulated molecules",
+                    id = "separate_updown_switch",
                     style = {"marginBottom": "5px"},
                 ),
                 dmc.Tabs(
@@ -1328,7 +1330,7 @@ def layout():
                                             position = "right",
                                         ),
                                     ],
-                                    style = {"height": "400px", "display": "flex", "flexDirection": "column"},
+                                    style = {"height": TEXTFIELD_HEIGHT, "display": "flex", "flexDirection": "column"},
                                     className = "textarea-expand-container",
                                 ),
                                 html.Div(
@@ -1341,7 +1343,6 @@ def layout():
                                         dmc.Textarea(
                                             id = "textarea_regulated_lipids",
                                             value = "",
-                                            minRows = 5,
                                         ),
                                         dmc.Group(
                                             dmc.Text(
@@ -1352,205 +1353,418 @@ def layout():
                                             ),
                                             position = "right",
                                         ),
-
+                                    ],
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "flex",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_regulated_lipids",
+                                ),
+                                html.Div(
+                                    [
                                         dmc.Title(
-                                            "All regulated lipid names in experiment",
+                                            "All up-regulated lipid names in experiment",
                                             order = 5,
                                             style = {"marginTop": "10px"},
                                         ),
                                         dmc.Textarea(
-                                            id = "textarea_regulated_lipidse",
+                                            id = "textarea_upregulated_lipids",
                                             value = "",
-                                            minRows = 5,
                                         ),
                                         dmc.Group(
                                             dmc.Text(
                                                 "Entries: 0",
-                                                id = "num_regulated_lipidse",
+                                                id = "num_upregulated_lipids",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+
+                                        dmc.Title(
+                                            "All down-regulated lipid names in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_downregulated_lipids",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_downregulated_lipids",
                                                 style = {"color": "#808080"},
                                                 size = "12px",
                                             ),
                                             position = "right",
                                         ),
                                     ],
-                                    style = {"height": "400px", "display": "flex", "flexDirection": "column"},
-                                    className = "textarea-expand-container",),
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "none",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_up_down_regulated_lipids",
+                                ),
                             ], cols = 2)],
                             value="lipid_tab",
                         ),
+
                         dmc.TabsPanel([
                             dmc.SimpleGrid([
-                                dmc.Group([
-                                    dmc.Title(
-                                        "All protein accessions in experiment (background)",
-                                        order = 5,
-                                        style = {"marginTop": "10px"},
-                                    ),
-                                    dmc.Menu(
-                                        [
-                                            dmc.MenuTarget(
-                                                dmc.ActionIcon(
-                                                    DashIconify(icon = "simple-icons:helix", width = 16),
-                                                    id = "predefined_bg_proteome",
-                                                    title = "Select predefined background proteome",
-                                                    style = {"display": "flex", "alignItems": "flex-end"},
-                                                ),
+                                html.Div(
+                                    [
+                                        dmc.Group([
+                                            dmc.Title(
+                                                "All protein accessions in experiment (background)",
+                                                order = 5,
+                                                style = {"marginTop": "10px"},
                                             ),
-                                            dmc.MenuDropdown(
+                                            dmc.Menu(
                                                 [
-                                                    dmc.MenuItem(
-                                                        f"Reviewed proteins only ({predefined_proteins[0]})",
-                                                        id = "button_load_reviewed_proteins",
-                                                        n_clicks = 0,
+                                                    dmc.MenuTarget(
+                                                        dmc.ActionIcon(
+                                                            DashIconify(icon = "simple-icons:helix", width = 16),
+                                                            id = "predefined_bg_proteome",
+                                                            title = "Select predefined background proteome",
+                                                            style = {"display": "flex", "alignItems": "flex-end"},
+                                                        ),
                                                     ),
-                                                    dmc.MenuItem(
-                                                        f"Unreviewed proteins only ({predefined_proteins[1]})",
-                                                        id = "button_load_unreviewed_proteins",
-                                                        n_clicks = 0,
-                                                    ),
-                                                    dmc.MenuItem(
-                                                        f"All registered proteins ({predefined_proteins[2]})",
-                                                        id = "button_load_all_proteins",
-                                                        n_clicks = 0,
+                                                    dmc.MenuDropdown(
+                                                        [
+                                                            dmc.MenuItem(
+                                                                f"Reviewed proteins only ({predefined_proteins[0]})",
+                                                                id = "button_load_reviewed_proteins",
+                                                                n_clicks = 0,
+                                                            ),
+                                                            dmc.MenuItem(
+                                                                f"Unreviewed proteins only ({predefined_proteins[1]})",
+                                                                id = "button_load_unreviewed_proteins",
+                                                                n_clicks = 0,
+                                                            ),
+                                                            dmc.MenuItem(
+                                                                f"All registered proteins ({predefined_proteins[2]})",
+                                                                id = "button_load_all_proteins",
+                                                                n_clicks = 0,
+                                                            ),
+                                                        ]
                                                     ),
                                                 ]
                                             ),
-                                        ]
-                                    ),
-                                ]),
-                                dmc.Title(
-                                    "All regulated protein accession in experiment",
-                                    order = 5,
-                                    style = {"marginTop": "10px"},
+                                        ]),
+                                        dmc.Textarea(
+                                            id = "textarea_all_proteins",
+                                            style = {"width": "100%", "height": "100%"},
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_all_proteins",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {"height": TEXTFIELD_HEIGHT, "display": "flex", "flexDirection": "column"},
+                                    className = "textarea-expand-container",
                                 ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Textarea(
-                                    id = "textarea_all_proteins",
-                                    style = {"height": "100%", "display": "inline"},
-                                    value = "",
-                                    minRows = 15,
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All regulated protein accession in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_regulated_proteins",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_regulated_proteins",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "flex",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_regulated_proteins",
                                 ),
-                                dmc.Textarea(
-                                    id = "textarea_regulated_proteins",
-                                    value = "",
-                                    minRows = 15,
-                                ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_all_proteins",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
-                                ),
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_regulated_proteins",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All up-regulated protein accession in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_upregulated_proteins",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_upregulated_proteins",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                        dmc.Title(
+                                            "All down-regulated protein accession in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_downregulated_proteins",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_downregulated_proteins",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "none",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_up_down_regulated_proteins",
                                 ),
                             ], cols = 2)],
                             value="protein_tab",
                         ),
+
                         dmc.TabsPanel([
                             dmc.SimpleGrid([
-                                dmc.Title(
-                                    "All metabolite ChEBI Ids in experiment (background)",
-                                    order = 5,
-                                    style = {"marginTop": "10px"},
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All metabolite ChEBI Ids in experiment (background)",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_all_metabolites",
+                                            style = {"width": "100%", "height": "100%"},
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_all_metabolites",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+
+                                    ],
+                                    style = {"height": TEXTFIELD_HEIGHT, "display": "flex", "flexDirection": "column"},
+                                    className = "textarea-expand-container",
                                 ),
-                                dmc.Title(
-                                    "All regulated metabolite ChEBI Ids in experiment",
-                                    order = 5,
-                                    style = {"marginTop": "10px"},
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All regulated metabolite ChEBI Ids in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_regulated_metabolites",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_regulated_metabolites",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "flex",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_regulated_metabolites",
                                 ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Textarea(
-                                    id = "textarea_all_metabolites",
-                                    style = {"height": "100%", "display": "inline"},
-                                    value = "",
-                                    minRows = 15,
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All up-regulated metabolite ChEBI Ids in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_upregulated_metabolites",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_upregulated_metabolites",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                        dmc.Title(
+                                            "All down-regulated metabolite ChEBI Ids in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_downregulated_metabolites",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_downregulated_metabolites",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "none",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_up_down_regulated_metabolites",
                                 ),
-                                dmc.Textarea(
-                                    id = "textarea_regulated_metabolites",
-                                    value = "",
-                                    minRows = 15,
-                                ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_all_metabolites",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
-                                ),
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_regulated_metabolites",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
-                                ),
+
                             ], cols = 2)],
                             value = "metabolites_tab",
                         ),
+
                         dmc.TabsPanel([
                             dmc.SimpleGrid([
-                                dmc.Title(
-                                    "All ensembl Ids in experiment (background)",
-                                    order = 5,
-                                    style = {"marginTop": "10px"},
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All ensembl Ids in experiment (background)",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_all_transcripts",
+                                            style = {"width": "100%", "height": "100%"},
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_all_transcripts",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {"height": TEXTFIELD_HEIGHT, "display": "flex", "flexDirection": "column"},
+                                    className = "textarea-expand-container",
                                 ),
-                                dmc.Title(
-                                    "All regulated ensembl Ids in experiment",
-                                    order = 5,
-                                    style = {"marginTop": "10px"},
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All regulated ensembl Ids in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_regulated_transcripts",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_regulated_transcripts",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "flex",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_regulated_transcripts",
                                 ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Textarea(
-                                    id = "textarea_all_transcripts",
-                                    style = {"height": "100%", "display": "inline"},
-                                    value = "",
-                                    minRows = 15,
-                                ),
-                                dmc.Textarea(
-                                    id = "textarea_regulated_transcripts",
-                                    value = "",
-                                    minRows = 15,
-                                ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_all_transcripts",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
-                                ),
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_regulated_transcripts",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All up-regulated ensembl Ids in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_upregulated_transcripts",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_upregulated_transcripts",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                        dmc.Title(
+                                            "All down-regulated ensembl Ids in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_downregulated_transcripts",
+                                            value = "",
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_downregulated_transcripts",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {
+                                        "height": TEXTFIELD_HEIGHT,
+                                        "display": "none",
+                                        "flexDirection": "column",
+                                    },
+                                    className = "textarea-expand-container",
+                                    id = "field_up_down_regulated_transcripts",
                                 ),
                             ], cols = 2)],
                             value = "transcripts_tab",
@@ -4414,6 +4628,56 @@ class EnrichmentResource(Resource):
 
 
 
+@callback(
+    Output("field_regulated_lipids", "style", allow_duplicate = True),
+    Output("field_up_down_regulated_lipids", "style", allow_duplicate = True),
+    Output("field_regulated_proteins", "style", allow_duplicate = True),
+    Output("field_up_down_regulated_proteins", "style", allow_duplicate = True),
+    Output("field_regulated_metabolites", "style", allow_duplicate = True),
+    Output("field_up_down_regulated_metabolites", "style", allow_duplicate = True),
+    Output("field_regulated_transcripts", "style", allow_duplicate = True),
+    Output("field_up_down_regulated_transcripts", "style", allow_duplicate = True),
+    Input("separate_updown_switch", "checked"),
+    State("field_regulated_lipids", "style"),
+    State("field_up_down_regulated_lipids", "style"),
+    State("field_regulated_proteins", "style"),
+    State("field_up_down_regulated_proteins", "style"),
+    State("field_regulated_metabolites", "style"),
+    State("field_up_down_regulated_metabolites", "style"),
+    State("field_regulated_transcripts", "style"),
+    State("field_up_down_regulated_transcripts", "style"),
+    prevent_initial_call = True,
+)
+def separate_updown_switch_changed(
+    separate_updown_switch,
+    field_regulated_lipids_style,
+    field_up_down_regulated_lipids_style,
+    field_regulated_proteins_style,
+    field_up_down_regulated_proteins_style,
+    field_regulated_metabolites_style,
+    field_up_down_regulated_metabolites_style,
+    field_regulated_transcripts_style,
+    field_up_down_regulated_transcripts_style,
+):
+    field_regulated_lipids_style["display"] = "none" if separate_updown_switch else "flex"
+    field_up_down_regulated_lipids_style["display"] = "flex" if separate_updown_switch else "none"
+    field_regulated_proteins_style["display"] = "none" if separate_updown_switch else "flex"
+    field_up_down_regulated_proteins_style["display"] = "flex" if separate_updown_switch else "none"
+    field_regulated_metabolites_style["display"] = "none" if separate_updown_switch else "flex"
+    field_up_down_regulated_metabolites_style["display"] = "flex" if separate_updown_switch else "none"
+    field_regulated_transcripts_style["display"] = "none" if separate_updown_switch else "flex"
+    field_up_down_regulated_transcripts_style["display"] = "flex" if separate_updown_switch else "none"
+
+    return (
+        field_regulated_lipids_style,
+        field_up_down_regulated_lipids_style,
+        field_regulated_proteins_style,
+        field_up_down_regulated_proteins_style,
+        field_regulated_metabolites_style,
+        field_up_down_regulated_metabolites_style,
+        field_regulated_transcripts_style,
+        field_up_down_regulated_transcripts_style,
+    )
 
 
 
