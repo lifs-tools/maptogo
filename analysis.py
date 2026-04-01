@@ -2003,6 +2003,7 @@ def layout():
                                 "headerName": "Domain",
                                 "maxWidth": 200,
                                 "checkboxSelection": True,
+                                "hide": True,
                             },
                             {
                                 'field': "termid",
@@ -2014,6 +2015,11 @@ def layout():
                                 'field': "term",
                                 "headerName": "Term",
                                 "cellRenderer": "TermRenderer",
+                            },
+                            {
+                                'field': "direction",
+                                "headerName": "Direction",
+                                "hide": True,
                             },
                             {
                                 'field': "count",
@@ -2301,12 +2307,20 @@ def load_uid(_):
     Input("button_run_enrichment", "n_clicks"),
     State("textarea_all_lipids", "value"),
     State("textarea_regulated_lipids", "value"),
+    State("textarea_upregulated_lipids", "value"),
+    State("textarea_downregulated_lipids", "value"),
     State("textarea_all_proteins", "value"),
     State("textarea_regulated_proteins", "value"),
+    State("textarea_upregulated_proteins", "value"),
+    State("textarea_downregulated_proteins", "value"),
     State("textarea_all_metabolites", "value"),
     State("textarea_regulated_metabolites", "value"),
+    State("textarea_upregulated_metabolites", "value"),
+    State("textarea_downregulated_metabolites", "value"),
     State("textarea_all_transcripts", "value"),
     State("textarea_regulated_transcripts", "value"),
+    State("textarea_upregulated_transcripts", "value"),
+    State("textarea_downregulated_transcripts", "value"),
     State("select_organism", "value"),
     State("select_domains", "value"),
     State("select_molecule_handling", "value"),
@@ -2318,18 +2332,27 @@ def load_uid(_):
     State("checkbox_use_proteins", "checked"),
     State("checkbox_use_metabolites", "checked"),
     State("checkbox_use_transcripts", "checked"),
+    State("separate_updown_switch", "checked"),
     prevent_initial_call = True,
 )
 def run_enrichment(
     n_clicks,
     all_lipids_list,
     regulated_lipids_list,
+    upregulated_lipids_list,
+    downregulated_lipids_list,
     all_proteins_list,
     regulated_proteins_list,
+    upregulated_proteins_list,
+    downregulated_proteins_list,
     all_metabolites_list,
     regulated_metabolites_list,
+    upregulated_metabolites_list,
+    downregulated_metabolites_list,
     all_transcripts_list,
     regulated_transcripts_list,
+    upregulated_transcripts_list,
+    downregulated_transcripts_list,
     organism,
     domains,
     ignore_unrecognizable_molecules,
@@ -2341,6 +2364,7 @@ def run_enrichment(
     with_proteins,
     with_metabolites,
     with_transcripts,
+    separate_updown_switch,
 ):
     histogram_disabled = True
     num_enrichment_terms = "Entries: 0"
@@ -2376,12 +2400,20 @@ def run_enrichment(
         omics_lists = [
             all_lipids_list,
             regulated_lipids_list,
+            upregulated_lipids_list,
+            downregulated_lipids_list,
             all_proteins_list,
             regulated_proteins_list,
+            upregulated_proteins_list,
+            downregulated_proteins_list,
             all_metabolites_list,
             regulated_metabolites_list,
+            upregulated_metabolites_list,
+            downregulated_metabolites_list,
             all_transcripts_list,
             regulated_transcripts_list,
+            upregulated_transcripts_list,
+            downregulated_transcripts_list,
         ]
 
         try:
@@ -2389,14 +2421,23 @@ def run_enrichment(
                 target_set,
                 lipidome,
                 regulated_lipids,
+                upregulated_lipids,
+                downregulated_lipids,
                 proteome,
                 regulated_proteins,
+                upregulated_proteins,
+                downregulated_proteins,
                 metabolome,
                 regulated_metabolites,
+                upregulated_metabolites,
+                downregulated_metabolites,
                 transcriptome,
                 regulated_transcripts,
+                upregulated_transcripts,
+                downregulated_transcripts,
                 background_list,
             ) = check_user_input(
+                separate_updown_switch,
                 omics_included,
                 omics_lists,
                 ontology,
@@ -2422,12 +2463,20 @@ def run_enrichment(
 
         session.background_lipids = lipidome if with_lipids else None
         session.regulated_lipids = regulated_lipids if with_lipids else None
+        session.upregulated_lipids = upregulated_lipids if with_lipids else None
+        session.downregulated_lipids = downregulated_lipids if with_lipids else None
         session.background_proteins = proteome if with_proteins else None
         session.regulated_proteins = regulated_proteins if with_proteins else None
+        session.upregulated_proteins = upregulated_proteins if with_proteins else None
+        session.downregulated_proteins = downregulated_proteins if with_proteins else None
         session.background_metabolites = metabolome if with_metabolites else None
         session.regulated_metabolites = regulated_metabolites if with_metabolites else None
+        session.upregulated_metabolites = upregulated_metabolites if with_metabolites else None
+        session.downregulated_metabolites = downregulated_metabolites if with_metabolites else None
         session.background_transcripts = transcriptome if with_transcripts else None
         session.regulated_transcripts = regulated_transcripts if with_transcripts else None
+        session.upregulated_transcripts = upregulated_transcripts if with_transcripts else None
+        session.downregulated_transcripts = downregulated_transcripts if with_transcripts else None
         background_list.sort(key = lambda row: row["value"])
         session.background_list = background_list
 

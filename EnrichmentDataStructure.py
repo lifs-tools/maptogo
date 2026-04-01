@@ -101,6 +101,7 @@ else:
 
 
 def check_user_input(
+    separate_updown_switch,
     omics_included,
     omics_lists,
     ontology,
@@ -108,31 +109,36 @@ def check_user_input(
     ignore_unknown,
 ):
     with_lipids, with_proteins, with_metabolites, with_transcripts = omics_included
-    target_set = set()
-    lipidome, regulated_lipids = {}, set()
-    proteome, regulated_proteins = set(), set()
-    metabolome, regulated_metabolites = set(), set()
-    transcriptome, regulated_transcripts = set(), set()
+    target_set = [set(), set()] if separate_updown_switch else set()
+    lipidome, regulated_lipids, upregulated_lipids, downregulated_lipids = {}, set(), set(), set()
+    proteome, regulated_proteins, upregulated_proteins, downregulated_proteins = set(), set(), set(), set()
+    metabolome, regulated_metabolites, upregulated_metabolites, downregulated_metabolites = set(), set(), set(), set()
+    transcriptome, regulated_transcripts, upregulated_transcripts, downregulated_transcripts = set(), set(), set(), set()
     background_list = []
 
     (
         all_lipids_list,
         regulated_lipids_list,
+        upregulated_lipids_list,
+        downregulated_lipids_list,
         all_proteins_list,
         regulated_proteins_list,
+        upregulated_proteins_list,
+        downregulated_proteins_list,
         all_metabolites_list,
         regulated_metabolites_list,
+        upregulated_metabolites_list,
+        downregulated_metabolites_list,
         all_transcripts_list,
         regulated_transcripts_list,
+        upregulated_transcripts_list,
+        downregulated_transcripts_list,
     ) = omics_lists
 
     if with_lipids:
         if type(all_lipids_list) == str: all_lipids_list = all_lipids_list.split("\n")
         elif len(all_lipids_list) == 0:
             raise Exception("No background lipids are defined.")
-        if type(regulated_lipids_list) == str: regulated_lipids_list = regulated_lipids_list.split("\n")
-        elif len(regulated_lipids_list) == 0:
-            raise Exception("No regulated lipids are defined.")
 
         for lipid_name in all_lipids_list:
             if len(lipid_name) == 0: continue
@@ -151,48 +157,57 @@ def check_user_input(
                         raise Exception(f"Lipid name '{lipid_name}' unrecognizable! Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
             lipidome[lipid_name] = lipid
 
-        for lipid_name in regulated_lipids_list:
-            if len(lipid_name) == 0: continue
-            if lipid_name not in lipidome:
-                if ignore_unknown == MOLECULE_HANDLING_REMOVE: continue
-                raise Exception(f"The regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
-            regulated_lipids.add(lipid_name)
-
         if len(lipidome) == 0:
             raise Exception("No background lipid left after lipid recognition.")
-
-        if len(regulated_lipids) == 0:
-            raise Exception("No regulated lipid left after lipid recognition.")
-
-        if len(regulated_lipids) > len(lipidome):
-            raise Exception("Length of regulated lipid list must be smaller than background list.")
-
-        left_lipids = regulated_lipids - lipidome.keys()
-        if len(left_lipids) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                for lipid_name in left_lipids:
-                    del lipidome[lipid_name]
-            else:
-                raise Exception("The regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
-
-        target_set |= regulated_lipids
         background_list += [{"value": k, "label": k} for k in lipidome.keys()]
+
+
+        def check_lipids(regulated_lipids_list, updown_str, lipidome):
+            if type(regulated_lipids_list) == str: regulated_lipids_list = regulated_lipids_list.split("\n")
+            elif len(regulated_lipids_list) == 0:
+                raise Exception(f"No {updown_str}regulated lipids are defined.")
+            regulated_lipids = set()
+            for lipid_name in regulated_lipids_list:
+                if len(lipid_name) == 0: continue
+                if lipid_name not in lipidome:
+                    if ignore_unknown == MOLECULE_HANDLING_REMOVE: continue
+                    raise Exception(f"The {updown_str}regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
+                regulated_lipids.add(lipid_name)
+
+            if len(regulated_lipids) == 0:
+                raise Exception(f"No {updown_str}regulated lipid left after lipid recognition.")
+
+            if len(regulated_lipids) > len(lipidome):
+                raise Exception(f"Length of {updown_str}regulated lipid list must be smaller than background list.")
+
+            left_lipids = regulated_lipids - lipidome.keys()
+            if len(left_lipids) > 0:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
+                    for lipid_name in left_lipids:
+                        del lipidome[lipid_name]
+                else:
+                    raise Exception(f"The {updown_str}regulated lipid" + (' ' if len(left_lipids) == 1 else 's ') + "'" + "', '".join(left_lipids) + ("' does" if len(left_lipids) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
+            return regulated_lipids
+
+        if separate_updown_switch:
+            upregulated_lipids = check_lipids(upregulated_lipids_list, "up-", lipidome)
+            downregulated_lipids = check_lipids(downregulated_lipids_list, "down-", lipidome)
+            target_set[0] |= upregulated_lipids
+            target_set[1] |= downregulated_lipids
+
+        else:
+            regulated_lipids = check_lipids(regulated_lipids_list, "", lipidome)
+            target_set |= regulated_lipids
 
     if with_proteins:
         if type(all_proteins_list) == str: all_proteins_list = all_proteins_list.split("\n")
         elif len(all_proteins_list) == 0:
             raise Exception("No background proteins are defined.")
 
-        if type(regulated_proteins_list) == str: regulated_proteins_list = regulated_proteins_list.split("\n")
-        elif len(regulated_proteins_list) == 0:
-            raise Exception("No regulated proteins are defined.")
-
         proteome = set(protein for protein in all_proteins_list if len(protein) > 0)
-        regulated_proteins = set(protein for protein in regulated_proteins_list if len(protein) > 0)
-
         background_list += [{"value": pp, "label": p + (' (' + ontology.proteins[pp].name + ')' if (pp in ontology.proteins) else '')} for p in proteome if (pp := "UNIPROT:" + p)]
         proteome = set(p.split("-")[0] for p in proteome)
-        regulated_proteins = set(rp.split("-")[0] for rp in regulated_proteins)
+
         left_proteins = proteome - ontology.clean_protein_ids
         if len(left_proteins) > 0:
             if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
@@ -202,47 +217,57 @@ def check_user_input(
             else:
                 raise Exception("The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
 
-        left_proteins = regulated_proteins - ontology.clean_protein_ids
-        if len(left_proteins) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                regulated_proteins -= left_proteins
-            else:
-                raise Exception("The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
-
-        left_proteins = regulated_proteins - proteome
-        if len(left_proteins) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                regulated_proteins -= left_proteins
-            else:
-                raise Exception("The regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
-
         if len(proteome) == 0:
             raise Exception("No background protein left after protein recognition.")
 
-        if len(regulated_proteins) == 0:
-            raise Exception("No regulated protein left after protein recognition.")
+        def check_proteins(regulated_proteins_list, updown_str, proteome):
+            if type(regulated_proteins_list) == str: regulated_proteins_list = regulated_proteins_list.split("\n")
+            elif len(regulated_proteins_list) == 0:
+                raise Exception(f"No {updown_str}regulated proteins are defined.")
 
-        if len(regulated_proteins) > len(proteome):
-            raise Exception("Length of regulated protein list must be smaller than background list.")
+            regulated_proteins = set(protein.split("-")[0] for protein in regulated_proteins_list if len(protein) > 0)
+            left_proteins = regulated_proteins - ontology.clean_protein_ids
+            if len(left_proteins) > 0:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
+                    regulated_proteins -= left_proteins
+                else:
+                    raise Exception("The protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' is" if len(left_proteins) == 1 else "' are") + f" unrecognizable in the {updown_str}regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
+
+            left_proteins = regulated_proteins - proteome
+            if len(left_proteins) > 0:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
+                    regulated_proteins -= left_proteins
+                else:
+                    raise Exception(f"The {updown_str}regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
+
+            if len(regulated_proteins) == 0:
+                raise Exception(f"No {updown_str}regulated protein left after protein recognition.")
+
+            if len(regulated_proteins) > len(proteome):
+                raise Exception(f"Length of {updown_str}regulated protein list must be smaller than background list.")
+
+            return set([f"UNIPROT:{protein}" for protein in regulated_proteins])
+
+        if separate_updown_switch:
+            upregulated_proteins = check_proteins(upregulated_proteins_list, "up-", proteome)
+            dowregulated_proteins = check_proteins(downregulated_proteins_list, "down-", proteome)
+            target_set[0] |= upregulated_proteins
+            target_set[1] |= downregulated_proteins
+
+        else:
+            regulated_proteins = check_proteins(regulated_proteins_list, "", proteome)
+            target_set |= regulated_proteins
 
         proteome = set([f"UNIPROT:{protein}" for protein in proteome])
-        regulated_proteins = set([f"UNIPROT:{protein}" for protein in regulated_proteins])
-        target_set |= regulated_proteins
 
     if with_metabolites:
         if type(all_metabolites_list) == str: all_metabolites_list = all_metabolites_list.split("\n")
         elif len(all_metabolites_list) == 0:
             raise Exception("No background metabolites are defined.")
 
-        if type(regulated_metabolites_list) == str: regulated_metabolites_list = regulated_metabolites_list.split("\n")
-        elif len(regulated_metabolites_list) == 0:
-            raise Exception("No regulated metabolites are defined.")
-
         metabolome = set(metabolite for metabolite in all_metabolites_list if len(metabolite) > 0)
-        regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list if len(metabolite) > 0)
-
         background_list += [{"value": m, "label": m} for m in metabolome]
         left_metabolites = metabolome - ontology.clean_metabolite_ids - ontology.metabolites.keys()
         left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
@@ -253,49 +278,58 @@ def check_user_input(
                 metabolome -= left_metabolites
             else:
                 raise Exception("The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
-
-        left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
-        left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
-        if len(left_metabolites) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                regulated_metabolites -= left_metabolites
-            else:
-                raise Exception("The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
-
-        left_metabolites = regulated_metabolites - metabolome
-        if len(left_metabolites) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                regulated_metabolites -= left_metabolites
-            else:
-                raise Exception("The regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.")
-
         if len(metabolome) == 0:
             raise Exception("No background metabolite left after metabolite recognition.")
 
-        if len(regulated_metabolites) == 0:
-            raise Exception("No regulated metabolite left after metabolite recognition.")
+        def check_metabolome(regulated_metabolites_list, updown_str, metabolome):
+            if type(regulated_metabolites_list) == str: regulated_metabolites_list = regulated_metabolites_list.split("\n")
+            elif len(regulated_metabolites_list) == 0:
+                raise Exception(f"No {updown_str}regulated metabolites are defined.")
 
-        if len(regulated_metabolites) > len(metabolome):
-            raise Exception("Length of regulated metabolite list must be smaller than background list.")
+            regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list if len(metabolite) > 0)
+            left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
+            left_metabolites -= set([m for m in left_metabolites if m.lower() in ontology.metabolite_names.keys()])
+            if len(left_metabolites) > 0:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
+                    regulated_metabolites -= left_metabolites
+                else:
+                    raise Exception("The metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' is" if len(left_metabolites) == 1 else "' are") + f" unrecognizable in the {updown_str}regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
+
+            left_metabolites = regulated_metabolites - metabolome
+            if len(left_metabolites) > 0:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
+                    regulated_metabolites -= left_metabolites
+                else:
+                    raise Exception(f"The {updown_str}regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.")
+
+            if len(regulated_metabolites) == 0:
+                raise Exception(f"No regulated {updown_str}metabolite left after metabolite recognition.")
+
+            if len(regulated_metabolites) > len(metabolome):
+                raise Exception(f"Length of {updown_str}regulated metabolite list must be smaller than background list.")
+
+            return set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
+
+        if separate_updown_switch:
+            upregulated_metabolites = check_metabolome(upregulated_metabolites_list, "up-", metabolome)
+            downregulated_metabolites = check_metabolome(downregulated_metabolites_list, "down-", metabolome)
+            target_set[0] |= upregulated_metabolites
+            target_set[1] |= downregulated_metabolites
+
+        else:
+            regulated_metabolites = check_metabolome(regulated_metabolites_list, "", metabolome)
+            target_set |= regulated_metabolites
 
         metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
-        regulated_metabolites = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in regulated_metabolites])
-        target_set |= regulated_metabolites
 
     if with_transcripts:
         if type(all_transcripts_list) == str: all_transcripts_list = all_transcripts_list.split("\n")
         elif len(all_transcripts_list) == 0:
             raise Exception("No background transcripts are defined.")
 
-        if type(regulated_transcripts_list) == str: regulated_transcripts_list = regulated_transcripts_list.split("\n")
-        elif len(regulated_transcripts_list) == 0:
-            raise Exception("No regulated transcripts are defined.")
-
         transcriptome = set(transcript for transcript in all_transcripts_list if len(transcript) > 0)
-        regulated_transcripts = set(transcript for transcript in regulated_transcripts_list if len(transcript) > 0)
-
         background_list += [{"value": t, "label": t + (' (' + ontology.transcripts[tt].name + ')' if (tt in ontology.transcripts) else '')} for t in transcriptome if (tt := t.split(".")[0])]
         transcript_keys = set(ontology.transcripts.keys())
         left_transcripts = set(t for t in transcriptome if t.split(".")[0] not in transcript_keys)
@@ -306,43 +340,66 @@ def check_user_input(
                 transcriptome -= left_transcripts
             else:
                 raise Exception("The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
-
-        left_transcripts = set(t for t in regulated_transcripts if t.split(".")[0] not in transcript_keys)
-        if len(left_transcripts) > 0:
-            if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
-                pass
-            elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
-                regulated_transcripts -= left_transcripts
-            else:
-                raise Exception("The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + " unrecognizable in the regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
-
-        left_transcripts = regulated_transcripts - transcriptome
-        if len(left_transcripts) > 0:
-            if ignore_unknown == MOLECULE_HANDLING_REMOVE:
-                regulated_transcripts -= left_transcripts
-            else:
-                raise Exception("The regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.")
         if len(transcriptome) == 0:
             raise Exception("No background transcript left after transcript recognition.")
 
-        if len(regulated_transcripts) == 0:
-            raise Exception("No regulated transcript left after transcript recognition.")
+        def check_transcripts(regulated_transcripts_list, updown_str, transcriptome):
+            if type(regulated_transcripts_list) == str: regulated_transcripts_list = regulated_transcripts_list.split("\n")
+            elif len(regulated_transcripts_list) == 0:
+                raise Exception(f"No {updown_str}regulated transcripts are defined.")
 
-        if len(regulated_transcripts) > len(transcriptome):
-            raise Exception("Length of regulated transcript list must be smaller than background list.")
+            regulated_transcripts = set(transcript for transcript in regulated_transcripts_list if len(transcript) > 0)
+            left_transcripts = set(t for t in regulated_transcripts if t.split(".")[0] not in transcript_keys)
+            if len(left_transcripts) > 0:
+                if ignore_unrecognizable_molecules == MOLECULE_HANDLING_IGNORE:
+                    pass
+                elif ignore_unrecognizable_molecules == MOLECULE_HANDLING_REMOVE:
+                    regulated_transcripts -= left_transcripts
+                else:
+                    raise Exception("The transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' is" if len(left_transcripts) == 1 else "' are") + f" unrecognizable in the {updown_str}regulated. Maybe enable the 'Remove for analysis' option in the 'Handling of unrecognizable molecules' setting.")
 
-        target_set |= regulated_transcripts
+            left_transcripts = regulated_transcripts - transcriptome
+            if len(left_transcripts) > 0:
+                if ignore_unknown == MOLECULE_HANDLING_REMOVE:
+                    regulated_transcripts -= left_transcripts
+                else:
+                    raise Exception(f"The {updown_str}regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.")
+
+            if len(regulated_transcripts) == 0:
+                raise Exception(f"No {updown_str}regulated transcript left after transcript recognition.")
+
+            if len(regulated_transcripts) > len(transcriptome):
+                raise Exception(f"Length of {updown_str}regulated transcript list must be smaller than background list.")
+            return regulated_transcripts
+
+        if separate_updown_switch:
+            upregulated_transcripts = check_transcripts(upregulated_transcripts_list, "up-", transcriptome)
+            downregulated_transcripts = check_transcripts(downregulated_transcripts_list, "down-", transcriptome)
+            target_set[0] |= upregulated_transcripts
+            target_set[1] |= downregulated_transcripts
+
+        else:
+            regulated_transcripts = check_transcripts(regulated_transcripts_list, "", transcriptome)
+            target_set |= regulated_transcripts
 
     return (
         target_set,
         lipidome,
         regulated_lipids,
+        upregulated_lipids,
+        downregulated_lipids,
         proteome,
         regulated_proteins,
+        upregulated_proteins,
+        downregulated_proteins,
         metabolome,
         regulated_metabolites,
+        upregulated_metabolites,
+        downregulated_metabolites,
         transcriptome,
         regulated_transcripts,
+        upregulated_transcripts,
+        downregulated_transcripts,
         background_list,
     )
 
