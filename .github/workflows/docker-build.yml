@@ -41,6 +41,20 @@ jobs:
         fi
         echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
+    - name: Create maptogo.ini
+      run: |
+        SHORT_COMMIT=${GITHUB_SHA::7}
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        TIMESTAMP=$(git log -1 --format=%cI)
+        cat > maptogo.ini << EOF
+        [git]
+        commit=${SHORT_COMMIT}
+        branch=${BRANCH}
+        timestamp=${TIMESTAMP}
+        version=${IMAGE_TAG}
+        EOF
+        cat maptogo.ini
+
     - name: Login to LIFS Tools registry
       uses: docker/login-action@v2
       with:

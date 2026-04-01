@@ -40,6 +40,9 @@ WORKDIR /wd
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
+# Copy the generated maptogo.ini if it exists
+COPY maptogo.ini* /wd/
+
 FROM python:3.12-slim-trixie
 # development or production
 ARG DASH_ENVIRONMENT="development"

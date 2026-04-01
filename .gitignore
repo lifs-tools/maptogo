@@ -100,3 +100,6 @@ report/
 
 # Editor backups
 *.bak
+
+# maptogo config file
+Config.py
