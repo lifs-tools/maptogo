@@ -60,19 +60,16 @@ from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidAdduct import LipidAdduct
 import pathlib
 import time
-import hashlib
-import threading
 import freetype
 from math import ceil
 from flask_restx import Api, Resource, fields
 import traceback
 import requests
-import socket
 import threading
-import subprocess
 from datetime import datetime
 from collections import defaultdict, deque
 import configparser
+import gc
 
 
 INIT_ORGANISM = "NCBITaxon:10090"
@@ -151,14 +148,12 @@ except Exception as e:
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
         # 'Drosophila melanogaster': 'NCBITaxon:7227',
-        #'Rattus norvegicus': 'NCBITaxon:10116',
+        # 'Rattus norvegicus': 'NCBITaxon:10116',
         # 'Bos taurus': 'NCBITaxon:9913',
         # 'Caenorhabditis elegans': 'NCBITaxon:6239',
         # 'Pseudomonas aeruginosa': 'NCBITaxon:287',
         # 'Arabidopsis thaliana': 'NCBITaxon:3702',
     }
-    MATOMO_TOKEN = None
-    MATOMO_ADDRESS = None
 
 
 def shorten_label(label, max_len = 10):
@@ -196,7 +191,6 @@ for font_size in range(1, 23):
         char_sizes_font.append((face.glyph.advance.x >> 6) * 0.1 * font_size)
 
 
-hash_function = hashlib.new('sha256')
 LINK_COLOR = "#2980B9"
 SESSION_DURATION_TIME = 60 * 60 * 2 # two hours
 domain_colors = {
@@ -251,18 +245,6 @@ def get_path(nodes, node):
     return path[::-1]
 
 
-
-_original_create_connection = socket.create_connection
-def create_ipv4_connection(address, *args, **kwargs):
-    host, port = address
-    # resolve only IPv4 addresses
-    infos = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
-    af, socktype, proto, canonname, sa = infos[0]
-    sock = socket.socket(af, socktype, proto)
-    sock.settimeout(kwargs.get("timeout"))
-    sock.connect(sa)
-    return sock
-socket.create_connection = create_ipv4_connection
 
 
 class ItemCounter:
@@ -570,11 +552,14 @@ api.static_url_path = app.get_relative_path("/swaggerui")
 
 logger.info(f"Deploying swagger-ui at {app.get_relative_path('/api/docs')}, setting prefix to: {app.get_relative_path('')}, static url path to: {app.get_relative_path('/swaggerui')}")
 
+gc.disable()
 enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
     logger.info(f"Loading {tax_name}")
     tax_id_number = tax_id.replace("NCBITaxon:", "")
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
+gc.enable()
+gc.collect()
 
 def get_aggrid_modal(name, molecule):
     return dag.AgGrid(

@@ -53,7 +53,6 @@ extern "C" double exact_fisher(int a, int ab, int ac, int abcd, int alternative)
         if (ab * ac < a * abcd){
             double sr = 0.;
             for (int i = a + 1; i <= a_max; ++i){
-                //for i in range(a+1, a_max+1):
                 double sr_new = sr + exp(pa - lgamma(i+1) - lgamma(ab-i+1) - lgamma(ac-i+1) - lgamma(abcd-ab-ac+i+1));
                 if (sr_new == sr) break;
                 sr = sr_new;
@@ -63,7 +62,6 @@ extern "C" double exact_fisher(int a, int ab, int ac, int abcd, int alternative)
         else {
             double sl = 1.;
             for (int i = a - 1; i >= a_min; --i){
-                //for i in range(a-1, a_min-1, -1):
                 double sl_new = sl + exp(pa - lgamma(i+1) - lgamma(ab-i+1) - lgamma(ac-i+1) - lgamma(abcd-ab-ac+i+1));
                 if (sl_new == sl) break;
                 sl = sl_new;
@@ -75,7 +73,6 @@ extern "C" double exact_fisher(int a, int ab, int ac, int abcd, int alternative)
     if (ab * ac > a * abcd){
         double sl = 0.;
         for (int i = a - 1; i >= a_min; --i){
-            //for i in range(a-1, a_min-1, -1):
             double sl_new = sl + exp(pa - lgamma(i+1) - lgamma(ab-i+1) - lgamma(ac-i+1) - lgamma(abcd-ab-ac+i+1));
             if (sl_new == sl) break;
             sl = sl_new;
@@ -85,7 +82,6 @@ extern "C" double exact_fisher(int a, int ab, int ac, int abcd, int alternative)
     else {
         double sr = 1.;
         for (int i = a + 1; i <= a_max; ++i){
-            //for i in range(a+1, a_max+1):
             double sr_new = sr + exp(pa - lgamma(i+1) - lgamma(ab-i+1) - lgamma(ac-i+1) - lgamma(abcd-ab-ac+i+1));
             if (sr_new == sr) break;
             sr = sr_new;

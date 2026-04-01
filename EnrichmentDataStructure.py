@@ -31,19 +31,14 @@ from pygoslin.domain.LipidLevel import LipidLevel
 from pygoslin.domain.LipidFaBondType import LipidFaBondType
 import scipy.stats as stats
 import logging
-import json
 import ctypes
 import pathlib
 from collections import defaultdict
 import traceback
-import pickle
 import os
-import sys
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
-from itertools import groupby
 import time
-from collections import defaultdict
 
 
 def maptogo_profile(func):
@@ -78,6 +73,10 @@ class TermType(Enum):
     GENE = 12
     INPUT_TERM = 90
     UNCLASSIFIED_TERM = 99
+
+
+int_to_term_type = {term_type.value: TermType(term_type.value) for  term_type in TermType}
+
 
 current_path = pathlib.Path(__file__).parent.resolve()
 logger = logging.getLogger(__name__)
@@ -365,63 +364,35 @@ def split_integers(s: str, delim: str = "|") -> list[int]:
 
 class OntologyTerm:
     __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories", "synonyms")
+    # Type hints for attributes
+    term_id: list[str]
+    term_id_str: str
+    name: str
+    term_type: TermType
+    relations: list[int]
+    synonyms: list[str]
+    domain: set[str]
+    categories: list[str]
 
-    def __init__(self, _term_id, _name, _term_type, _relations, _synonyms, _domain, _categories):
-        self.term_type = TermType(int(_term_type))
+    def __init__(
+        self,
+        _term_id: str,
+        _name: str,
+        _term_type: str,
+        _relations: str,
+        _synonyms: str,
+        _domain: str,
+        _categories: str,
+    ):
+        self.term_type = int_to_term_type[int(_term_type)]
         self.term_id = _term_id.split("|")
         self.term_id_str = _term_id
         self.name = _name
-        self.relations = [int(p) for p in _relations.split("|")] if len(_relations) > 0 else []
+        self.relations = [int(p) for p in _relations.split("|")] if _relations else []
         self.synonyms = _synonyms.split("|")
-        self.domain = {d for d in _domain.split("|")} if len(_domain) > 0 else set()
-        self.categories = [c for c in _categories.split("|")] if len(_categories) > 0 else []
-
-        if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0:
-            self.categories = ["Unclassified reaction"]
-
-
-    def post_processing(self, ontology, term_list):
-        self.relations = [term_list[p] for p in self.relations]
-
-        for t_id in self.term_id: ontology.ontology_terms[t_id] = self
-        term_id_str, _name = self.term_id_str, self.name
-        ontology.domains |= self.domain
-        match self.term_type:
-            case TermType.LIPID_CLASS: # lipid class
-                if _name not in ontology.lipid_classes: ontology.lipid_classes[_name] = []
-                ontology.lipid_classes[_name].append(self)
-                for synonym in self.synonyms:
-                    if synonym not in ontology.lipid_classes: ontology.lipid_classes[synonym] = []
-                    ontology.lipid_classes[synonym].append(self)
-
-            case TermType.LIPID_SPECIES: # lipid species
-                if _name not in ontology.lipids: ontology.lipids[_name] = self
-
-            case TermType.CARBON_CHAIN: # carbon chain
-                if _name not in ontology.carbon_chains: ontology.carbon_chains[_name] = self
-                for synonym in self.synonyms:
-                    ontology.carbon_chains[synonym] = self
-
-            case TermType.UNSPECIFIC_LIPID:
-                if _name.lower() not in ontology.unspecific_lipids: ontology.unspecific_lipids[_name.lower()] = self
-                for synonym in self.synonyms:
-                    if synonym.lower() not in ontology.unspecific_lipids:
-                        ontology.unspecific_lipids[synonym.lower()] = self
-
-            case TermType.REVIEWED_PROTEIN: # reviewed protein
-                if term_id_str not in ontology.proteins:
-                    ontology.proteins[term_id_str] = self
-                    ontology.reviewed_proteins.add(term_id_str)
-
-            case TermType.UNREVIEWED_PROTEIN: # unreviewed protein
-                if term_id_str not in ontology.proteins: ontology.proteins[term_id_str] = self
-
-            case TermType.ENSEMBLE_PROTEIN | TermType.ENSEMBLE_TRANSCRIPT | TermType.ENSEMBLE_GENE: # ensemble
-                if term_id_str not in ontology.transcripts: ontology.transcripts[term_id_str] = self
-
-            case TermType.METABOLITE: # metabolite
-                if term_id_str not in ontology.metabolites: ontology.metabolites[term_id_str] = self
-
+        self.domain = {d for d in _domain.split("|")} if _domain else set()
+        self.categories = [c for c in _categories.split("|")] if _categories else []
+        if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0: self.categories = ["Unclassified reaction"]
 
     def get_term_id(self, space = True):
         return " | ".join(self.term_id) if space else self.term_id_str
@@ -472,7 +443,46 @@ class EnrichmentOntology:
         try:
             with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
                 term_list = [OntologyTerm(*line.strip("\n").split("\t")) for line in f]
-            for term in term_list: term.post_processing(self, term_list)
+
+            for term in term_list:
+                term.relations = [term_list[p] for p in term.relations]
+                for t_id in term.term_id: ontology_terms[t_id] = term
+                term_id_str, _name = term.term_id_str, term.name
+                self.domains |= term.domain
+                match term.term_type:
+                    case TermType.LIPID_CLASS: # lipid class
+                        if _name not in self.lipid_classes: self.lipid_classes[_name] = []
+                        self.lipid_classes[_name].append(term)
+                        for synonym in term.synonyms:
+                            if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
+                            self.lipid_classes[synonym].append(term)
+
+                    case TermType.LIPID_SPECIES: # lipid species
+                        if _name not in self.lipids: self.lipids[_name] = term
+
+                    case TermType.CARBON_CHAIN: # carbon chain
+                        if _name not in self.carbon_chains: self.carbon_chains[_name] = term
+                        for synonym in term.synonyms: self.carbon_chains[synonym] = term
+
+                    case TermType.UNSPECIFIC_LIPID:
+                        if _name.lower() not in self.unspecific_lipids: self.unspecific_lipids[_name.lower()] = term
+                        for synonym in term.synonyms:
+                            if synonym.lower() not in self.unspecific_lipids: self.unspecific_lipids[synonym.lower()] = term
+
+                    case TermType.REVIEWED_PROTEIN: # reviewed protein
+                        if term_id_str not in self.proteins:
+                            self.proteins[term_id_str] = term
+                            self.reviewed_proteins.add(term_id_str)
+
+                    case TermType.UNREVIEWED_PROTEIN: # unreviewed protein
+                        if term_id_str not in self.proteins: self.proteins[term_id_str] = term
+
+                    case TermType.ENSEMBLE_PROTEIN | TermType.ENSEMBLE_TRANSCRIPT | TermType.ENSEMBLE_GENE: # ensemble
+                        if term_id_str not in self.transcripts: self.transcripts[term_id_str] = term
+
+                    case TermType.METABOLITE: # metabolite
+                        if term_id_str not in self.metabolites: self.metabolites[term_id_str] = term
+
 
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
@@ -482,8 +492,7 @@ class EnrichmentOntology:
         self.clean_metabolite_ids = set([key.replace("CHEBI:", "") for key in self.metabolites.keys()])
         self.metabolite_names = {term.name.lower(): term for term in self.metabolites.values()}
         for synonym, term_id in CHEBI_synonym_table.items():
-            if term_id in self.metabolites:
-                self.metabolite_names[synonym] = self.metabolites[term_id]
+            if term_id in self.metabolites: self.metabolite_names[synonym] = self.metabolites[term_id]
 
         # add additional knowlegde graph edges
         try:
