@@ -439,20 +439,28 @@ for worksheet_name in xl.sheet_names:
     if worksheet_name[0] in {"_", "#"}: continue
     df = xl.parse(worksheet_name)
     worksheet = {
-        "bgl": [], "regl": [],
-        "bgp": [], "regp": [],
-        "bgm": [], "regm": [],
-        "bgt": [], "regt": [],
+        "bgl": [], "regl": [], "upregl": [], "downregl": [],
+        "bgp": [], "regp": [], "upregp": [], "downregp": [],
+        "bgm": [], "regm": [], "upregm": [], "downregm": [],
+        "bgt": [], "regt": [], "upregt": [], "downregt": [],
         "title": "", "desc": "", "comp": "", "doi": "", "org": INIT_ORGANISM
     }
     if "BackgroundLipids" in df: worksheet["bgl"] = list(df["BackgroundLipids"].dropna())
     if "RegulatedLipids" in df: worksheet["regl"] = list(df["RegulatedLipids"].dropna())
+    if "UpregulatedLipids" in df: worksheet["upregl"] = list(df["UpregulatedLipids"].dropna())
+    if "DownregulatedLipids" in df: worksheet["downregl"] = list(df["DownregulatedLipids"].dropna())
     if "BackgroundProteins" in df: worksheet["bgp"] = list(df["BackgroundProteins"].dropna())
     if "RegulatedProteins" in df: worksheet["regp"] = list(df["RegulatedProteins"].dropna())
+    if "UpregulatedProteins" in df: worksheet["upregp"] = list(df["UpregulatedProteins"].dropna())
+    if "DownregulatedProteins" in df: worksheet["downregp"] = list(df["DownregulatedProteins"].dropna())
     if "BackgroundMetabolites" in df: worksheet["bgm"] = list(df["BackgroundMetabolites"].dropna())
     if "RegulatedMetabolites" in df: worksheet["regm"] = list(df["RegulatedMetabolites"].dropna())
+    if "UpregulatedMetabolites" in df: worksheet["upregm"] = list(df["UpregulatedMetabolites"].dropna())
+    if "DownregulatedMetabolites" in df: worksheet["downregm"] = list(df["DownregulatedMetabolites"].dropna())
     if "BackgroundTranscripts" in df: worksheet["bgt"] = list(df["BackgroundTranscripts"].dropna())
     if "RegulatedTranscripts" in df: worksheet["regt"] = list(df["RegulatedTranscripts"].dropna())
+    if "UpregulatedTranscripts" in df: worksheet["upregt"] = list(df["UpregulatedTranscripts"].dropna())
+    if "DownregulatedTranscripts" in df: worksheet["downregt"] = list(df["DownregulatedTranscripts"].dropna())
     if "Title" in df: worksheet["title"] = df.loc[0, "Title"]
     if "Description" in df: worksheet["desc"] = df.loc[0, "Description"]
     if "Comparison" in df: worksheet["comp"] = df.loc[0, "Comparison"]
@@ -2120,22 +2128,39 @@ def organism_changed(organism, domain_values):
     Output("sessionid", "children", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
+    Output("separate_updown_switch", "checked", allow_duplicate = True),
     Output("num_all_lipids", "children", allow_duplicate = True),
     Output("num_regulated_lipids", "children", allow_duplicate = True),
+    Output("num_upregulated_lipids", "children", allow_duplicate = True),
+    Output("num_downregulated_lipids", "children", allow_duplicate = True),
     Output("num_all_proteins", "children", allow_duplicate = True),
     Output("num_regulated_proteins", "children", allow_duplicate = True),
+    Output("num_upregulated_proteins", "children", allow_duplicate = True),
+    Output("num_downregulated_proteins", "children", allow_duplicate = True),
     Output("num_all_metabolites", "children", allow_duplicate = True),
     Output("num_regulated_metabolites", "children", allow_duplicate = True),
+    Output("num_upregulated_metabolites", "children", allow_duplicate = True),
+    Output("num_downregulated_metabolites", "children", allow_duplicate = True),
     Output("num_all_transcripts", "children", allow_duplicate = True),
     Output("num_regulated_transcripts", "children", allow_duplicate = True),
+    Output("num_upregulated_transcripts", "children", allow_duplicate = True),
+    Output("num_downregulated_transcripts", "children", allow_duplicate = True),
     Output("textarea_all_lipids", "value", allow_duplicate = True),
     Output("textarea_regulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_upregulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_downregulated_lipids", "value", allow_duplicate = True),
     Output("textarea_all_proteins", "value", allow_duplicate = True),
     Output("textarea_regulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_upregulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_downregulated_proteins", "value", allow_duplicate = True),
     Output("textarea_all_metabolites", "value", allow_duplicate = True),
     Output("textarea_regulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_upregulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_downregulated_metabolites", "value", allow_duplicate = True),
     Output("textarea_all_transcripts", "value", allow_duplicate = True),
     Output("textarea_regulated_transcripts", "value", allow_duplicate = True),
+    Output("textarea_upregulated_transcripts", "value", allow_duplicate = True),
+    Output("textarea_downregulated_transcripts", "value", allow_duplicate = True),
     Output("use_bounded_fatty_acyls", "checked", allow_duplicate = True),
     Output("checkbox_use_lipids", "checked", allow_duplicate = True),
     Output("checkbox_use_proteins", "checked", allow_duplicate = True),
@@ -2156,7 +2181,7 @@ def load_uid(_):
     if session_id not in sessions:
         sessions[session_id] = SessionEntry()
         logger.info(f"New session: {session_id}")
-        return (session_id, *([no_update] * 30))
+        return (session_id, *([no_update] * 47))
 
     logger.info(f"Reopen session: {session_id}")
     session = sessions[session_id]
@@ -2164,12 +2189,21 @@ def load_uid(_):
     use_bounded_fatty_acyls = session.use_bounded_fatty_acyls
     all_lipids_list = ui["all_lipids_list"] if "all_lipids_list" in ui else ""
     regulated_lipids_list = ui["regulated_lipids_list"] if "regulated_lipids_list" in ui else ""
+    upregulated_lipids_list = ui["upregulated_lipids_list"] if "upregulated_lipids_list" in ui else ""
+    downregulated_lipids_list = ui["downregulated_lipids_list"] if "downregulated_lipids_list" in ui else ""
     all_proteins_list = ui["all_proteins_list"] if "all_proteins_list" in ui else ""
     regulated_proteins_list = ui["regulated_proteins_list"] if "regulated_proteins_list" in ui else ""
+    upregulated_proteins_list = ui["upregulated_proteins_list"] if "upregulated_proteins_list" in ui else ""
+    downregulated_proteins_list = ui["downregulated_proteins_list"] if "downregulated_proteins_list" in ui else ""
     all_metabolites_list = ui["all_metabolites_list"] if "all_metabolites_list" in ui else ""
     regulated_metabolites_list = ui["regulated_metabolites_list"] if "regulated_metabolites_list" in ui else ""
+    upregulated_metabolites_list = ui["upregulated_metabolites_list"] if "upregulated_metabolites_list" in ui else ""
+    downregulated_metabolites_list = ui["downregulated_metabolites_list"] if "downregulated_metabolites_list" in ui else ""
     all_transcripts_list = ui["all_transcripts_list"] if "all_transcripts_list" in ui else ""
     regulated_transcripts_list = ui["regulated_transcripts_list"] if "regulated_transcripts_list" in ui else ""
+    upregulated_transcripts_list = ui["upregulated_transcripts_list"] if "upregulated_transcripts_list" in ui else ""
+    downregulated_transcripts_list = ui["downregulated_transcripts_list"] if "downregulated_transcripts_list" in ui else ""
+    separate_updown_switch = ui["separate_updown_switch"] if "separate_updown_switch" in ui else False
     with_lipids = ui["with_lipids"] if "with_lipids" in ui else False
     with_proteins = ui["with_proteins"] if "with_proteins" in ui else False
     with_metabolites = ui["with_metabolites"] if "with_metabolites" in ui else False
@@ -2184,33 +2218,58 @@ def load_uid(_):
 
     num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))
     num_regulated_lipids = sum(len(line) > 0 for line in regulated_lipids_list.split("\n"))
+    num_upregulated_lipids = sum(len(line) > 0 for line in upregulated_lipids_list.split("\n"))
+    num_downregulated_lipids = sum(len(line) > 0 for line in downregulated_lipids_list.split("\n"))
     num_all_proteins = sum(len(line) > 0 for line in all_proteins_list.split("\n"))
     num_regulated_proteins = sum(len(line) > 0 for line in regulated_proteins_list.split("\n"))
+    num_upregulated_proteins = sum(len(line) > 0 for line in upregulated_proteins_list.split("\n"))
+    num_downregulated_proteins = sum(len(line) > 0 for line in downregulated_proteins_list.split("\n"))
     num_all_metabolites = sum(len(line) > 0 for line in all_metabolites_list.split("\n"))
     num_regulated_metabolites = sum(len(line) > 0 for line in regulated_metabolites_list.split("\n"))
+    num_upregulated_metabolites = sum(len(line) > 0 for line in upregulated_metabolites_list.split("\n"))
+    num_downregulated_metabolites = sum(len(line) > 0 for line in downregulated_metabolites_list.split("\n"))
     num_all_transcripts = sum(len(line) > 0 for line in all_transcripts_list.split("\n"))
     num_regulated_transcripts = sum(len(line) > 0 for line in regulated_transcripts_list.split("\n"))
+    num_upregulated_transcripts = sum(len(line) > 0 for line in upregulated_transcripts_list.split("\n"))
+    num_downregulated_transcripts = sum(len(line) > 0 for line in downregulated_transcripts_list.split("\n"))
 
     return (
         session_id,
         no_update,
         no_update,
+        separate_updown_switch,
         f"Entries: {num_all_lipids}",
         f"Entries: {num_regulated_lipids}",
+        f"Entries: {num_upregulated_lipids}",
+        f"Entries: {num_downregulated_lipids}",
         f"Entries: {num_all_proteins}",
         f"Entries: {num_regulated_proteins}",
+        f"Entries: {num_upregulated_proteins}",
+        f"Entries: {num_downregulated_proteins}",
         f"Entries: {num_all_metabolites}",
         f"Entries: {num_regulated_metabolites}",
+        f"Entries: {num_upregulated_metabolites}",
+        f"Entries: {num_downregulated_metabolites}",
         f"Entries: {num_all_transcripts}",
         f"Entries: {num_regulated_transcripts}",
+        f"Entries: {num_upregulated_transcripts}",
+        f"Entries: {num_downregulated_transcripts}",
         all_lipids_list,
         regulated_lipids_list,
+        upregulated_lipids_list,
+        downregulated_lipids_list,
         all_proteins_list,
         regulated_proteins_list,
+        upregulated_proteins_list,
+        downregulated_proteins_list,
         all_metabolites_list,
         regulated_metabolites_list,
+        upregulated_metabolites_list,
+        downregulated_metabolites_list,
         all_transcripts_list,
         regulated_transcripts_list,
+        upregulated_transcripts_list,
+        downregulated_transcripts_list,
         use_bounded_fatty_acyls,
         with_lipids,
         with_proteins,
@@ -2471,20 +2530,36 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("num_all_lipids", "children", allow_duplicate = True),
     Output("num_regulated_lipids", "children", allow_duplicate = True),
+    Output("num_upregulated_lipids", "children", allow_duplicate = True),
+    Output("num_downregulated_lipids", "children", allow_duplicate = True),
     Output("num_all_proteins", "children", allow_duplicate = True),
     Output("num_regulated_proteins", "children", allow_duplicate = True),
+    Output("num_upregulated_proteins", "children", allow_duplicate = True),
+    Output("num_downregulated_proteins", "children", allow_duplicate = True),
     Output("num_all_metabolites", "children", allow_duplicate = True),
     Output("num_regulated_metabolites", "children", allow_duplicate = True),
+    Output("num_upregulated_metabolites", "children", allow_duplicate = True),
+    Output("num_downregulated_metabolites", "children", allow_duplicate = True),
     Output("num_all_transcripts", "children", allow_duplicate = True),
     Output("num_regulated_transcripts", "children", allow_duplicate = True),
+    Output("num_upregulated_transcripts", "children", allow_duplicate = True),
+    Output("num_downregulated_transcripts", "children", allow_duplicate = True),
     Input("textarea_all_lipids", "value"),
     Input("textarea_regulated_lipids", "value"),
+    Input("textarea_upregulated_lipids", "value"),
+    Input("textarea_downregulated_lipids", "value"),
     Input("textarea_all_proteins", "value"),
     Input("textarea_regulated_proteins", "value"),
+    Input("textarea_upregulated_proteins", "value"),
+    Input("textarea_downregulated_proteins", "value"),
     Input("textarea_all_metabolites", "value"),
     Input("textarea_regulated_metabolites", "value"),
+    Input("textarea_upregulated_metabolites", "value"),
+    Input("textarea_downregulated_metabolites", "value"),
     Input("textarea_all_transcripts", "value"),
     Input("textarea_regulated_transcripts", "value"),
+    Input("textarea_upregulated_transcripts", "value"),
+    Input("textarea_downregulated_transcripts", "value"),
     Input("use_bounded_fatty_acyls", "checked"),
     Input("checkbox_use_lipids", "checked"),
     Input("checkbox_use_proteins", "checked"),
@@ -2497,18 +2572,27 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
     Input("select_term_representation", "value"),
     Input("select_test_method", "value"),
     Input("select_domains", "value"),
+    Input("separate_updown_switch", "checked"),
     State("sessionid", "children"),
     prevent_initial_call = True,
 )
 def update_background(
     all_lipids_list,
     regulated_lipids_list,
+    upregulated_lipids_list,
+    downregulated_lipids_list,
     all_proteins_list,
     regulated_proteins_list,
+    upregulated_proteins_list,
+    downregulated_proteins_list,
     all_metabolites_list,
     regulated_metabolites_list,
+    upregulated_metabolites_list,
+    downregulated_metabolites_list,
     all_transcripts_list,
     regulated_transcripts_list,
+    upregulated_transcripts_list,
+    downregulated_transcripts_list,
     use_bounded_fatty_acyls,
     with_lipids,
     with_proteins,
@@ -2521,16 +2605,25 @@ def update_background(
     select_term_representation,
     select_test_method,
     select_domains,
+    separate_updown_switch,
     session_id,
 ):
     num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))
     num_regulated_lipids = sum(len(line) > 0 for line in regulated_lipids_list.split("\n"))
+    num_upregulated_lipids = sum(len(line) > 0 for line in upregulated_lipids_list.split("\n"))
+    num_downregulated_lipids = sum(len(line) > 0 for line in downregulated_lipids_list.split("\n"))
     num_all_proteins = sum(len(line) > 0 for line in all_proteins_list.split("\n"))
     num_regulated_proteins = sum(len(line) > 0 for line in regulated_proteins_list.split("\n"))
+    num_upregulated_proteins = sum(len(line) > 0 for line in upregulated_proteins_list.split("\n"))
+    num_downregulated_proteins = sum(len(line) > 0 for line in downregulated_proteins_list.split("\n"))
     num_all_metabolites = sum(len(line) > 0 for line in all_metabolites_list.split("\n"))
     num_regulated_metabolites = sum(len(line) > 0 for line in regulated_metabolites_list.split("\n"))
+    num_upregulated_metabolites = sum(len(line) > 0 for line in upregulated_metabolites_list.split("\n"))
+    num_downregulated_metabolites = sum(len(line) > 0 for line in downregulated_metabolites_list.split("\n"))
     num_all_transcripts = sum(len(line) > 0 for line in all_transcripts_list.split("\n"))
     num_regulated_transcripts = sum(len(line) > 0 for line in regulated_transcripts_list.split("\n"))
+    num_upregulated_transcripts = sum(len(line) > 0 for line in upregulated_transcripts_list.split("\n"))
+    num_downregulated_transcripts = sum(len(line) > 0 for line in downregulated_transcripts_list.split("\n"))
 
     if session_id not in sessions:
         return (
@@ -2538,12 +2631,20 @@ def update_background(
             "Your session has expired. Please refresh the website.",
             f"Entries: {num_all_lipids}",
             f"Entries: {num_regulated_lipids}",
+            f"Entries: {num_upregulated_lipids}",
+            f"Entries: {num_downregulated_lipids}",
             f"Entries: {num_all_proteins}",
             f"Entries: {num_regulated_proteins}",
+            f"Entries: {num_upregulated_proteins}",
+            f"Entries: {num_downregulated_proteins}",
             f"Entries: {num_all_metabolites}",
             f"Entries: {num_regulated_metabolites}",
+            f"Entries: {num_upregulated_metabolites}",
+            f"Entries: {num_downregulated_metabolites}",
             f"Entries: {num_all_transcripts}",
             f"Entries: {num_regulated_transcripts}",
+            f"Entries: {num_upregulated_transcripts}",
+            f"Entries: {num_downregulated_transcripts}",
         )
     session = sessions[session_id]
     session.time = time.time()
@@ -2551,12 +2652,20 @@ def update_background(
     session.use_bounded_fatty_acyls = use_bounded_fatty_acyls
     session.ui["all_lipids_list"] = all_lipids_list
     session.ui["regulated_lipids_list"] = regulated_lipids_list
+    session.ui["upregulated_lipids_list"] = upregulated_lipids_list
+    session.ui["downregulated_lipids_list"] = downregulated_lipids_list
     session.ui["all_proteins_list"] = all_proteins_list
     session.ui["regulated_proteins_list"] = regulated_proteins_list
+    session.ui["upregulated_proteins_list"] = upregulated_proteins_list
+    session.ui["downregulated_proteins_list"] = downregulated_proteins_list
     session.ui["all_metabolites_list"] = all_metabolites_list
     session.ui["regulated_metabolites_list"] = regulated_metabolites_list
+    session.ui["upregulated_metabolites_list"] = upregulated_metabolites_list
+    session.ui["downregulated_metabolites_list"] = downregulated_metabolites_list
     session.ui["all_transcripts_list"] = all_transcripts_list
     session.ui["regulated_transcripts_list"] = regulated_transcripts_list
+    session.ui["upregulated_transcripts_list"] = upregulated_transcripts_list
+    session.ui["downregulated_transcripts_list"] = downregulated_transcripts_list
     session.ui["with_lipids"] = with_lipids
     session.ui["with_proteins"] = with_proteins
     session.ui["with_metabolites"] = with_metabolites
@@ -2568,18 +2677,27 @@ def update_background(
     session.ui["select_term_representation"] = select_term_representation
     session.ui["select_test_method"] = select_test_method
     session.ui["select_domains"] = select_domains
+    session.ui["separate_updown_switch"] = separate_updown_switch
 
     return (
         no_update,
         no_update,
         f"Entries: {num_all_lipids}",
         f"Entries: {num_regulated_lipids}",
+        f"Entries: {num_upregulated_lipids}",
+        f"Entries: {num_downregulated_lipids}",
         f"Entries: {num_all_proteins}",
         f"Entries: {num_regulated_proteins}",
+        f"Entries: {num_upregulated_proteins}",
+        f"Entries: {num_downregulated_proteins}",
         f"Entries: {num_all_metabolites}",
         f"Entries: {num_regulated_metabolites}",
+        f"Entries: {num_upregulated_metabolites}",
+        f"Entries: {num_downregulated_metabolites}",
         f"Entries: {num_all_transcripts}",
         f"Entries: {num_regulated_transcripts}",
+        f"Entries: {num_upregulated_transcripts}",
+        f"Entries: {num_downregulated_transcripts}",
     )
 
 
@@ -2823,12 +2941,20 @@ def open_load_examples_modal(n_clicks):
     Output("load_examples_modal", "opened", allow_duplicate = True),
     Output("textarea_all_lipids", "value", allow_duplicate = True),
     Output("textarea_regulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_upregulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_downregulated_lipids", "value", allow_duplicate = True),
     Output("textarea_all_proteins", "value", allow_duplicate = True),
     Output("textarea_regulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_upregulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_downregulated_proteins", "value", allow_duplicate = True),
     Output("textarea_all_metabolites", "value", allow_duplicate = True),
     Output("textarea_regulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_upregulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_downregulated_metabolites", "value", allow_duplicate = True),
     Output("textarea_all_transcripts", "value", allow_duplicate = True),
     Output("textarea_regulated_transcripts", "value", allow_duplicate = True),
+    Output("textarea_upregulated_transcripts", "value", allow_duplicate = True),
+    Output("textarea_downregulated_transcripts", "value", allow_duplicate = True),
     Output("select_organism", "value", allow_duplicate = True),
     Output("checkbox_use_lipids", "checked", allow_duplicate = True),
     Output("checkbox_use_proteins", "checked", allow_duplicate = True),
@@ -2850,17 +2976,25 @@ def submit_load_examples_modal(n_clicks, checked, checkbox_ids):
         False,
         "\n".join(examples[index]["bgl"]),
         "\n".join(examples[index]["regl"]),
+        "\n".join(examples[index]["upregl"]),
+        "\n".join(examples[index]["downregl"]),
         "\n".join(examples[index]["bgp"]),
         "\n".join(examples[index]["regp"]),
+        "\n".join(examples[index]["upregp"]),
+        "\n".join(examples[index]["downregp"]),
         "\n".join(examples[index]["bgm"]),
         "\n".join(examples[index]["regm"]),
+        "\n".join(examples[index]["upregm"]),
+        "\n".join(examples[index]["downregm"]),
         "\n".join(examples[index]["bgt"]),
         "\n".join(examples[index]["regt"]),
+        "\n".join(examples[index]["upregt"]),
+        "\n".join(examples[index]["downregt"]),
         examples[index]["org"],
-        len(examples[index]["bgl"]) > 0 or len(examples[index]["regl"]) > 0,
-        len(examples[index]["bgp"]) > 0 or len(examples[index]["regp"]) > 0,
-        len(examples[index]["bgm"]) > 0 or len(examples[index]["regm"]) > 0,
-        len(examples[index]["bgt"]) > 0 or len(examples[index]["regt"]) > 0,
+        len(examples[index]["bgl"]) > 0 or len(examples[index]["regl"]) > 0 or len(examples[index]["upregl"]) > 0 or len(examples[index]["downregl"]) > 0,
+        len(examples[index]["bgp"]) > 0 or len(examples[index]["regp"]) > 0 or len(examples[index]["upregp"]) > 0 or len(examples[index]["downregp"]) > 0,
+        len(examples[index]["bgm"]) > 0 or len(examples[index]["regm"]) > 0 or len(examples[index]["upregm"]) > 0 or len(examples[index]["downregm"]) > 0,
+        len(examples[index]["bgt"]) > 0 or len(examples[index]["regt"]) > 0 or len(examples[index]["upregt"]) > 0 or len(examples[index]["downregt"]) > 0,
     )
 
 

@@ -12,8 +12,9 @@ def extract_significant(df, start_data, variable, condition_1, condition_2, pval
 
     data = df.iloc[:, start_data:]
 
+    print(len(data.columns))
     print(list(data.columns))
-    print("=" * 20)
+    print("-" * 20)
 
     keep_lipids = (data[df[variable] == condition_1].mean().notna()) & (data[df[variable] == condition_2].mean().notna())
     data = data.loc[:, keep_lipids]
@@ -24,7 +25,7 @@ def extract_significant(df, start_data, variable, condition_1, condition_2, pval
     c1_data = data[df[variable] == condition_1]
     c2_data = data[df[variable] == condition_2]
 
-    t, p_corr = mannwhitneyu(c1_data, c2_data, nan_policy = "omit")
+    t, p_corr = ttest_ind(c1_data, c2_data, nan_policy = "omit")
     p_corr = pd.Series(multipletests(p_corr, method = "fdr_bh")[1], index = data.columns)
 
     log_fc = np.log2(c2_data.mean() / c1_data.mean())
@@ -35,8 +36,29 @@ def extract_significant(df, start_data, variable, condition_1, condition_2, pval
 
     print(list(data.loc[: , thresholds].columns))
 
-df = pd.read_excel("AOValves-All.xlsx")
-extract_significant(df, 2, "Condition", "Healthy", "Calcified", log_fc_ths = np.log2(1.5), up_down = "up")
+# df = pd.read_excel("Simplex2016.xlsx", "Lipids")
+# extract_significant(df, 3, "Condition", "Dmso", "Rosi", up_down = "both")
+# print("=" * 20)
+# extract_significant(df, 3, "Condition", "Dmso", "Rosi", up_down = "up")
+# print("=" * 20)
+# extract_significant(df, 3, "Condition", "Dmso", "Rosi", up_down = "down")
+
+# df = pd.read_excel("Simplex2016.xlsx", "Proteins")
+# extract_significant(df, 5, "Condition", "Dmso", "Rosi", log_fc_ths = 1, up_down = "down")
+
+
+df = pd.read_excel("Simplex2016.xlsx", "Metabolites")
+extract_significant(df, 3, "Condition", "Dmso", "Rosi", up_down = "both")
+print("=" * 20)
+extract_significant(df, 3, "Condition", "Dmso", "Rosi", up_down = "up")
+print("=" * 20)
+extract_significant(df, 3, "Condition", "Dmso", "Rosi", up_down = "down")
+
+
+
+
+# df = pd.read_excel("AOValves-All.xlsx")
+# extract_significant(df, 2, "Condition", "Healthy", "Calcified", log_fc_ths = np.log2(1.5), up_down = "up")
 
 #df = pd.read_excel("AOValves-Proteomics.xlsx")
 #extract_significant(df, 2, "Condition", "Healthy", "Calcified")
