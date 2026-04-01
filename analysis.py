@@ -142,7 +142,7 @@ try:
 except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
-        'Homo sapiens': 'NCBITaxon:9606',
+        #'Homo sapiens': 'NCBITaxon:9606',
         'Mus musculus': 'NCBITaxon:10090',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
@@ -1289,6 +1289,10 @@ def layout():
         style = {"marginTop": "5px", "gridTemplateColumns": "44% 55%"},
         children = [
             html.Div([
+                dmc.Switch(
+                    "Bla blab lab",
+                    style = {"marginBottom": "5px"},
+                ),
                 dmc.Tabs(
                     [
                         dmc.TabsList(
@@ -1302,49 +1306,75 @@ def layout():
                         ),
                         dmc.TabsPanel([
                             dmc.SimpleGrid([
-                                dmc.Title(
-                                    "All lipid names in experiment (background)",
-                                    order = 5,
-                                    style = {"marginTop": "10px"},
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All lipid names in experiment (background)",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_all_lipids",
+                                            value = "",
+                                            style = {"width": "100%", "height": "100%"},
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_all_lipids",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {"height": "400px", "display": "flex", "flexDirection": "column"},
+                                    className = "textarea-expand-container",
                                 ),
-                                dmc.Title(
-                                    "All regulated lipid names in experiment",
-                                    order = 5,
-                                    style = {"marginTop": "10px"},
-                                ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Textarea(
-                                    id = "textarea_all_lipids",
-                                    value = "",
-                                    style = {"height": "100%", "display": "inline"},
-                                    minRows = 15,
-                                ),
-                                dmc.Textarea(
-                                    id = "textarea_regulated_lipids",
-                                    value = "",
-                                    minRows = 15,
-                                ),
-                            ], cols = 2),
-                            dmc.SimpleGrid([
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_all_lipids",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
-                                ),
-                                dmc.Group(
-                                    dmc.Text(
-                                        "Entries: 0",
-                                        id = "num_regulated_lipids",
-                                        style = {"color": "#808080"},
-                                        size = "12px",
-                                    ),
-                                    position = "right",
-                                ),
+                                html.Div(
+                                    [
+                                        dmc.Title(
+                                            "All regulated lipid names in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_regulated_lipids",
+                                            value = "",
+                                            minRows = 5,
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_regulated_lipids",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+
+                                        dmc.Title(
+                                            "All regulated lipid names in experiment",
+                                            order = 5,
+                                            style = {"marginTop": "10px"},
+                                        ),
+                                        dmc.Textarea(
+                                            id = "textarea_regulated_lipidse",
+                                            value = "",
+                                            minRows = 5,
+                                        ),
+                                        dmc.Group(
+                                            dmc.Text(
+                                                "Entries: 0",
+                                                id = "num_regulated_lipidse",
+                                                style = {"color": "#808080"},
+                                                size = "12px",
+                                            ),
+                                            position = "right",
+                                        ),
+                                    ],
+                                    style = {"height": "400px", "display": "flex", "flexDirection": "column"},
+                                    className = "textarea-expand-container",),
                             ], cols = 2)],
                             value="lipid_tab",
                         ),
@@ -1534,7 +1564,7 @@ def layout():
                 dmc.Title(
                     "Analysis parameters",
                     order = 5,
-                    style = {"marginTop": "10px"},
+                    style = {"marginTop": "0px"},
                 ),
                 html.Div(
                     [
