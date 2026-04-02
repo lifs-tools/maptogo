@@ -214,6 +214,9 @@ class Term:
         return "|".join(sorted(list(a_set)))
 
     def to_string(self, term_positions):
+        for term_set in [self.id, self.relations, self.synonyms, self.namespace, self.categories]:
+            term_set -= {"", " "}
+
         visited, relations = set(), []
         for relation in sorted(self.relations):
             if relation in term_positions:

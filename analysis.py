@@ -115,6 +115,7 @@ class SessionEntry:
         self.max_pvalue = "0.05"
         self.ui = {}
         self.sankey_data = None
+        self.separate_updown_switch = False
 
 
 
@@ -2497,6 +2498,7 @@ def run_enrichment(
         background_list = no_update
 
     session.domains = set(domains)
+    session.separate_updown_switch = separate_updown_switch
     results = ontology.enrichment_analysis(separate_updown_switch, session.search_terms, session.num_background, target_set, domains, term_regulation, correction_method)
     session.result = results
 
@@ -3405,7 +3407,10 @@ def open_sunburstplot(
             if child_term_id not in terms: continue
             child_term = terms[child_term_id]
             if child_term in sunburst_terms: continue
-            pvalue = session_data[child_term_id].pvalue_corrected if child_term_id in session_data else -1
+            if session.separate_updown_switch:
+                pvalue = session_data[child_term_id].pvalue_corrected[0] if child_term_id in session_data else -1
+            else:
+                pvalue = session_data[child_term_id].pvalue_corrected if child_term_id in session_data else -1
             sunburst_terms[child_term] = SunburstTerm(child_term, term == child_term, pvalue)
 
             for parent_term in child_term.relations:
@@ -3434,22 +3439,56 @@ def open_sunburstplot(
         if sunburst_term.pvalue > 0:
             pvalue = max(min(-np.log10(sunburst_term.pvalue), pval_min_float), pval_max_float)
             ratio = (pvalue - pval_max_float) / (pval_min_float - pval_max_float)
+            term_session_data = session_data[list(term.term_id)[0]]
+            fisher_data = term_session_data.fisher_data
 
-            fisher_data = session_data[list(term.term_id)[0]].fisher_data
-            n, K, N = fisher_data[0] + fisher_data[2], fisher_data[0] + fisher_data[1], sum(fisher_data)
-            overrepresented = fisher_data[0] >= ceil((n + 1) * (K + 1) / (N + 2))
-            # blue hex: 3a4cc0
-            # red hex: b30d03
-            if overrepresented:
-                h, s, l = 3, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+            if session.separate_updown_switch:
+                pvalues = session_data[list(term.term_id)[0]].pvalue_corrected
+                n_up, K_up, N_up = fisher_data[0][0] + fisher_data[0][2], fisher_data[0][0] + fisher_data[0][1], sum(fisher_data[0])
+                n_down, K_down, N_down = fisher_data[1][0] + fisher_data[1][2], fisher_data[1][0] + fisher_data[1][1], sum(fisher_data[1])
+                overrepresented_up = fisher_data[0][0] >= ceil((n_up + 1) * (K_up + 1) / (N_up + 2))
+                overrepresented_down = fisher_data[1][0] >= ceil((n_down + 1) * (K_down + 1) / (N_down + 2))
+                if (
+                    0 < pvalues[1] <= pval_max_float
+                    and overrepresented_up
+                    and 0 < pvalues[2] <= pval_max_float
+                    and overrepresented_down
+                ):
+                    h, s, l = 308, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+                    regulated_metabolites = fisher_data[0][0] + fisher_data[1][0]
+                    all_metabolites = regulated_metabolites + fisher_data[0][1] + fisher_data[1][1]
+                    custom_text += f"<br>p-value: {sunburst_term.pvalue}<br>Up/Down-regulated molecules: {regulated_metabolites} / {all_metabolites}"
+
+                elif 0 < pvalues[1] <= pval_max_float and overrepresented_up:
+                    h, s, l = 3, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+                    regulated_metabolites = fisher_data[0][0]
+                    all_metabolites = regulated_metabolites + fisher_data[0][1]
+                    custom_text += f"<br>p-value: {sunburst_term.pvalue}<br>Up-regulated molecules: {regulated_metabolites} / {all_metabolites}"
+
+                elif 0 < pvalues[2] <= pval_max_float and overrepresented_down:
+                    h, s, l = 207, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+                    regulated_metabolites = fisher_data[1][0]
+                    all_metabolites = regulated_metabolites + fisher_data[1][1]
+                    custom_text += f"<br>p-value: {sunburst_term.pvalue}<br>Down-regulated molecules: {regulated_metabolites} / {all_metabolites}"
+
+                else:
+                    h, s, l = 0, 0, 80
+                    custom_text += f"<br>p-value: {sunburst_term.pvalue}"
             else:
-                h, s, l = 207, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+                n, K, N = fisher_data[0] + fisher_data[2], fisher_data[0] + fisher_data[1], sum(fisher_data)
+                overrepresented = fisher_data[0] >= ceil((n + 1) * (K + 1) / (N + 2))
+                if overrepresented:
+                    h, s, l = 3, int(ratio * 100), 75 - int(ratio * 39) # 39 = 75 - 36
+                    regulated_metabolites = fisher_data[0]
+                    all_metabolites = regulated_metabolites + fisher_data[1]
+                    custom_text += f"<br>p-value: {sunburst_term.pvalue}<br>Regulated molecules: {regulated_metabolites} / {all_metabolites}"
+
+                else:
+                    h, s, l = 0, 0, 80
+                    custom_text += f"<br>p-value: {sunburst_term.pvalue}"
+
             color = f"hsl({h}, {s}%, {l}%)"
 
-            term_session_data = session_data[list(term.term_id)[0]]
-            regulated_metabolites = term_session_data.fisher_data[0]
-            all_metabolites = regulated_metabolites + term_session_data.fisher_data[1]
-            custom_text += f"<br>p-value: {sunburst_term.pvalue}<br>Regulated: {regulated_metabolites} / {all_metabolites}"
 
         colors.append(color)
         custom_data.append(custom_text)
@@ -3850,9 +3889,14 @@ def open_barplot(
         jaccard_values = jaccard_values[sort_order]
         jaccard_values = jaccard_values[:, sort_order]
 
-    pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
+
+    if session.separate_updown_switch:
+        pvalues = -np.log10([session_data[term_id].pvalue_corrected[0] for term_id in selected_term_ids])
+        number_regulated_entities = np.array([session_data[term_id].fisher_data[0][0] + session_data[term_id].fisher_data[1][0] for term_id in selected_term_ids])
+    else:
+        pvalues = -np.log10([session_data[term_id].pvalue_corrected for term_id in selected_term_ids])
+        number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
     number_entities = np.array([len(session_data[term_id].source_terms) for term_id in selected_term_ids])
-    number_regulated_entities = np.array([session_data[term_id].fisher_data[0] for term_id in selected_term_ids])
 
     domains = ["|".join(session_data[term_id].term.domain) for term_id in selected_term_ids]
     term_names = [session_data[term_id].term.name for term_id in selected_term_ids]
@@ -3937,6 +3981,7 @@ def open_barplot(
             # draw the p value as horizontal radial bar
             pvalue_start_angle = description_start_angle
             pvalue_end_angle = pvalue_start_angle - bar_width / max(pvalues) * pvalues[i]
+            pvalue = result.pvalue_corrected[0] if session.separate_updown_switch else result.pvalue_corrected
             add_arc(
                 fig,
                 pvalue_start_angle,
@@ -3944,7 +3989,7 @@ def open_barplot(
                 pvalue_arc_inner_radius,
                 pvalue_arc_outer_radius,
                 domain_colors[list(result.term.domain)[0]][1],
-                hoverinfo = "p-value: {:.6g}".format(result.pvalue_corrected)
+                hoverinfo = f"p-value: {pvalue:.6g}"
             )
 
         len_lipid_table = 0

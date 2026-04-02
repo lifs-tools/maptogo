@@ -435,7 +435,6 @@ class OntologyTerm:
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
         self.synonyms = _synonyms.split("|")
         self.domain = {d for d in _domain.split("|")} if _domain else set()
-        if "" in self.domain or " " in self.domain: print(self.term_id, f"'{_domain}'")
         self.categories = [c for c in _categories.split("|")] if _categories else []
         if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0: self.categories = ["Unclassified reaction"]
 
