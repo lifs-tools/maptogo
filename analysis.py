@@ -266,53 +266,50 @@ class ItemCounter:
             else: self.counter[item] = count
 
 
-def get_term_link(ontology, term_id):
-    if term_id in ontology.ontology_terms:
-        if term_id.startswith("GO:"):
-            return "https://www.ebi.ac.uk/QuickGO/term/" + term_id
+def get_term_link(term_id):
+    if term_id.startswith("GO:"):
+        return "https://www.ebi.ac.uk/QuickGO/term/" + term_id
 
-        elif term_id.startswith("SMP"):
-            return "https://pathbank.org/view/" + term_id
+    elif term_id.startswith("SMP"):
+        return "https://pathbank.org/view/" + term_id
 
-        elif term_id.startswith("LION:") or term_id.startswith("CAT:"):
-            return "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
+    elif term_id.startswith("LION:") or term_id.startswith("CAT:"):
+        return "https://bioportal.bioontology.org/ontologies/LION?p=classes&conceptid=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2F" + term_id.replace(":", "_")
 
-        elif term_id.startswith("RHEA:"):
-            return f"https://www.rhea-db.org/rhea/{term_id[5:]}"
+    elif term_id.startswith("RHEA:"):
+        return f"https://www.rhea-db.org/rhea/{term_id[5:]}"
 
-        elif term_id.startswith("UNIPROT:"):
-            return f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
+    elif term_id.startswith("UNIPROT:"):
+        return f"https://www.uniprot.org/uniprotkb/{term_id[8:]}/entry"
 
-        elif term_id.startswith("CHEBI:"):
-            return f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
+    elif term_id.startswith("CHEBI:"):
+        return f"https://www.ebi.ac.uk/chebi/searchId.do?chebiId={term_id}"
 
-        elif term_id.startswith("DOID:"):
-            return f"https://disease-ontology.org/?id={term_id}"
+    elif term_id.startswith("DOID:"):
+        return f"https://disease-ontology.org/?id={term_id}"
 
-        elif term_id.startswith("MONDO:"):
-            return f"https://monarchinitiative.org/{term_id}"
+    elif term_id.startswith("MONDO:"):
+        return f"https://monarchinitiative.org/{term_id}"
 
-        elif term_id.startswith("HGNC:"):
-            return f"https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/{term_id}"
+    elif term_id.startswith("HGNC:"):
+        return f"https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/{term_id}"
 
-        elif term_id.startswith("HP:"):
-            return f"https://hpo.jax.org/browse/term/{term_id}"
+    elif term_id.startswith("HP:"):
+        return f"https://hpo.jax.org/browse/term/{term_id}"
 
-        elif term_id.startswith("NCBI:"):
-            return f"https://www.ncbi.nlm.nih.gov/gene/{term_id.split(':')[1]}"
+    elif term_id.startswith("NCBI:"):
+        return f"https://www.ncbi.nlm.nih.gov/gene/{term_id.split(':')[1]}"
 
-        elif term_id.startswith("ENS") or term_id.startswith("WBGene") or term_id.startswith("FBgn"):
-            return f"https://www.ensembl.org/id/{term_id}"
+    elif term_id.startswith("ENS") or term_id.startswith("WBGene") or term_id.startswith("FBgn"):
+        return f"https://www.ensembl.org/id/{term_id}"
 
-        elif term_id.startswith("R-"):
-            return f"https://reactome.org/PathwayBrowser/#/{term_id}"
+    elif term_id.startswith("R-"):
+        return f"https://reactome.org/PathwayBrowser/#/{term_id}"
 
-        elif term_id.startswith("LM"):
-            return f"https://www.lipidmaps.org/databases/lmsd/{term_id}"
+    elif term_id.startswith("LM"):
+        return f"https://www.lipidmaps.org/databases/lmsd/{term_id}"
 
-    else:
-        return ""
-
+    return ""
 
 def analytics(action):
     def send_action(recorded_action):
@@ -3283,6 +3280,9 @@ def sankey_node_clicked(clickData, session_id):
     point = clickData["points"][0]
     entries_list = []
     if "pointNumber" in point:
+        if "group" not in point:
+            raise exceptions.PreventUpdate
+
         idx = point["pointNumber"]
         if session.sankey_data != None and idx < len(session.sankey_data):
             entries_list = sorted([
@@ -4086,7 +4086,7 @@ def show_molecule_term_path(
         else: term_id = list(term.term_id)[0]
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))
 
-        href = get_term_link(ontology, term_id)
+        href = get_term_link(term_id)
         if term_id in ontology.ontology_terms:
             term_name = term.name if type(term) == OntologyTerm else ontology.ontology_terms[term_id].name
         else:
