@@ -3582,20 +3582,41 @@ def open_sankeyplot(
 
     background_lipids = session.background_lipids
     regulated_lipids = session.regulated_lipids
+    upregulated_lipids = session.upregulated_lipids
+    downregulated_lipids = session.downregulated_lipids
     background_proteins = session.background_proteins
     regulated_proteins = session.regulated_proteins
+    upregulated_proteins = session.upregulated_proteins
+    downregulated_proteins = session.downregulated_proteins
     background_metabolites = session.background_metabolites
     regulated_metabolites = session.regulated_metabolites
+    upregulated_metabolites = session.upregulated_metabolites
+    downregulated_metabolites = session.downregulated_metabolites
     background_transcripts = session.background_transcripts
     regulated_transcripts = session.regulated_transcripts
+    upregulated_transcripts = session.upregulated_transcripts
+    downregulated_transcripts = session.downregulated_transcripts
 
     #if switch_sankey_regulated_only:
-    regulated_molecules = (
-        (regulated_lipids if regulated_lipids else set()) |
-        (regulated_proteins if regulated_proteins else set()) |
-        (regulated_metabolites if regulated_metabolites else set()) |
-        (regulated_transcripts if regulated_transcripts else set())
-    )
+    if session.separate_updown_switch:
+        regulated_molecules = (
+            (upregulated_lipids if upregulated_lipids else set()) |
+            (downregulated_lipids if downregulated_lipids else set()) |
+            (upregulated_proteins if upregulated_proteins else set()) |
+            (downregulated_proteins if downregulated_proteins else set()) |
+            (upregulated_metabolites if upregulated_metabolites else set()) |
+            (downregulated_metabolites if downregulated_metabolites else set()) |
+            (upregulated_transcripts if upregulated_transcripts else set()) |
+            (downregulated_transcripts if downregulated_transcripts else set())
+        )
+
+    else:
+        regulated_molecules = (
+            (regulated_lipids if regulated_lipids else set()) |
+            (regulated_proteins if regulated_proteins else set()) |
+            (regulated_metabolites if regulated_metabolites else set()) |
+            (regulated_transcripts if regulated_transcripts else set())
+        )
 
     pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
     def compute_layers(n_nodes, source, target):
@@ -3635,13 +3656,13 @@ def open_sankeyplot(
         for molecule in session.data[target_term_id_single].source_terms:
             if switch_sankey_regulated_only and molecule not in regulated_molecules: continue
 
-            if regulated_lipids and molecule in background_lipids.keys():
+            if molecule in background_lipids.keys():
                 input_molecule = "Input lipid"
-            elif regulated_proteins and molecule in background_proteins:
+            elif molecule in background_proteins:
                 input_molecule = "Input protein"
-            elif regulated_metabolites and molecule in background_metabolites:
+            elif molecule in background_metabolites:
                 input_molecule = "Input metabolite"
-            elif regulated_transcripts and molecule in background_transcripts:
+            elif molecule in background_transcripts:
                 input_molecule = "Input transcript"
 
             path_layers = [[TermType.INPUT_TERM, [input_molecule], ItemCounter(molecule)]]
