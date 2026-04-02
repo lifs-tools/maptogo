@@ -33,6 +33,9 @@ function get_url(term_id){
     else if (term_id.startsWith("DOID:")){
         return "https://disease-ontology.org/?id=" + term_id;
     }
+    else if (term_id.startsWith("RHEA:")){
+        return "https://www.rhea-db.org/rhea/" + term_id.split(":")[1];
+    }
     else if (term_id.startsWith("MONDO:")){
         return "https://monarchinitiative.org/" + term_id;
     }
