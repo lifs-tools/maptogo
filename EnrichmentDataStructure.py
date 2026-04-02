@@ -252,7 +252,7 @@ def check_user_input(
 
         if separate_updown_switch:
             upregulated_proteins = check_proteins(upregulated_proteins_list, "up-", proteome)
-            dowregulated_proteins = check_proteins(downregulated_proteins_list, "down-", proteome)
+            downregulated_proteins = check_proteins(downregulated_proteins_list, "down-", proteome)
             target_set[0] |= upregulated_proteins
             target_set[1] |= downregulated_proteins
 

@@ -1062,11 +1062,31 @@ def layout():
                         ),
                     ],
                 ),
-                dmc.Switch(
-                    id = "switch_sankey_regulated_only",
-                    checked = False,
-                    label = "Regulated molecules only",
-                    style = {"paddingBottom": "8px", "paddingRight": "2px"},
+                dmc.RadioGroup(
+                    children = [
+                        dmc.Group([
+                            dmc.Radio("All molecules", value = "sankey_all"),
+                            dmc.Radio("All non-regulated molecules", value = "sankey_non"),
+                            dmc.Radio("All regulated molecules", value = "sankey_regulated"),
+                            dmc.Radio(
+                                "All up-regulated molecules",
+                                value = "sankey_upregulated",
+                                id = "sankey_upregulated",
+                                style = {"display": "none"},
+                            ),
+                            dmc.Radio(
+                                "All down-regulated molecules",
+                                value = "sankey_downregulated",
+                                id = "sankey_downregulated",
+                                style = {"display": "none"},
+                            ),
+                        ], my = 10)
+                    ],
+                    id = "radiogroup_sankey",
+                    value = "sankey_all",
+                    size = "sm",
+                    mb = 10,
+                    style = {"paddingBottom": "8px", "paddingRight": "2px", "display": "block"},
                 ),
             ],
             size = "90%",
@@ -3183,12 +3203,20 @@ def open_term_window(
 
     background_lipids = session.background_lipids
     regulated_lipids = session.regulated_lipids
+    upregulated_lipids = session.upregulated_lipids
+    downregulated_lipids = session.downregulated_lipids
     background_proteins = session.background_proteins
     regulated_proteins = session.regulated_proteins
+    upregulated_proteins = session.upregulated_proteins
+    downregulated_proteins = session.downregulated_proteins
     background_metabolites = session.background_metabolites
     regulated_metabolites = session.regulated_metabolites
+    upregulated_metabolites = session.upregulated_metabolites
+    downregulated_metabolites = session.downregulated_metabolites
     background_transcripts = session.background_transcripts
     regulated_transcripts = session.regulated_transcripts
+    upregulated_transcripts = session.upregulated_transcripts
+    downregulated_transcripts = session.downregulated_transcripts
 
     with_lipids = background_lipids != None
     with_proteins = background_proteins != None
@@ -3203,28 +3231,55 @@ def open_term_window(
     result = sessions[session_id].data[term_id]
     molecules = sorted(list(result.source_terms))
 
+    def molecule_regulated(molecule, m_type):
+        match m_type:
+            case "l":
+                regulated_molecules = regulated_lipids
+                upregulated_molecules = upregulated_lipids
+                downregulated_molecules = downregulated_lipids
+            case "p":
+                regulated_molecules = regulated_proteins
+                upregulated_molecules = upregulated_proteins
+                downregulated_molecules = downregulated_proteins
+            case "m":
+                regulated_molecules = regulated_metabolites
+                upregulated_molecules = upregulated_metabolites
+                downregulated_molecules = downregulated_metabolites
+            case "t":
+                regulated_molecules = regulated_transcripts
+                upregulated_molecules = upregulated_transcripts
+                downregulated_molecules = downregulated_transcripts
+
+        if session.separate_updown_switch:
+            if molecule in upregulated_molecules: return "↑"
+            if molecule in downregulated_molecules: return "↓"
+            return ""
+        else:
+            if molecule in regulated_molecules: return "x"
+            return ""
+
     if with_lipids:
         background_lipids = set(background_lipids.keys())
-        lipid_table = [{"molecule_id": molecule, "molecule": molecule, "regulated": ("X" if molecule in regulated_lipids else "")} for molecule in molecules if molecule in background_lipids]
+        lipid_table = [{"molecule_id": molecule, "molecule": molecule, "regulated": molecule_regulated(molecule, "l")} for molecule in molecules if molecule in background_lipids]
 
     if with_proteins:
         protein_table = [
             {
                 "molecule_id": molecule,
                 "molecule": molecule.replace("UNIPROT:", "") + f" ({ontology.proteins[molecule].name})" if molecule in ontology.proteins else "",
-                "regulated": ("X" if molecule in regulated_proteins else "")
+                "regulated": molecule_regulated(molecule, "p")
             } for molecule in molecules if molecule in background_proteins
         ]
 
     if with_metabolites:
-        metabolite_table = [{"molecule_id": molecule, "molecule": molecule, "regulated": ("X" if molecule in regulated_metabolites else "")} for molecule in molecules if molecule in background_metabolites]
+        metabolite_table = [{"molecule_id": molecule, "molecule": molecule, "regulated": molecule_regulated(molecule, "m")} for molecule in molecules if molecule in background_metabolites]
 
     if with_transcripts:
         transcript_table = [
             {
                 "molecule_id": molecule,
                 "molecule": molecule + f" ({ontology.transcripts[m].name})" if m in ontology.transcripts else "",
-                "regulated": ("X" if molecule in regulated_transcripts else "")
+                "regulated": molecule_regulated(molecule, "t")
             } for molecule in molecules if molecule in background_transcripts and (m := molecule.split(".")[0])
         ]
 
@@ -3240,13 +3295,40 @@ def open_term_window(
     col_2 = "Molecules associated with Term"
     col_3 = "Molecules not associated with Term"
     col_4 = "Sum"
-    fisher_data = result.fisher_data
-    data = {
-        col_1: ["Regulated molecules", "Not regulated Molecules", "Sum"],
-        col_2: [fisher_data[0], fisher_data[1], fisher_data[0] + fisher_data[1]],
-        col_3: [fisher_data[2], fisher_data[3], fisher_data[2] + fisher_data[3]],
-        col_4: [fisher_data[0] + fisher_data[2], fisher_data[1] + fisher_data[3], fisher_data[0] + fisher_data[1] + fisher_data[2] + fisher_data[3]]
-    }
+
+    if session.separate_updown_switch:
+        fisher_data_up = result.fisher_data[0]
+        fisher_data_down = result.fisher_data[1]
+        data = {
+            col_1: ["Up-regulated", "Down-regulated", "Not regulated", "Sum"],
+            col_2: [
+                fisher_data_up[0],
+                fisher_data_down[0],
+                fisher_data_up[1] - fisher_data_down[0],
+                fisher_data_up[0] + fisher_data_up[1],
+            ],
+            col_3: [
+                fisher_data_up[2],
+                fisher_data_down[2],
+                fisher_data_up[3] - fisher_data_down[2],
+                fisher_data_up[2] + fisher_data_up[3],
+            ],
+            col_4: [
+                fisher_data_up[0] + fisher_data_up[2],
+                fisher_data_down[0] + fisher_data_down[2],
+                (fisher_data_up[1] - fisher_data_down[0]) + (fisher_data_up[3] - fisher_data_down[2]),
+                sum(fisher_data_up),
+            ]
+        }
+
+    else:
+        fisher_data = result.fisher_data
+        data = {
+            col_1: ["Regulated molecules", "Not regulated Molecules", "Sum"],
+            col_2: [fisher_data[0], fisher_data[1], fisher_data[0] + fisher_data[1]],
+            col_3: [fisher_data[2], fisher_data[3], fisher_data[2] + fisher_data[3]],
+            col_4: [fisher_data[0] + fisher_data[2], fisher_data[1] + fisher_data[3], fisher_data[0] + fisher_data[1] + fisher_data[2] + fisher_data[3]]
+        }
     dfc = pd.DataFrame(data)
 
     contingency_table = dash_table.DataTable(
@@ -3270,7 +3352,7 @@ def open_term_window(
         # Style first column to match the header row
         style_data_conditional=[
             {'if': {'column_id': col_1}, 'backgroundColor': '#f8f8f8'},
-            {'if': {'row_index': 1}, 'borderBottom': '1px solid black'},
+            {'if': {'row_index': 2 if session.separate_updown_switch else 1}, 'borderBottom': '1px solid black'},
             {'if': {'column_id': col_3}, 'borderRight': '1px solid black'},
             {'if': {'column_id': col_1}, 'fontWeight': 'bold'},
         ]
@@ -3534,8 +3616,9 @@ def open_sunburstplot(
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("sankey_entries", "rowData", allow_duplicate = True),
     Output("icon_download_sankey_entries", "disabled", allow_duplicate = True),
+    Output("radiogroup_sankey", "value", allow_duplicate = True),
     Input("sankey_results", "n_clicks"),
-    Input("switch_sankey_regulated_only", "checked"),
+    Input("radiogroup_sankey", "value"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
@@ -3546,7 +3629,7 @@ def open_sunburstplot(
 )
 def open_sankeyplot(
     n_clicks,
-    switch_sankey_regulated_only,
+    radiogroup_sankey,
     row_data,
     selected_rows,
     session_id,
@@ -3554,7 +3637,7 @@ def open_sankeyplot(
     sunburst_controls_style,
     barplot_terms_wrapper_style,
 ):
-    if session_id == None or n_clicks == None or switch_sankey_regulated_only == None:
+    if session_id == None or n_clicks == None or radiogroup_sankey == None:
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -3566,6 +3649,7 @@ def open_sankeyplot(
             "Your session has expired. Please refresh the website.",
             no_update,
             no_update,
+            no_update,
         )
     session = sessions[session_id]
     selected_term_ids = [row["termid"] for row in selected_rows]
@@ -3575,6 +3659,9 @@ def open_sankeyplot(
 
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "none"
+
+    if ctx.triggered_id != "radiogroup_sankey":
+        radiogroup_sankey = "sankey_all"
 
     background_lipids = session.background_lipids
     regulated_lipids = session.regulated_lipids
@@ -3593,18 +3680,21 @@ def open_sankeyplot(
     upregulated_transcripts = session.upregulated_transcripts
     downregulated_transcripts = session.downregulated_transcripts
 
-    #if switch_sankey_regulated_only:
     if session.separate_updown_switch:
-        regulated_molecules = (
+        upregulated_molecules = (
             (upregulated_lipids if upregulated_lipids else set()) |
-            (downregulated_lipids if downregulated_lipids else set()) |
             (upregulated_proteins if upregulated_proteins else set()) |
-            (downregulated_proteins if downregulated_proteins else set()) |
             (upregulated_metabolites if upregulated_metabolites else set()) |
+            (upregulated_transcripts if upregulated_transcripts else set())
+        )
+        downregulated_molecules = (
+            (downregulated_lipids if downregulated_lipids else set()) |
+            (downregulated_proteins if downregulated_proteins else set()) |
             (downregulated_metabolites if downregulated_metabolites else set()) |
-            (upregulated_transcripts if upregulated_transcripts else set()) |
             (downregulated_transcripts if downregulated_transcripts else set())
         )
+
+        regulated_molecules = upregulated_molecules | downregulated_molecules
 
     else:
         regulated_molecules = (
@@ -3613,6 +3703,7 @@ def open_sankeyplot(
             (regulated_metabolites if regulated_metabolites else set()) |
             (regulated_transcripts if regulated_transcripts else set())
         )
+        upregulated_molecules, downregulated_molecules = set(), set()
 
     pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
     def compute_layers(n_nodes, source, target):
@@ -3650,7 +3741,12 @@ def open_sankeyplot(
         target_term = terms[target_term_id_single]
 
         for molecule in session.data[target_term_id_single].source_terms:
-            if switch_sankey_regulated_only and molecule not in regulated_molecules: continue
+            if (
+                (radiogroup_sankey == "sankey_non" and molecule in regulated_molecules)
+                or (radiogroup_sankey == "sankey_regulated" and molecule not in regulated_molecules)
+                or (radiogroup_sankey == "sankey_upregulated" and molecule not in upregulated_molecules)
+                or (radiogroup_sankey == "sankey_downregulated" and molecule not in downregulated_molecules)
+            ): continue
 
             if molecule in background_lipids.keys():
                 input_molecule = "Input lipid"
@@ -3775,6 +3871,7 @@ def open_sankeyplot(
         no_update,
         [],
         True,
+        "sankey_all" if ctx.triggered_id != "radiogroup_sankey" else no_update,
     )
 
 
@@ -4922,6 +5019,8 @@ class EnrichmentResource(Resource):
     Output("field_up_down_regulated_metabolites", "style", allow_duplicate = True),
     Output("field_regulated_transcripts", "style", allow_duplicate = True),
     Output("field_up_down_regulated_transcripts", "style", allow_duplicate = True),
+    Output("sankey_upregulated", "style", allow_duplicate = True),
+    Output("sankey_downregulated", "style", allow_duplicate = True),
     Input("separate_updown_switch", "checked"),
     State("field_regulated_lipids", "style"),
     State("field_up_down_regulated_lipids", "style"),
@@ -4931,6 +5030,8 @@ class EnrichmentResource(Resource):
     State("field_up_down_regulated_metabolites", "style"),
     State("field_regulated_transcripts", "style"),
     State("field_up_down_regulated_transcripts", "style"),
+    State("sankey_upregulated", "style"),
+    State("sankey_downregulated", "style"),
     prevent_initial_call = True,
 )
 def separate_updown_switch_changed(
@@ -4943,6 +5044,8 @@ def separate_updown_switch_changed(
     field_up_down_regulated_metabolites_style,
     field_regulated_transcripts_style,
     field_up_down_regulated_transcripts_style,
+    sankey_upregulated_style,
+    sankey_downregulated_style,
 ):
     field_regulated_lipids_style["display"] = "none" if separate_updown_switch else "flex"
     field_up_down_regulated_lipids_style["display"] = "flex" if separate_updown_switch else "none"
@@ -4952,6 +5055,8 @@ def separate_updown_switch_changed(
     field_up_down_regulated_metabolites_style["display"] = "flex" if separate_updown_switch else "none"
     field_regulated_transcripts_style["display"] = "none" if separate_updown_switch else "flex"
     field_up_down_regulated_transcripts_style["display"] = "flex" if separate_updown_switch else "none"
+    sankey_upregulated_style["display"] = "flex" if separate_updown_switch else "none"
+    sankey_downregulated_style["display"] = "flex" if separate_updown_switch else "none"
 
     return (
         field_regulated_lipids_style,
@@ -4962,6 +5067,8 @@ def separate_updown_switch_changed(
         field_up_down_regulated_metabolites_style,
         field_regulated_transcripts_style,
         field_up_down_regulated_transcripts_style,
+        sankey_upregulated_style,
+        sankey_downregulated_style,
     )
 
 
