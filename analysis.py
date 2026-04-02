@@ -128,7 +128,7 @@ def get_latest_tag():
 
 
 
-def graph_enrichment_results_def(separate_updown_switch, multiple_domains):
+def graph_enrichment_results_def(separate_updown_switch, multiple_domains, qvalue = True):
     return [
         {
             'field': "termid",
@@ -163,7 +163,7 @@ def graph_enrichment_results_def(separate_updown_switch, multiple_domains):
         },
         {
             'field': "pvalue",
-            "headerName": "p-value",
+            "headerName": "q-value" if qvalue else "p-value",
             "width": 80,
             "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
             "filter": "agNumberColumnFilter",
@@ -2568,7 +2568,7 @@ def run_enrichment(
         for term_id in result.term.term_id:
             session.data[term_id] = result
 
-    results_def = graph_enrichment_results_def(separate_updown_switch, len(domains) > 1)
+    results_def = graph_enrichment_results_def(separate_updown_switch, len(domains) > 1, correction_method != "no")
     num_enrichment_terms = f"Entries: {len(results)}"
 
     return (

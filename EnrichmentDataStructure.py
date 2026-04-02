@@ -39,6 +39,8 @@ import os
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
 import time
+from math import erfc
+from scipy.special import erfcinv
 
 
 def maptogo_profile(func):
@@ -192,6 +194,8 @@ def check_user_input(
         if separate_updown_switch:
             upregulated_lipids = check_lipids(upregulated_lipids_list, "up-", lipidome)
             downregulated_lipids = check_lipids(downregulated_lipids_list, "down-", lipidome)
+            if len(mixed := upregulated_lipids & downregulated_lipids) > 0:
+                raise Exception(f"The following lipids are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
             target_set[0] |= upregulated_lipids
             target_set[1] |= downregulated_lipids
 
@@ -253,6 +257,8 @@ def check_user_input(
         if separate_updown_switch:
             upregulated_proteins = check_proteins(upregulated_proteins_list, "up-", proteome)
             downregulated_proteins = check_proteins(downregulated_proteins_list, "down-", proteome)
+            if len(mixed := upregulated_proteins & downregulated_proteins) > 0:
+                raise Exception(f"The following proteins are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
             target_set[0] |= upregulated_proteins
             target_set[1] |= downregulated_proteins
 
@@ -315,6 +321,8 @@ def check_user_input(
         if separate_updown_switch:
             upregulated_metabolites = check_metabolome(upregulated_metabolites_list, "up-", metabolome)
             downregulated_metabolites = check_metabolome(downregulated_metabolites_list, "down-", metabolome)
+            if len(mixed := upregulated_metabolites & downregulated_metabolites) > 0:
+                raise Exception(f"The following metabolits are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
             target_set[0] |= upregulated_metabolites
             target_set[1] |= downregulated_metabolites
 
@@ -375,6 +383,8 @@ def check_user_input(
         if separate_updown_switch:
             upregulated_transcripts = check_transcripts(upregulated_transcripts_list, "up-", transcriptome)
             downregulated_transcripts = check_transcripts(downregulated_transcripts_list, "down-", transcriptome)
+            if len(mixed := upregulated_transcripts & downregulated_transcripts) > 0:
+                raise Exception(f"The following transcripts are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
             target_set[0] |= upregulated_transcripts
             target_set[1] |= downregulated_transcripts
 
@@ -455,8 +465,14 @@ class OntologyResult:
 
         if type(_pvalue) == list:
             self.pvalue_up_down = list(_pvalue)
-            if _pvalue[0] > 0 and _pvalue[1] > 0:
-                _pvalue = min(_pvalue) # TODO: better aggregation
+            if (
+                0 < (p1 := _pvalue[0]) < 1
+                and 0 < (p2 := _pvalue[1]) < 1
+                and 0 < (w1 := _fisher[0][0] + _fisher[0][2])
+                and 0 < (w2 := _fisher[1][0] + _fisher[1][2])
+            ):
+                #Stouffer's method (weighted)
+                _pvalue = 0.5 * erfc((w1*erfcinv(2*p1) + w2*erfcinv(2*p2)) / (w1**2 + w2**2)**0.5)
             else:
                 _pvalue = _pvalue[0] if _pvalue[0] > 0 else _pvalue[1]
 
