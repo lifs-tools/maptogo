@@ -2482,7 +2482,6 @@ def download_results_table(
         pd.DataFrame({"Ensembl": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
 
     writer._save()
-    analytics("download_results", session)
 
     return (
         "",
