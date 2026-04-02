@@ -127,6 +127,59 @@ def get_latest_tag():
 
 
 
+def graph_enrichment_results_def(separate_updown_switch, multiple_domains):
+    return [
+        {
+            'field': "termid",
+            "headerName": "Term ID",
+            "cellRenderer": "TermIDRenderer",
+            "maxWidth": 160,
+            "checkboxSelection": True,
+        },
+        {
+            'field': "domain",
+            "headerName": "Domain",
+            "maxWidth": 160,
+            "hide": not multiple_domains,
+        },
+        {
+            'field': "term",
+            "headerName": "Term",
+            "cellRenderer": "TermRenderer",
+        },
+        {
+            'field': "direction",
+            "headerName": "Direction",
+            "hide": not separate_updown_switch,
+            "width": 60,
+            "headerTooltip": "Up: term enhanced; Down: term suppressed; Both: term modulated / adjusting",
+        },
+        {
+            'field': "count",
+            "headerName": "Count",
+            "width": 110,
+            "headerTooltip": "Number of regulated associated molecules (Expected number of regulated associated molecules) / Number of all associated molecules",
+        },
+        {
+            'field': "pvalue",
+            "headerName": "p-value",
+            "width": 80,
+            "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
+            "filter": "agNumberColumnFilter",
+            "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
+        },
+        {
+            'field': "log_odds_ratio",
+            "headerName": "Log odds",
+            "width": 80,
+            "valueFormatter": {} if separate_updown_switch else {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
+            "filter": "" if separate_updown_switch else "agNumberColumnFilter",
+            "headerTooltip": "The 'log odds ratio' determines how strong the association is (effect size). Positive: enriched; Zero: no enrichment; Negative: depleted.",
+        },
+    ]
+
+
+
 correction_list = [
     {"value": "no", "label": "No correction"},
     {"value": "bonferroni", "label": "Bonferroni"},
@@ -1997,53 +2050,7 @@ def layout():
                 html.Div([
                     dag.AgGrid(
                         id = "graph_enrichment_results",
-                        columnDefs = [
-                            {
-                                'field': "domain",
-                                "headerName": "Domain",
-                                "maxWidth": 200,
-                                "checkboxSelection": True,
-                                "hide": True,
-                            },
-                            {
-                                'field': "termid",
-                                "headerName": "Term ID",
-                                "cellRenderer": "TermIDRenderer",
-                                "maxWidth": 130,
-                            },
-                            {
-                                'field': "term",
-                                "headerName": "Term",
-                                "cellRenderer": "TermRenderer",
-                            },
-                            {
-                                'field': "direction",
-                                "headerName": "Direction",
-                                "hide": True,
-                            },
-                            {
-                                'field': "count",
-                                "headerName": "Count",
-                                "width": 110,
-                                "headerTooltip": "Number of regulated associated molecules (Expected number of regulated associated molecules) / Number of all associated molecules",
-                            },
-                            {
-                                'field': "pvalue",
-                                "headerName": "p-value",
-                                "width": 80,
-                                "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
-                                "filter": "agNumberColumnFilter",
-                                "headerTooltip": "The p-value is the statistical significance, the q-value is the adjusted p-value after multiple testing correction",
-                            },
-                            {
-                                'field': "log_odds_ratio",
-                                "headerName": "Log odds",
-                                "width": 80,
-                                "valueFormatter": {"function": "params.value != null ? Number(params.value).toPrecision(5) : ''"},
-                                "filter": "agNumberColumnFilter",
-                                "headerTooltip": "The 'log odds ratio' determines how strong the association is (effect size). Positive: enriched; Zero: no enrichment; Negative: depleted.",
-                            },
-                        ],
+                        columnDefs = graph_enrichment_results_def(False, False),
                         rowData = [],
                         columnSize = "responsiveSizeToFit",
                         defaultColDef={
@@ -2303,6 +2310,7 @@ def load_uid(_):
     Output("multiselect_filter_molecules", "data", allow_duplicate = True),
     Output("multiselect_filter_molecules", "value", allow_duplicate = True),
     Output("num_enrichment_terms", "children", allow_duplicate = True),
+    Output("graph_enrichment_results", "columnDefs", allow_duplicate = True),
     Output("analytics", "children", allow_duplicate = True),
     Input("button_run_enrichment", "n_clicks"),
     State("textarea_all_lipids", "value"),
@@ -2370,20 +2378,20 @@ def run_enrichment(
     num_enrichment_terms = "Entries: 0"
 
     if session_id not in sessions:
-        return "", [], [], {}, True, "Your session has expired. Please refresh the website.",  histogram_disabled, [], [], num_enrichment_terms
+        return "", [], [], {}, True, "Your session has expired. Please refresh the website.",  histogram_disabled, [], [], no_update, num_enrichment_terms
 
     logger.info(f"Enrichment session: {session_id}")
     session = sessions[session_id]
     session.time = time.time()
 
     if not with_lipids and not with_proteins and not with_metabolites and not with_transcripts:
-        return "", [], [], {}, True, "No omics data is selected.", histogram_disabled, [], [], num_enrichment_terms, no_update
+        return "", [], [], {}, True, "No omics data is selected.", histogram_disabled, [], [], num_enrichment_terms, no_update, no_update
 
     if len(domains) == 0:
-        return "", [], [], {}, True, "No domain(s) selected.", histogram_disabled, [], [], num_enrichment_terms, no_update
+        return "", [], [], {}, True, "No domain(s) selected.", histogram_disabled, [], [], num_enrichment_terms, no_update, no_update
 
     if organism is None or organism not in enrichment_ontologies:
-        return "", [], [], {}, True, "No organism selected.", histogram_disabled, [], [], num_enrichment_terms, no_update
+        return "", [], [], {}, True, "No organism selected.", histogram_disabled, [], [], num_enrichment_terms, no_update, no_update
     
     ontology = enrichment_ontologies[organism]
     target_set = set()
@@ -2445,7 +2453,7 @@ def run_enrichment(
                 ignore_unknown,
             )
         except Exception as error_message:
-            return "", [], [], {}, True, str(error_message), histogram_disabled, [], [], num_enrichment_terms, no_update
+            return "", [], [], {}, True, str(error_message), histogram_disabled, [], [], num_enrichment_terms, no_update, no_update
 
         (
             session.search_terms,
@@ -2489,31 +2497,59 @@ def run_enrichment(
         background_list = no_update
 
     session.domains = set(domains)
-    results = ontology.enrichment_analysis(session.search_terms, session.num_background, target_set, domains, term_regulation, correction_method)
+    results = ontology.enrichment_analysis(separate_updown_switch, session.search_terms, session.num_background, target_set, domains, term_regulation, correction_method)
     session.result = results
 
     data = []
     session.data = {}
     session.results = []
     result_map = {}
-    for result in results:
-        expected = round((result.fisher_data[0] + result.fisher_data[1]) * (result.fisher_data[0] + result.fisher_data[2]) / sum(result.fisher_data))
-        row = {
-            "domain": " | ".join(result.term.domain),
-            "term": result.term.name,
-            "termid": result.term.term_id_str,
-            "count": f"{result.fisher_data[0]} ({expected}) / {len(result.source_terms)}",
-            "pvalue": result.pvalue_corrected,
-            "log_odds_ratio": result.lor,
-        }
-        data.append(row)
-        session.results.append((result, row))
+    if separate_updown_switch:
+        for result in results:
+            expected_up = round((result.fisher_data[0][0] + result.fisher_data[0][1]) * (result.fisher_data[0][0] + result.fisher_data[0][2]) / sum(result.fisher_data[0]))
+            expected_down = round((result.fisher_data[1][0] + result.fisher_data[1][1]) * (result.fisher_data[1][0] + result.fisher_data[1][2]) / sum(result.fisher_data[1]))
+            direction = ""
+            if result.pvalue_corrected[0] < 0.05:
+                if 0 < result.pvalue_corrected[1] < 0.05 and 0 < result.pvalue_corrected[2] < 0.05:
+                    direction = "⇅"
+                elif 0 < result.pvalue_corrected[1] < 0.05:
+                    direction = "↑"
+                elif 0 < result.pvalue_corrected[2] < 0.05:
+                    direction = "↓"
+
+            row = {
+                "domain": " | ".join(result.term.domain),
+                "term": result.term.name,
+                "termid": result.term.term_id_str,
+                "count": f"{result.fisher_data[0][0]}, {result.fisher_data[1][0]} ({expected_up}, {expected_down}) / {len(result.source_terms)}",
+                "direction": direction,
+                "pvalue": result.pvalue_corrected[0],
+                "log_odds_ratio": f"{result.lor[0]:.3f} / {result.lor[1]:.3f}",
+            }
+            data.append(row)
+            session.results.append((result, row))
+
+    else:
+        for result in results:
+            expected = round((result.fisher_data[0] + result.fisher_data[1]) * (result.fisher_data[0] + result.fisher_data[2]) / sum(result.fisher_data))
+            row = {
+                "domain": " | ".join(result.term.domain),
+                "term": result.term.name,
+                "termid": result.term.term_id_str,
+                "direction": "",
+                "count": f"{result.fisher_data[0]} ({expected}) / {len(result.source_terms)}",
+                "pvalue": result.pvalue_corrected,
+                "log_odds_ratio": result.lor,
+            }
+            data.append(row)
+            session.results.append((result, row))
 
     histogram_disabled = False
     for result in results:
         for term_id in result.term.term_id:
             session.data[term_id] = result
 
+    results_def = graph_enrichment_results_def(separate_updown_switch, len(domains) > 1)
     num_enrichment_terms = f"Entries: {len(results)}"
 
     return (
@@ -2527,6 +2563,7 @@ def run_enrichment(
         background_list,
         [],
         num_enrichment_terms,
+        results_def,
         "enrichment_analysis",
     )
 

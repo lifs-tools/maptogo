@@ -164,8 +164,8 @@ def check_user_input(
 
         def check_lipids(regulated_lipids_list, updown_str, lipidome):
             if type(regulated_lipids_list) == str: regulated_lipids_list = regulated_lipids_list.split("\n")
-            elif len(regulated_lipids_list) == 0:
-                raise Exception(f"No {updown_str}regulated lipids are defined.")
+            # elif len(regulated_lipids_list) == 0:
+            #     raise Exception(f"No {updown_str}regulated lipids are defined.")
             regulated_lipids = set()
             for lipid_name in regulated_lipids_list:
                 if len(lipid_name) == 0: continue
@@ -174,8 +174,8 @@ def check_user_input(
                     raise Exception(f"The {updown_str}regulated lipid '{lipid_name}' does not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
                 regulated_lipids.add(lipid_name)
 
-            if len(regulated_lipids) == 0:
-                raise Exception(f"No {updown_str}regulated lipid left after lipid recognition.")
+            # if len(regulated_lipids) == 0:
+            #     raise Exception(f"No {updown_str}regulated lipid left after lipid recognition.")
 
             if len(regulated_lipids) > len(lipidome):
                 raise Exception(f"Length of {updown_str}regulated lipid list must be smaller than background list.")
@@ -222,8 +222,8 @@ def check_user_input(
 
         def check_proteins(regulated_proteins_list, updown_str, proteome):
             if type(regulated_proteins_list) == str: regulated_proteins_list = regulated_proteins_list.split("\n")
-            elif len(regulated_proteins_list) == 0:
-                raise Exception(f"No {updown_str}regulated proteins are defined.")
+            # elif len(regulated_proteins_list) == 0:
+            #     raise Exception(f"No {updown_str}regulated proteins are defined.")
 
             regulated_proteins = set(protein.split("-")[0] for protein in regulated_proteins_list if len(protein) > 0)
             left_proteins = regulated_proteins - ontology.clean_protein_ids
@@ -242,8 +242,8 @@ def check_user_input(
                 else:
                     raise Exception(f"The {updown_str}regulated protein" + (' ' if len(left_proteins) == 1 else 's ') + "'" + "', '".join(left_proteins) + ("' does" if len(left_proteins) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Remove for analysis' option in the 'Handling of non-background regulated molecules' setting.")
 
-            if len(regulated_proteins) == 0:
-                raise Exception(f"No {updown_str}regulated protein left after protein recognition.")
+            # if len(regulated_proteins) == 0:
+            #     raise Exception(f"No {updown_str}regulated protein left after protein recognition.")
 
             if len(regulated_proteins) > len(proteome):
                 raise Exception(f"Length of {updown_str}regulated protein list must be smaller than background list.")
@@ -283,8 +283,8 @@ def check_user_input(
 
         def check_metabolome(regulated_metabolites_list, updown_str, metabolome):
             if type(regulated_metabolites_list) == str: regulated_metabolites_list = regulated_metabolites_list.split("\n")
-            elif len(regulated_metabolites_list) == 0:
-                raise Exception(f"No {updown_str}regulated metabolites are defined.")
+            # elif len(regulated_metabolites_list) == 0:
+            #     raise Exception(f"No {updown_str}regulated metabolites are defined.")
 
             regulated_metabolites = set(metabolite for metabolite in regulated_metabolites_list if len(metabolite) > 0)
             left_metabolites = regulated_metabolites - ontology.clean_metabolite_ids - ontology.metabolites.keys()
@@ -304,8 +304,8 @@ def check_user_input(
                 else:
                     raise Exception(f"The {updown_str}regulated metabolite" + (' ' if len(left_metabolites) == 1 else 's ') + "'" + "', '".join(left_metabolites) + ("' does" if len(left_metabolites) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.")
 
-            if len(regulated_metabolites) == 0:
-                raise Exception(f"No regulated {updown_str}metabolite left after metabolite recognition.")
+            # if len(regulated_metabolites) == 0:
+            #     raise Exception(f"No regulated {updown_str}metabolite left after metabolite recognition.")
 
             if len(regulated_metabolites) > len(metabolome):
                 raise Exception(f"Length of {updown_str}regulated metabolite list must be smaller than background list.")
@@ -345,8 +345,8 @@ def check_user_input(
 
         def check_transcripts(regulated_transcripts_list, updown_str, transcriptome):
             if type(regulated_transcripts_list) == str: regulated_transcripts_list = regulated_transcripts_list.split("\n")
-            elif len(regulated_transcripts_list) == 0:
-                raise Exception(f"No {updown_str}regulated transcripts are defined.")
+            # elif len(regulated_transcripts_list) == 0:
+            #     raise Exception(f"No {updown_str}regulated transcripts are defined.")
 
             regulated_transcripts = set(transcript for transcript in regulated_transcripts_list if len(transcript) > 0)
             left_transcripts = set(t for t in regulated_transcripts if t.split(".")[0] not in transcript_keys)
@@ -365,8 +365,8 @@ def check_user_input(
                 else:
                     raise Exception(f"The {updown_str}regulated transcript" + (' ' if len(left_transcripts) == 1 else 's ') + "'" + "', '".join(left_transcripts) + ("' does" if len(left_transcripts) == 1 else "' do") + " not occur in the background list. Maybe enable the 'Ignore regulated molecules that aren't in background' option.")
 
-            if len(regulated_transcripts) == 0:
-                raise Exception(f"No {updown_str}regulated transcript left after transcript recognition.")
+            # if len(regulated_transcripts) == 0:
+            #     raise Exception(f"No {updown_str}regulated transcript left after transcript recognition.")
 
             if len(regulated_transcripts) > len(transcriptome):
                 raise Exception(f"Length of {updown_str}regulated transcript list must be smaller than background list.")
@@ -404,19 +404,6 @@ def check_user_input(
     )
 
 
-def split_integers(s: str, delim: str = "|") -> list[int]:
-    result = []
-    current = 0
-
-    for c in s:
-        if c == delim:
-            result.append(current)
-            current = 0
-        else:
-            current = current * 10 + (ord(c) - 48)  # fast digit conversion
-
-    result.append(current)  # last number
-    return result
 
 
 class OntologyTerm:
@@ -448,6 +435,7 @@ class OntologyTerm:
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
         self.synonyms = _synonyms.split("|")
         self.domain = {d for d in _domain.split("|")} if _domain else set()
+        if "" in self.domain or " " in self.domain: print(self.term_id, f"'{_domain}'")
         self.categories = [c for c in _categories.split("|")] if _categories else []
         if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0: self.categories = ["Unclassified reaction"]
 
@@ -462,19 +450,38 @@ class OntologyResult:
         _term,
         _pvalue,
         _source_terms,
-        _fisher = None,
+        _fisher,
     ):
         if _fisher == None: _fisher = [0, 0, 0, 0]
+
+        if type(_pvalue) == list:
+            self.pvalue_up_down = list(_pvalue)
+            if _pvalue[0] > 0 and _pvalue[1] > 0:
+                _pvalue = min(_pvalue) # TODO: better aggregation
+            else:
+                _pvalue = _pvalue[0] if _pvalue[0] > 0 else _pvalue[1]
+
+            self.lor = [
+                _fisher[0][0] * _fisher[0][3] / (_fisher[0][1] * _fisher[0][2]) if _fisher[0][1] > 0 and _fisher[0][2] > 0 else 0,
+                _fisher[1][0] * _fisher[1][3] / (_fisher[1][1] * _fisher[1][2]) if _fisher[1][1] > 0 and _fisher[1][2] > 0 else 0,
+            ]
+            if min(_fisher[0]) < 0:
+                logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher[0]}")
+
+            if min(_fisher[1]) < 0:
+                logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher[1]}")
+
+        else:
+            self.pvalue_up_down = None
+            self.lor = _fisher[0] * _fisher[3] / (_fisher[1] * _fisher[2]) if _fisher[1] > 0 and _fisher[2] > 0 else 0
+            if min(_fisher) < 0:
+                logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher}")
 
         self.term = _term
         self.pvalue = _pvalue
         self.pvalue_corrected = _pvalue
-        self.lor = _fisher[0] * _fisher[3] / (_fisher[1] * _fisher[2]) if _fisher[1] > 0 and _fisher[2] > 0 else 0
         self.source_terms = _source_terms
         self.fisher_data = _fisher
-
-        if min(_fisher) < 0:
-            logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher}")
 
 
 
@@ -688,58 +695,143 @@ class EnrichmentOntology:
         return search_terms, all_parent_nodes
 
 
-    def enrichment_analysis(self, search_terms, num_background, target_set, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
-        if len(target_set) == 0 or num_background < 2 or len(enrichment_domains) == 0: return []
+    def enrichment_analysis(self, separate_updown_switch, search_terms, num_background, target_set, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
+        if separate_updown_switch:
+            if (len(target_set[0]) == 0 and len(target_set[1]) == 0) or num_background < 2 or len(enrichment_domains) == 0: return []
 
-        enrichment_domains = set(enrichment_domains)
-        result_list = [None] * len(search_terms)
-        len_target_set = len(target_set)
+            enrichment_domains = set(enrichment_domains)
+            result_list = [None] * len(search_terms)
+            len_target_set_up = len(target_set[0])
+            len_target_set_down = len(target_set[1])
 
-        try: # C++ implementation, just way faster
-            side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
-            for i, (term, term_molecules) in enumerate(search_terms.items()):
-                if term.domain.isdisjoint(enrichment_domains): continue
-                target_number = len(term_molecules & target_set)
+            try: # C++ implementation, just way faster
+                side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
+                for i, (term, term_molecules) in enumerate(search_terms.items()):
+                    if term.domain.isdisjoint(enrichment_domains): continue
+                    target_number_up = len(term_molecules & target_set[0])
+                    target_number_down = len(term_molecules & target_set[1])
 
-                p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
-                if p_hyp == 0: continue
-                result_list[i] = OntologyResult(
-                    term,
-                    p_hyp,
-                    term_molecules,
-                    [
+                    p_hyp_up = exact_fisher(target_number_up, len(term_molecules), len_target_set_up, num_background, side)
+                    p_hyp_down = exact_fisher(target_number_down, len(term_molecules), len_target_set_down, num_background, side)
+                    if p_hyp_up == 0 and p_hyp_down == 0: continue
+                    result_list[i] = OntologyResult(
+                        term,
+                        [p_hyp_up, p_hyp_down],
+                        term_molecules,
+                        [
+                            [
+                                target_number_up,
+                                len(term_molecules) - target_number_up,
+                                len_target_set_up - target_number_up,
+                                num_background - len(term_molecules) - len_target_set_up + target_number_up,
+                            ],
+                            [
+                                target_number_down,
+                                len(term_molecules) - target_number_down,
+                                len_target_set_down - target_number_down,
+                                num_background - len(term_molecules) - len_target_set_down + target_number_down,
+                            ],
+                        ],
+                    )
+
+            except Exception as e:
+                logger.error("".join(traceback.format_tb(e.__traceback__)))
+                logger.error("C++ implementation of fisher exact test failed.")
+                for i, (term, term_molecules) in enumerate(search_terms.items()):
+                    if term.domain.isdisjoint(enrichment_domains): continue
+                    target_number_up = len(term_molecules & target_set[0])
+                    target_number_down = len(term_molecules & target_set[1])
+                    a_up, b_up, c_up, d_up = (
+                        target_number_up,
+                        len(term_molecules) - target_number_up,
+                        len_target_set_up - target_number_up,
+                        num_background - len(term_molecules) - len_target_set_up + target_number_up,
+                    )
+                    a_down, b_down, c_down, d_down = (
+                        target_number_down,
+                        len(term_molecules) - target_number_down,
+                        len_target_set_down - target_number_down,
+                        num_background - len(term_molecules) - len_target_set_down + target_number_down,
+                    )
+                    p_hyp_up = stats.fisher_exact([[a_up, b_up], [c_up, d_up]], alternative = term_regulation)[1]
+                    p_hyp_down = stats.fisher_exact([[a_down, b_down], [c_down, d_down]], alternative = term_regulation)[1]
+                    if p_hyp_up == 0 and p_hyp_down == 0: continue
+                    result_list[i] = OntologyResult(
+                        term,
+                        [p_hyp_up, p_hyp_down],
+                        term_molecules,
+                        [
+                            [a_up, b_up, c_up, d_up],
+                            [a_down, b_down, c_down, d_down],
+                        ],
+                    )
+            results = [result for result in result_list if result != None]
+
+            if multiple_test_correction != "no" and len(results) > 1:
+                pvalues = [r.pvalue for r in results]
+                pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
+                pvalues_up = [r.pvalue_up_down[0] for r in results]
+                pvalues_up = multipletests(pvalues_up, method = multiple_test_correction)[1]
+                pvalues_down = [r.pvalue_up_down[1] for r in results]
+                pvalues_down = multipletests(pvalues_down, method = multiple_test_correction)[1]
+                for pvalue, pvalue_up, pvalue_down, r in zip(pvalues, pvalues_up, pvalues_down, results):
+                    r.pvalue_corrected = [pvalue, pvalue_up, pvalue_down]
+
+            results.sort(key = lambda row: (row.pvalue_corrected[0], row.term.name))
+            return results
+
+        else:
+            if len(target_set) == 0 or num_background < 2 or len(enrichment_domains) == 0: return []
+
+            enrichment_domains = set(enrichment_domains)
+            result_list = [None] * len(search_terms)
+            len_target_set = len(target_set)
+
+            try: # C++ implementation, just way faster
+                side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
+                for i, (term, term_molecules) in enumerate(search_terms.items()):
+                    if term.domain.isdisjoint(enrichment_domains): continue
+                    target_number = len(term_molecules & target_set)
+
+                    p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
+                    if p_hyp == 0: continue
+                    result_list[i] = OntologyResult(
+                        term,
+                        p_hyp,
+                        term_molecules,
+                        [
+                            target_number,
+                            len(term_molecules) - target_number,
+                            len_target_set - target_number,
+                            num_background - len(term_molecules) - len_target_set + target_number,
+                        ],
+                    )
+
+            except Exception as e:
+                logger.error("".join(traceback.format_tb(e.__traceback__)))
+                logger.error("C++ implementation of fisher exact test failed.")
+                for i, (term, term_molecules) in enumerate(search_terms.items()):
+                    if term.domain.isdisjoint(enrichment_domains): continue
+                    target_number = len(term_molecules & target_set)
+                    a, b, c, d = (
                         target_number,
                         len(term_molecules) - target_number,
                         len_target_set - target_number,
                         num_background - len(term_molecules) - len_target_set + target_number,
-                    ],
-                )
+                    )
+                    p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
+                    if p_hyp == 0: continue
+                    result_list[i] = OntologyResult(
+                        term,
+                        p_hyp,
+                        term_molecules,
+                        [a, b, c, d]
+                    )
 
-        except Exception as e:
-            logger.error("".join(traceback.format_tb(e.__traceback__)))
-            logger.error("C++ implementation of fisher exact test failed.")
-            for i, (term, term_molecules) in enumerate(search_terms.items()):
-                if term.domain.isdisjoint(enrichment_domains): continue
-                target_number = len(term_molecules & target_set)
-                a, b, c, d = (
-                    target_number,
-                    len(term_molecules) - target_number,
-                    len_target_set - target_number,
-                    num_background - len(term_molecules) - len_target_set + target_number,
-                )
-                p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
-                if p_hyp == 0: continue
-                result_list[i] = OntologyResult(
-                    term,
-                    p_hyp,
-                    term_molecules,
-                    [a, b, c, d]
-                )
-
-        results = [result for result in result_list if result != None]
-        if multiple_test_correction != "no" and len(results) > 1:
-            pvalues = [r.pvalue for r in results]
-            pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
-            for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
-        results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
-        return results
+            results = [result for result in result_list if result != None]
+            if multiple_test_correction != "no" and len(results) > 1:
+                pvalues = [r.pvalue for r in results]
+                pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
+                for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
+            results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
+            return results
