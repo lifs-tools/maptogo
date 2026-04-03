@@ -197,8 +197,8 @@ try:
 except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
-        #'Homo sapiens': 'NCBITaxon:9606',
         'Mus musculus': 'NCBITaxon:10090',
+        # 'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -612,6 +612,7 @@ api.static_url_path = app.get_relative_path("/swaggerui")
 
 logger.info(f"Deploying swagger-ui at {app.get_relative_path('/api/docs')}, setting prefix to: {app.get_relative_path('')}, static url path to: {app.get_relative_path('/swaggerui')}")
 
+
 gc.disable()
 enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
@@ -620,6 +621,7 @@ for tax_name, tax_id in organisms.items():
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
 gc.enable()
 gc.collect()
+
 
 def get_aggrid_modal(name, molecule):
     return dag.AgGrid(
@@ -3762,7 +3764,7 @@ def open_sankeyplot(
             for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
                 term_id = term if type(term) == str else term.term_id[0]
 
-                if not term_id in ontology.ontology_terms:
+                if not term_id in terms:
                     if term_id in background_lipids and type(background_lipids[term_id]) == LipidAdduct:
                         lipid_category = background_lipids[term_id].get_lipid_string(LipidLevel.CATEGORY)
                         if path_layers[-1][0] != TermType.LIPID_SPECIES:
@@ -3771,7 +3773,7 @@ def open_sankeyplot(
                             path_layers[-1][2].add(term_id)
 
                 else:
-                    term_type = ontology.ontology_terms[term_id].term_type
+                    term_type = term.term_type
                     if term_type == TermType.LIPID_CLASS: term_type = TermType.LIPID_SPECIES
                     elif term_type in {TermType.UNREVIEWED_PROTEIN, TermType.ENSEMBLE_PROTEIN}: term_type = TermType.REVIEWED_PROTEIN
                     elif term_type == TermType.ENSEMBLE_GENE: term_type = TermType.GENE
@@ -3779,19 +3781,19 @@ def open_sankeyplot(
 
                     if term_type != TermType.UNCLASSIFIED_TERM:
                         if not path_layers or path_layers[-1][0] != term_type:
-                            if len(terms[term_id].categories) > 0:
-                                path_layers.append([term_type, terms[term_id].categories, ItemCounter(term_id)])
+                            if len(term.categories) > 0:
+                                path_layers.append([term_type, term.categories, ItemCounter(term_id)])
                             else:
-                                path_layers.append([term_type, [terms[term_id].name], ItemCounter(term_id)])
+                                path_layers.append([term_type, [term.name], ItemCounter(term_id)])
                         else:
                             path_layers[-1][2].add(term_id)
 
 
                     else:
                         if path_layers[-1][0] != TermType.UNCLASSIFIED_TERM:
-                            path_layers.append([TermType.UNCLASSIFIED_TERM, [terms[term_id].name], ItemCounter(term_id)])
+                            path_layers.append([TermType.UNCLASSIFIED_TERM, [term.name], ItemCounter(term_id)])
                         else:
-                            path_layers[-1][1] = [ontology.ontology_terms[term_id].name]
+                            path_layers[-1][1] = [term.name]
                             path_layers[-1][2].add(term_id)
 
             if len(path_layers) < 2: continue
@@ -3841,7 +3843,7 @@ def open_sankeyplot(
     fig = go.Figure(
         go.Sankey(
             node = dict(
-                label = fig_labels,
+                label = [(ontology.categories[c] if type(c) == int else c) for c in fig_labels],
                 x = node_x,
                 color = node_colors,
                 pad = 20,
@@ -4240,6 +4242,7 @@ def open_barplot(
                 if type(term) == OntologyTerm: break
 
             for category in term.categories:
+                category = ontology.categories[category]
                 if category not in remaining_domains_categories[i][2]:
                     remaining_domains_categories[i][2][category] = 0
                 remaining_domains_categories[i][2][category] += 1

@@ -41,6 +41,7 @@ from statsmodels.stats.multitest import multipletests
 import time
 from math import erfc
 from scipy.special import erfcinv
+import numpy as np
 
 
 def maptogo_profile(func):
@@ -417,24 +418,24 @@ def check_user_input(
 
 
 class OntologyTerm:
-    __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories", "synonyms")
+    __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories")
     # Type hints for attributes
     term_id: list[str]
     term_id_str: str
     name: str
     term_type: TermType
     relations: list[int]
-    synonyms: list[str]
     domain: set[str]
     categories: list[str]
 
     def __init__(
         self,
+        category_dict: dict[str, int],
         _term_id: str,
         _name: str,
         _term_type: str,
         _relations: str,
-        _synonyms: str,
+        _,
         _domain: str,
         _categories: str,
     ):
@@ -443,9 +444,8 @@ class OntologyTerm:
         self.term_id_str = _term_id
         self.name = _name
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
-        self.synonyms = _synonyms.split("|")
         self.domain = {d for d in _domain.split("|")} if _domain else set()
-        self.categories = [c for c in _categories.split("|")] if _categories else []
+        self.categories = [category_dict.setdefault(c, len(category_dict)) for c in _categories.split("|")] if _categories else []
         if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0: self.categories = ["Unclassified reaction"]
 
     def get_term_id(self, space = True):
@@ -517,22 +517,26 @@ class EnrichmentOntology:
         self.ontology_name = ontology_name
         self.reviewed_proteins = set()
         self.unspecific_lipids = {}
+        self.categories = []
 
+        category_dict = {}
         ontology_terms = self.ontology_terms
         try:
             with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
-                term_list = [OntologyTerm(*line.strip("\n").split("\t")) for line in f]
+                term_list = [(OntologyTerm(category_dict, *row), row[4]) for line in f if (row := line.strip("\n").split("\t"))]
 
-            for term in term_list:
-                term.relations = [term_list[p] for p in term.relations]
+            for term, synonyms in term_list:
+                term.relations = [term_list[p][0] for p in term.relations]
+                synonyms = synonyms.split("|") if len(synonyms) > 0 else []
                 for t_id in term.term_id: ontology_terms[t_id] = term
                 term_id_str, _name = term.term_id_str, term.name
                 self.domains |= term.domain
+
                 match term.term_type:
                     case TermType.LIPID_CLASS: # lipid class
                         if _name not in self.lipid_classes: self.lipid_classes[_name] = []
                         self.lipid_classes[_name].append(term)
-                        for synonym in term.synonyms:
+                        for synonym in synonyms:
                             if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
                             self.lipid_classes[synonym].append(term)
 
@@ -541,11 +545,11 @@ class EnrichmentOntology:
 
                     case TermType.CARBON_CHAIN: # carbon chain
                         if _name not in self.carbon_chains: self.carbon_chains[_name] = term
-                        for synonym in term.synonyms: self.carbon_chains[synonym] = term
+                        for synonym in synonyms: self.carbon_chains[synonym] = term
 
                     case TermType.UNSPECIFIC_LIPID:
                         if _name.lower() not in self.unspecific_lipids: self.unspecific_lipids[_name.lower()] = term
-                        for synonym in term.synonyms:
+                        for synonym in synonyms:
                             if synonym.lower() not in self.unspecific_lipids: self.unspecific_lipids[synonym.lower()] = term
 
                     case TermType.REVIEWED_PROTEIN: # reviewed protein
@@ -562,6 +566,7 @@ class EnrichmentOntology:
                     case TermType.METABOLITE: # metabolite
                         if term_id_str not in self.metabolites: self.metabolites[term_id_str] = term
 
+            self.categories = sorted(category_dict.keys(), key = lambda k: category_dict[k])
 
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
