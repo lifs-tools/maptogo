@@ -1114,6 +1114,19 @@ for uniprot_term in uniprot_data.values():
         uniprot_term.namespace.add("Enzymatic activity (Swiss-Prot + TrEMBL)")
 
 
+terms = list(go_terms.values())
+terms += list(chebi_lipid_terms.values())
+terms += list(lipid_maps_terms.values())
+terms += list(ontology_terms.values())
+
+term_positions = {term_id: i for i, term in enumerate(terms) for term_id in term.id}
+output = [term.to_string(term_positions) for term in terms]
+
+with gzip.open("../ontology_shared.gz", "wb") as gz_output:
+    gzip_out = "\n".join(output).encode("utf8")
+    print("writing", len(gzip_out))
+    gz_output.write(gzip_out)
+
 
 # do several organisms
 for tax_name, tax_id in species.items():
@@ -1211,11 +1224,13 @@ for tax_name, tax_id in species.items():
         terms.append(chebi_term)
 
     # diseases and phenotypes
-    written_diseases = set()
-    for _, disease_term in disease_and_phenotype_terms.items():
-        if disease_term in written_diseases: continue
-        written_diseases.add(disease_term)
-        terms.append(disease_term)
+    if tax_id == "9606":
+        print("With D&P")
+        written_diseases = set()
+        for _, disease_term in disease_and_phenotype_terms.items():
+            if disease_term in written_diseases: continue
+            written_diseases.add(disease_term)
+            terms.append(disease_term)
 
 
     for lipid_name, term in chebi_lipid_terms.items():

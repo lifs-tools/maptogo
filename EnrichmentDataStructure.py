@@ -500,10 +500,29 @@ class OntologyResult:
 
 
 
+class ReferenceDictionary(dict):
+    def __init__(self, r):
+        super().__init__()
+        self.reference = r
+
+    def __getitem__(self, k):
+        try:
+            return super().__getitem__(k)
+        except Exception:
+            return self.reference[k]
+
+    def __setitem__(self, k, v):
+        if k not in self.reference: super().__setitem__(k, v)
+
+    def __contains__(self, k):
+        return super().__contains__(k) or (k in self.reference)
+
+
+
 class EnrichmentOntology:
     @maptogo_profile
-    def __init__(self, file_name, ontology_name = "undefined"):
-        self.ontology_terms = {}
+    def __init__(self, file_name, reference_dictionary, ontology_name = "undefined"):
+        self.ontology_terms = ReferenceDictionary(reference_dictionary)
         self.lipids = {}
         self.lipid_classes = {}
         self.carbon_chains = {}
@@ -526,7 +545,7 @@ class EnrichmentOntology:
                 term_list = [(OntologyTerm(category_dict, *row), row[4]) for line in f if (row := line.strip("\n").split("\t"))]
 
             for term, synonyms in term_list:
-                term.relations = [term_list[p][0] for p in term.relations]
+                term.relations = [reference_dictionary[t.term_id[0]] if t.term_id[0] in reference_dictionary else t for p in term.relations if (t := term_list[p][0])]
                 synonyms = synonyms.split("|") if len(synonyms) > 0 else []
                 for t_id in term.term_id: ontology_terms[t_id] = term
                 term_id_str, _name = term.term_id_str, term.name
@@ -567,6 +586,7 @@ class EnrichmentOntology:
                         if term_id_str not in self.metabolites: self.metabolites[term_id_str] = term
 
             self.categories = sorted(category_dict.keys(), key = lambda k: category_dict[k])
+            del term_list
 
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))

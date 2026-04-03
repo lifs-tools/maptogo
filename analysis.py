@@ -198,7 +198,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        # 'Homo sapiens': 'NCBITaxon:9606',
+        'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -614,11 +614,21 @@ logger.info(f"Deploying swagger-ui at {app.get_relative_path('/api/docs')}, sett
 
 
 gc.disable()
-enrichment_ontologies = {}
+
+enrichment_ontologies, shared_ontology_terms = {}, {}
+with gzip.open(f"{current_path}/Data/ontology_shared.gz", mode="rt", encoding="utf-8", newline = "") as f:
+    term_list = [OntologyTerm({}, *line.strip("\n").split("\t")) for line in f]
+
+for term in term_list:
+    term.relations = [term_list[p] for p in term.relations]
+    for t_id in term.term_id: shared_ontology_terms[t_id] = term
+del term_list
+
 for tax_name, tax_id in organisms.items():
     logger.info(f"Loading {tax_name}")
     tax_id_number = tax_id.replace("NCBITaxon:", "")
-    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
+    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", shared_ontology_terms, tax_name)
+
 gc.enable()
 gc.collect()
 
