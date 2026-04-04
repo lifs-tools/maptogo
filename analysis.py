@@ -198,7 +198,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        'Homo sapiens': 'NCBITaxon:9606',
+        # 'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -3791,7 +3791,7 @@ def open_sankeyplot(
 
                     if term_type != TermType.UNCLASSIFIED_TERM:
                         if not path_layers or path_layers[-1][0] != term_type:
-                            if len(term.categories) > 0:
+                            if term.categories > 0:
                                 path_layers.append([term_type, term.categories, ItemCounter(term_id)])
                             else:
                                 path_layers.append([term_type, [term.name], ItemCounter(term_id)])
@@ -3809,6 +3809,8 @@ def open_sankeyplot(
             if len(path_layers) < 2: continue
             for i, path_layer in enumerate(path_layers):
                 layer_term, layer_categories, term_ids = path_layer
+                if type(layer_categories) == int:
+                    layer_categories = [i for i in range(layer_categories.bit_length()) if (layer_categories >> i) & 1]
                 for layer_category in layer_categories:
                     if (sankey_key := (layer_term, layer_category)) not in sankey_data:
                         sankey_data[sankey_key] = {}
@@ -3820,7 +3822,10 @@ def open_sankeyplot(
 
                     if i == 0: continue
                     layer_term_prev = path_layers[i - 1][0]
-                    for layer_category_prev in path_layers[i - 1][1]:
+                    layer_categories_prev = path_layers[i - 1][1]
+                    if type(layer_categories_prev) == int:
+                        layer_categories_prev = [i for i in range(layer_categories_prev.bit_length()) if (layer_categories_prev >> i) & 1]
+                    for layer_category_prev in layer_categories_prev:
                         sankey_key_prev = (layer_term_prev, layer_category_prev)
                         if sankey_key not in sankey_data[sankey_key_prev]:
                             sankey_data[sankey_key_prev][sankey_key] = 0
@@ -4251,8 +4256,7 @@ def open_barplot(
             for term in get_path(session.all_parent_nodes[molecule], result.term):
                 if type(term) == OntologyTerm: break
 
-            for category in term.categories:
-                category = ontology.categories[category]
+            for category in [ontology.categories[i] for i in range(term.categories.bit_length()) if (term.categories >> i) & 1]:
                 if category not in remaining_domains_categories[i][2]:
                     remaining_domains_categories[i][2][category] = 0
                 remaining_domains_categories[i][2][category] += 1

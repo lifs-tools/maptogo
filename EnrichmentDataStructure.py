@@ -445,8 +445,8 @@ class OntologyTerm:
         self.name = _name
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
         self.domain = {d for d in _domain.split("|")} if _domain else set()
-        self.categories = [category_dict.setdefault(c, len(category_dict)) for c in _categories.split("|")] if _categories else []
-        if self.term_type == TermType.GENERIC_REACTION and len(self.categories) == 0: self.categories = ["Unclassified reaction"]
+        self.categories = sum([(1 << category_dict.setdefault(c, len(category_dict))) for c in _categories.split("|")]) if _categories else 0
+        if self.term_type == TermType.GENERIC_REACTION and self.categories == 0: self.categories = (1 << category_dict.setdefault("Unclassified reaction", len(category_dict)))
 
     def get_term_id(self, space = True):
         return " | ".join(self.term_id) if space else self.term_id_str
