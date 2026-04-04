@@ -418,25 +418,26 @@ def check_user_input(
 
 
 class OntologyTerm:
-    __slots__ = ("term_id", "term_id_str", "term_type", "name", "domain", "relations", "categories")
+    __slots__ = ("term_id", "term_id_str", "term_type", "name", "domains", "relations", "categories")
     # Type hints for attributes
     term_id: list[str]
     term_id_str: str
     name: str
     term_type: TermType
     relations: list[int]
-    domain: set[str]
+    domains: set[str]
     categories: list[str]
 
     def __init__(
         self,
         category_dict: dict[str, int],
+        domain_dict: dict[str, int],
         _term_id: str,
         _name: str,
         _term_type: str,
         _relations: str,
         _,
-        _domain: str,
+        _domains: str,
         _categories: str,
     ):
         self.term_type = int_to_term_type[int(_term_type)]
@@ -444,7 +445,7 @@ class OntologyTerm:
         self.term_id_str = _term_id
         self.name = _name
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
-        self.domain = {d for d in _domain.split("|")} if _domain else set()
+        self.domains = sum([(1 << domain_dict.setdefault(d, len(domain_dict))) for d in _domains.split("|")]) if _domains else 0
         self.categories = sum([(1 << category_dict.setdefault(c, len(category_dict))) for c in _categories.split("|")]) if _categories else 0
         if self.term_type == TermType.GENERIC_REACTION and self.categories == 0: self.categories = (1 << category_dict.setdefault("Unclassified reaction", len(category_dict)))
 
@@ -521,7 +522,8 @@ class ReferenceDictionary(dict):
 
 class EnrichmentOntology:
     @maptogo_profile
-    def __init__(self, file_name, reference_dictionary, ontology_name = "undefined"):
+    def __init__(self, file_name, ontology_name = "undefined", reference_dictionary = None):
+        if not reference_dictionary: reference_dictionary = {}
         self.ontology_terms = ReferenceDictionary(reference_dictionary)
         self.lipids = {}
         self.lipid_classes = {}
@@ -531,25 +533,24 @@ class EnrichmentOntology:
         self.clean_protein_ids = set()
         self.metabolites = {}
         self.clean_metabolite_ids = set()
-        self.domains = set()
+        self.domains = []
         self.metabolite_names = {}
         self.ontology_name = ontology_name
         self.reviewed_proteins = set()
         self.unspecific_lipids = {}
         self.categories = []
 
-        category_dict = {}
+        category_dict, domain_dict = {}, {}
         ontology_terms = self.ontology_terms
         try:
             with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
-                term_list = [(OntologyTerm(category_dict, *row), row[4]) for line in f if (row := line.strip("\n").split("\t"))]
+                term_list = [(OntologyTerm(category_dict, domain_dict, *row), row[4]) for line in f if (row := line.strip("\n").split("\t"))]
 
             for term, synonyms in term_list:
                 term.relations = [reference_dictionary[t.term_id[0]] if t.term_id[0] in reference_dictionary else t for p in term.relations if (t := term_list[p][0])]
                 synonyms = synonyms.split("|") if len(synonyms) > 0 else []
                 for t_id in term.term_id: ontology_terms[t_id] = term
                 term_id_str, _name = term.term_id_str, term.name
-                self.domains |= term.domain
 
                 match term.term_type:
                     case TermType.LIPID_CLASS: # lipid class
@@ -586,6 +587,7 @@ class EnrichmentOntology:
                         if term_id_str not in self.metabolites: self.metabolites[term_id_str] = term
 
             self.categories = sorted(category_dict.keys(), key = lambda k: category_dict[k])
+            self.domains = sorted(domain_dict.keys(), key = lambda k: domain_dict[k])
             del term_list
 
         except Exception as e:
@@ -723,7 +725,7 @@ class EnrichmentOntology:
             queue = [start_term]
             while queue:
                 term = queue.pop()
-                if term.domain: search_terms[term].append(molecule_input_name)
+                if term.domains: search_terms[term].append(molecule_input_name)
                 for relation_term in term.relations:
                     if relation_term not in parent_nodes:
                         queue.append(relation_term)
@@ -735,11 +737,14 @@ class EnrichmentOntology:
         return search_terms, all_parent_nodes
 
 
+    def get_domains(self, domain_bit_field):
+        return [self.domains[d] for d in range(domain_bit_field.bit_length()) if ((domain_bit_field >> d) & 1)]
+
+
     def enrichment_analysis(self, separate_updown_switch, search_terms, num_background, target_set, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
         if separate_updown_switch:
             if (len(target_set[0]) == 0 and len(target_set[1]) == 0) or num_background < 2 or len(enrichment_domains) == 0: return []
-
-            enrichment_domains = set(enrichment_domains)
+            enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
             result_list = [None] * len(search_terms)
             len_target_set_up = len(target_set[0])
             len_target_set_down = len(target_set[1])
@@ -747,7 +752,7 @@ class EnrichmentOntology:
             try: # C++ implementation, just way faster
                 side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if term.domain.isdisjoint(enrichment_domains): continue
+                    if not (term.domains & enrichment_domains): continue
                     target_number_up = len(term_molecules & target_set[0])
                     target_number_down = len(term_molecules & target_set[1])
 
@@ -778,7 +783,7 @@ class EnrichmentOntology:
                 logger.error("".join(traceback.format_tb(e.__traceback__)))
                 logger.error("C++ implementation of fisher exact test failed.")
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if term.domain.isdisjoint(enrichment_domains): continue
+                    if not (term.domains & enrichment_domains): continue
                     target_number_up = len(term_molecules & target_set[0])
                     target_number_down = len(term_molecules & target_set[1])
                     a_up, b_up, c_up, d_up = (
@@ -822,15 +827,14 @@ class EnrichmentOntology:
 
         else:
             if len(target_set) == 0 or num_background < 2 or len(enrichment_domains) == 0: return []
-
-            enrichment_domains = set(enrichment_domains)
+            enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
             result_list = [None] * len(search_terms)
             len_target_set = len(target_set)
 
             try: # C++ implementation, just way faster
                 side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if term.domain.isdisjoint(enrichment_domains): continue
+                    if not (term.domains & enrichment_domains): continue
                     target_number = len(term_molecules & target_set)
 
                     p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
@@ -851,7 +855,7 @@ class EnrichmentOntology:
                 logger.error("".join(traceback.format_tb(e.__traceback__)))
                 logger.error("C++ implementation of fisher exact test failed.")
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if term.domain.isdisjoint(enrichment_domains): continue
+                    if not (term.domains & enrichment_domains): continue
                     target_number = len(term_molecules & target_set)
                     a, b, c, d = (
                         target_number,

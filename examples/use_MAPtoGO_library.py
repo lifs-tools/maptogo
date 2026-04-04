@@ -58,16 +58,49 @@ omics_included = [True, True, True, False]
 omics_lists = [
     background_lipids_list,
     regulated_lipids_list,
+    [], # up-regulated_lipids_list
+    [], # down-regulated_lipids_list
     background_proteins_list,
     regulated_proteins_list,
+    [], # up-regulated_proteins_list
+    [], # down-regulated_proteins_list
     background_metabolites_list,
     regulated_metabolites_list,
-    [],
-    [],
+    [], # up-regulated_metabolites_list
+    [], # down-regulated_metabolites_list
+    [], # background_transcripts_list
+    [], # regulated_transcripts_list
+    [], # up-regulated_transcripts_list
+    [], # down-regulated_transcripts_list
 ]
 ignore_unrecognizable_molecules = MOLECULE_HANDLING_REMOVE
 ignore_unknown = MOLECULE_HANDLING_REMOVE
 use_bounded_fatty_acyls = False
+
+
+
+# possible domains: "Biological process", "Cellular component", "Disease", "Metabolic and signalling pathway", "Molecular function", "Phenotype", "Physical or chemical properties", or any combination
+domains = {"Biological process"}
+
+# possible term_regulation:
+# "greater" -> significant biomolocules are overrepresented in domain term (default)
+# "less" -> significant biomolocules are underrepresented in domain term, means no effect on the term
+# "two-sided" -> either way
+term_regulation = "greater"
+
+# do you have only regulated molecules (False) or up / down-regulated molecules (True)
+separate_updown = False
+
+# possible multiple_test_correction:
+# "no" -> No correction
+# "bonferroni" -> Bonferroni
+# "fdr_bh" -> Benjamini/Hochberg (default)
+# "fdr_by" -> Benjamini/Yekutieli
+# "holm-sidak" -> Step down method using Sidak adjustment
+# "holm" -> Step-down method using Bonferroni adjustments
+# "simes-hochberg" -> Step-up method (independent)
+# "fdr_tsbh" -> Two stage fdr correction
+multiple_test_correction = "fdr_bh"
 
 
 
@@ -78,14 +111,23 @@ try:
         target_set,
         lipidome,
         regulated_lipids,
+        upregulated_lipids,
+        downregulated_lipids,
         proteome,
         regulated_proteins,
+        upregulated_proteins,
+        downregulated_proteins,
         metabolome,
         regulated_metabolites,
+        upregulated_metabolites,
+        downregulated_metabolites,
         transcriptome,
         regulated_transcripts,
+        upregulated_transcripts,
+        downregulated_transcripts,
         background_list,
     ) = check_user_input(
+        separate_updown,
         omics_included,
         omics_lists,
         ontology,
@@ -116,27 +158,9 @@ print("Set enrichment background")
 
 ## run enrichment analysis
 print("Run enrichment analysis")
-# possible domains: "Biological process", "Cellular component", "Disease", "Metabolic and signalling pathway", "Molecular function", "Phenotype", "Physical or chemical properties", or any combination
-domains = {"Biological process"}
-
-# possible term_regulation:
-# "greater" -> significant biomolocules are overrepresented in domain term (default)
-# "less" -> significant biomolocules are underrepresented in domain term, means no effect on the term
-# "two-sided" -> either way
-term_regulation = "greater"
-
-# possible multiple_test_correction:
-# "no" -> No correction
-# "bonferroni" -> Bonferroni
-# "fdr_bh" -> Benjamini/Hochberg (default)
-# "fdr_by" -> Benjamini/Yekutieli
-# "holm-sidak" -> Step down method using Sidak adjustment
-# "holm" -> Step-down method using Bonferroni adjustments
-# "simes-hochberg" -> Step-up method (independent)
-# "fdr_tsbh" -> Two stage fdr correction
-multiple_test_correction = "fdr_bh"
 
 results = ontology.enrichment_analysis(
+    separate_updown,
     search_terms,
     num_background,
     target_set,
@@ -149,7 +173,7 @@ results = ontology.enrichment_analysis(
 ### printing the results in p-value reverse order
 for result in results[::-1]:
     expected = round((result.fisher_data[0] + result.fisher_data[1]) * (result.fisher_data[0] + result.fisher_data[2]) / sum(result.fisher_data))
-    print("domain:", " | ".join(result.term.domain))
+    print("domain:", " | ".join(ontology.get_domains(result.term.domains)))
     print("term:", result.term.name)
     print("termid:", result.term.term_id_str)
     print("count:", f"{result.fisher_data[0]} ({expected}) / {len(result.source_terms)}")
