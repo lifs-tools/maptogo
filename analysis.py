@@ -200,7 +200,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        'Homo sapiens': 'NCBITaxon:9606',
+        # 'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -1458,10 +1458,24 @@ def layout():
                                 ),
                                 html.Div(
                                     [
-                                        dmc.Title(
-                                            "All up-regulated lipid names in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All up-regulated lipid names in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_upregulated_lipids",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_upregulated_lipids",
@@ -1477,10 +1491,24 @@ def layout():
                                             position = "right",
                                         ),
 
-                                        dmc.Title(
-                                            "All down-regulated lipid names in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All down-regulated lipid names in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_downregulated_lipids",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_downregulated_lipids",
@@ -1571,7 +1599,7 @@ def layout():
                                 html.Div(
                                     [
                                         dmc.Title(
-                                            "All regulated protein accession in experiment",
+                                            "All regulated protein accessions in experiment",
                                             order = 5,
                                             style = {"marginTop": "10px"},
                                         ),
@@ -1599,10 +1627,24 @@ def layout():
                                 ),
                                 html.Div(
                                     [
-                                        dmc.Title(
-                                            "All up-regulated protein accession in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All up-regulated protein accessions in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_upregulated_proteins",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_upregulated_proteins",
@@ -1617,10 +1659,25 @@ def layout():
                                             ),
                                             position = "right",
                                         ),
-                                        dmc.Title(
-                                            "All down-regulated protein accession in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All down-regulated protein accession in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_downregulated_proteins",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_downregulated_proteins",
@@ -1707,10 +1764,24 @@ def layout():
                                 ),
                                 html.Div(
                                     [
-                                        dmc.Title(
-                                            "All up-regulated metabolite ChEBI Ids in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All up-regulated metabolite ChEBI Ids in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_upregulated_metabolites",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_upregulated_metabolites",
@@ -1725,10 +1796,25 @@ def layout():
                                             ),
                                             position = "right",
                                         ),
-                                        dmc.Title(
-                                            "All down-regulated metabolite ChEBI Ids in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All down-regulated metabolite ChEBI Ids in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_downregulated_metabolites",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_downregulated_metabolites",
@@ -1815,10 +1901,24 @@ def layout():
                                 ),
                                 html.Div(
                                     [
-                                        dmc.Title(
-                                            "All up-regulated ensembl Ids in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All up-regulated ensembl Ids in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_upregulated_transcripts",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_upregulated_transcripts",
@@ -1833,10 +1933,25 @@ def layout():
                                             ),
                                             position = "right",
                                         ),
-                                        dmc.Title(
-                                            "All down-regulated ensembl Ids in experiment",
-                                            order = 5,
-                                            style = {"marginTop": "10px"},
+
+                                        html.Div(
+                                            [
+                                                dmc.Title(
+                                                    "All down-regulated ensembl Ids in experiment",
+                                                    order = 5,
+                                                ),
+                                                dmc.Checkbox(
+                                                    id = "check_textarea_downregulated_transcripts",
+                                                    checked = True,
+                                                ),
+                                            ],
+                                            style = {
+                                                "width": "100%",
+                                                "marginTop": "10px",
+                                                "display": "flex",
+                                                "alignItems": "center",
+                                                "gap": "10px",
+                                            },
                                         ),
                                         dmc.Textarea(
                                             id = "textarea_downregulated_transcripts",
@@ -2218,6 +2333,14 @@ def organism_changed(organism, domain_values):
     Output("select_term_representation", "value", allow_duplicate = True),
     Output("select_test_method", "value", allow_duplicate = True),
     Output("select_domains", "value", allow_duplicate = True),
+    Output("check_textarea_upregulated_lipids", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_lipids", "checked", allow_duplicate = True),
+    Output("check_textarea_upregulated_proteins", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_proteins", "checked", allow_duplicate = True),
+    Output("check_textarea_upregulated_metabolites", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_metabolites", "checked", allow_duplicate = True),
+    Output("check_textarea_upregulated_transcripts", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_transcripts", "checked", allow_duplicate = True),
     Input("url", "pathname"),
     prevent_initial_call = True,
 )
@@ -2226,7 +2349,7 @@ def load_uid(_):
     if session_id not in sessions:
         sessions[session_id] = SessionEntry()
         logger.info(f"New session: {session_id}")
-        return (session_id, *([no_update] * 47))
+        return (session_id, *([no_update] * 55))
 
     logger.info(f"Reopen session: {session_id}")
     session = sessions[session_id]
@@ -2260,6 +2383,15 @@ def load_uid(_):
     select_term_representation = ui["select_term_representation"] if "select_term_representation" in ui else "greater"
     select_test_method = ui["select_test_method"] if "select_test_method" in ui else "fdr_bh"
     select_domains = ui["select_domains"] if "select_domains" in ui else ["Biological process"]
+
+    check_textarea_upregulated_lipids = ui["check_textarea_upregulated_lipids"] if "check_textarea_upregulated_lipids" in ui else True
+    check_textarea_downregulated_lipids = ui["check_textarea_downregulated_lipids"] if "check_textarea_downregulated_lipids" in ui else True
+    check_textarea_upregulated_proteins = ui["check_textarea_upregulated_proteins"] if "check_textarea_upregulated_proteins" in ui else True
+    check_textarea_downregulated_proteins = ui["check_textarea_downregulated_proteins"] if "check_textarea_downregulated_proteins" in ui else True
+    check_textarea_upregulated_metabolites = ui["check_textarea_upregulated_metabolites"] if "check_textarea_upregulated_metabolites" in ui else True
+    check_textarea_downregulated_metabolites = ui["check_textarea_downregulated_metabolites"] if "check_textarea_downregulated_metabolites" in ui else True
+    check_textarea_upregulated_transcripts = ui["check_textarea_upregulated_transcripts"] if "check_textarea_upregulated_transcripts" in ui else True
+    check_textarea_downregulated_transcripts = ui["check_textarea_downregulated_transcripts"] if "check_textarea_downregulated_transcripts" in ui else True
 
     num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))
     num_regulated_lipids = sum(len(line) > 0 for line in regulated_lipids_list.split("\n"))
@@ -2327,6 +2459,14 @@ def load_uid(_):
         select_term_representation,
         select_test_method,
         select_domains,
+        check_textarea_upregulated_lipids,
+        check_textarea_downregulated_lipids,
+        check_textarea_upregulated_proteins,
+        check_textarea_downregulated_proteins,
+        check_textarea_upregulated_metabolites,
+        check_textarea_downregulated_metabolites,
+        check_textarea_upregulated_transcripts,
+        check_textarea_downregulated_transcripts,
     )
 
 
@@ -2373,6 +2513,14 @@ def load_uid(_):
     State("checkbox_use_metabolites", "checked"),
     State("checkbox_use_transcripts", "checked"),
     State("separate_updown_switch", "checked"),
+    State("check_textarea_upregulated_lipids", "checked"),
+    State("check_textarea_downregulated_lipids", "checked"),
+    State("check_textarea_upregulated_proteins", "checked"),
+    State("check_textarea_downregulated_proteins", "checked"),
+    State("check_textarea_upregulated_metabolites", "checked"),
+    State("check_textarea_downregulated_metabolites", "checked"),
+    State("check_textarea_upregulated_transcripts", "checked"),
+    State("check_textarea_downregulated_transcripts", "checked"),
     prevent_initial_call = True,
 )
 def run_enrichment(
@@ -2405,6 +2553,14 @@ def run_enrichment(
     with_metabolites,
     with_transcripts,
     separate_updown_switch,
+    check_textarea_upregulated_lipids,
+    check_textarea_downregulated_lipids,
+    check_textarea_upregulated_proteins,
+    check_textarea_downregulated_proteins,
+    check_textarea_upregulated_metabolites,
+    check_textarea_downregulated_metabolites,
+    check_textarea_upregulated_transcripts,
+    check_textarea_downregulated_transcripts,
 ):
     histogram_disabled = True
     num_enrichment_terms = "Entries: 0"
@@ -2440,20 +2596,20 @@ def run_enrichment(
         omics_lists = [
             all_lipids_list,
             regulated_lipids_list,
-            upregulated_lipids_list,
-            downregulated_lipids_list,
+            upregulated_lipids_list if check_textarea_upregulated_lipids else [],
+            downregulated_lipids_list if check_textarea_downregulated_lipids else [],
             all_proteins_list,
             regulated_proteins_list,
-            upregulated_proteins_list,
-            downregulated_proteins_list,
+            upregulated_proteins_list if check_textarea_upregulated_proteins else [],
+            downregulated_proteins_list if check_textarea_downregulated_proteins else [],
             all_metabolites_list,
             regulated_metabolites_list,
-            upregulated_metabolites_list,
-            downregulated_metabolites_list,
+            upregulated_metabolites_list if check_textarea_upregulated_metabolites else [],
+            downregulated_metabolites_list if check_textarea_downregulated_metabolites else [],
             all_transcripts_list,
             regulated_transcripts_list,
-            upregulated_transcripts_list,
-            downregulated_transcripts_list,
+            upregulated_transcripts_list if check_textarea_upregulated_transcripts else [],
+            downregulated_transcripts_list if check_textarea_downregulated_transcripts else [],
         ]
 
         try:
@@ -2692,7 +2848,15 @@ def filter_result_table(multiselect_values, multiselect_data, session_id):
     Input("select_test_method", "value"),
     Input("select_domains", "value"),
     Input("separate_updown_switch", "checked"),
-    State("sessionid", "children"),
+    Input("check_textarea_upregulated_lipids", "checked"),
+    Input("check_textarea_downregulated_lipids", "checked"),
+    Input("check_textarea_upregulated_proteins", "checked"),
+    Input("check_textarea_downregulated_proteins", "checked"),
+    Input("check_textarea_upregulated_metabolites", "checked"),
+    Input("check_textarea_downregulated_metabolites", "checked"),
+    Input("check_textarea_upregulated_transcripts", "checked"),
+    Input("check_textarea_downregulated_transcripts", "checked"),
+    Input("sessionid", "children"),
     prevent_initial_call = True,
 )
 def update_background(
@@ -2725,6 +2889,14 @@ def update_background(
     select_test_method,
     select_domains,
     separate_updown_switch,
+    check_textarea_upregulated_lipids,
+    check_textarea_downregulated_lipids,
+    check_textarea_upregulated_proteins,
+    check_textarea_downregulated_proteins,
+    check_textarea_upregulated_metabolites,
+    check_textarea_downregulated_metabolites,
+    check_textarea_upregulated_transcripts,
+    check_textarea_downregulated_transcripts,
     session_id,
 ):
     num_all_lipids = sum(len(line) > 0 for line in all_lipids_list.split("\n"))
@@ -2797,6 +2969,14 @@ def update_background(
     session.ui["select_test_method"] = select_test_method
     session.ui["select_domains"] = select_domains
     session.ui["separate_updown_switch"] = separate_updown_switch
+    session.ui["check_textarea_upregulated_lipids"] = check_textarea_upregulated_lipids
+    session.ui["check_textarea_downregulated_lipids"] = check_textarea_downregulated_lipids
+    session.ui["check_textarea_upregulated_proteins"] = check_textarea_upregulated_proteins
+    session.ui["check_textarea_downregulated_proteins"] = check_textarea_downregulated_proteins
+    session.ui["check_textarea_upregulated_metabolites"] = check_textarea_upregulated_metabolites
+    session.ui["check_textarea_downregulated_metabolites"] = check_textarea_downregulated_metabolites
+    session.ui["check_textarea_upregulated_transcripts"] = check_textarea_upregulated_transcripts
+    session.ui["check_textarea_downregulated_transcripts"] = check_textarea_downregulated_transcripts
 
     return (
         no_update,
