@@ -618,19 +618,12 @@ logger.info(f"Deploying swagger-ui at {app.get_relative_path('/api/docs')}, sett
 
 gc.disable()
 
-enrichment_ontologies, shared_ontology_terms = {}, {}
-with gzip.open(f"{current_path}/Data/ontology_shared.gz", mode="rt", encoding="utf-8", newline = "") as f:
-    term_list = [OntologyTerm({}, {}, *line.strip("\n").split("\t")) for line in f]
-
-for term in term_list:
-    term.relations = [term_list[p] for p in term.relations]
-    for t_id in term.term_id: shared_ontology_terms[t_id] = term
-del term_list
+enrichment_ontologies = {}
 
 for tax_name, tax_id in organisms.items():
     logger.info(f"Loading {tax_name}")
     tax_id_number = tax_id.replace("NCBITaxon:", "")
-    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name, shared_ontology_terms)
+    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
 
 gc.enable()
 gc.collect()
@@ -2124,11 +2117,19 @@ def layout():
                                     checked = False,
                                 ),
                             ]),
-                            dmc.Button(
-                                "Run enrichment analysis",
-                                id = "button_run_enrichment",
-                                style = {"margin-left": "auto"},
-                            ),
+                            html.Div([
+                                dmc.Button(
+                                    "Reset",
+                                    id = "button_reset",
+                                    variant = "outline",
+                                    style = {"marginRight": "10px"},
+                                ),
+                                dmc.Button(
+                                    "Run analysis",
+                                    id = "button_run_enrichment",
+
+                                ),
+                            ], style = {"marginLeft": "auto"}),
                         ], style={"display": "flex", "width": "100%", "marginTop": "20px"}),
                     ],
                     style = {"border": "1px solid #dddddd", "radius": "10px", "padding": "10px"},
@@ -2467,6 +2468,136 @@ def load_uid(_):
         check_textarea_downregulated_metabolites,
         check_textarea_upregulated_transcripts,
         check_textarea_downregulated_transcripts,
+    )
+
+
+@callback(
+    Output("info_modal", "opened", allow_duplicate = True),
+    Output("info_modal_message", "children", allow_duplicate = True),
+    Output("separate_updown_switch", "checked", allow_duplicate = True),
+    Output("num_all_lipids", "children", allow_duplicate = True),
+    Output("num_regulated_lipids", "children", allow_duplicate = True),
+    Output("num_upregulated_lipids", "children", allow_duplicate = True),
+    Output("num_downregulated_lipids", "children", allow_duplicate = True),
+    Output("num_all_proteins", "children", allow_duplicate = True),
+    Output("num_regulated_proteins", "children", allow_duplicate = True),
+    Output("num_upregulated_proteins", "children", allow_duplicate = True),
+    Output("num_downregulated_proteins", "children", allow_duplicate = True),
+    Output("num_all_metabolites", "children", allow_duplicate = True),
+    Output("num_regulated_metabolites", "children", allow_duplicate = True),
+    Output("num_upregulated_metabolites", "children", allow_duplicate = True),
+    Output("num_downregulated_metabolites", "children", allow_duplicate = True),
+    Output("num_all_transcripts", "children", allow_duplicate = True),
+    Output("num_regulated_transcripts", "children", allow_duplicate = True),
+    Output("num_upregulated_transcripts", "children", allow_duplicate = True),
+    Output("num_downregulated_transcripts", "children", allow_duplicate = True),
+    Output("textarea_all_lipids", "value", allow_duplicate = True),
+    Output("textarea_regulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_upregulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_downregulated_lipids", "value", allow_duplicate = True),
+    Output("textarea_all_proteins", "value", allow_duplicate = True),
+    Output("textarea_regulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_upregulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_downregulated_proteins", "value", allow_duplicate = True),
+    Output("textarea_all_metabolites", "value", allow_duplicate = True),
+    Output("textarea_regulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_upregulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_downregulated_metabolites", "value", allow_duplicate = True),
+    Output("textarea_all_transcripts", "value", allow_duplicate = True),
+    Output("textarea_regulated_transcripts", "value", allow_duplicate = True),
+    Output("textarea_upregulated_transcripts", "value", allow_duplicate = True),
+    Output("textarea_downregulated_transcripts", "value", allow_duplicate = True),
+    Output("use_bounded_fatty_acyls", "checked", allow_duplicate = True),
+    Output("checkbox_use_lipids", "checked", allow_duplicate = True),
+    Output("checkbox_use_proteins", "checked", allow_duplicate = True),
+    Output("checkbox_use_metabolites", "checked", allow_duplicate = True),
+    Output("checkbox_use_transcripts", "checked", allow_duplicate = True),
+    Output("select_organism", "value", allow_duplicate = True),
+    Output("select_molecule_handling", "value", allow_duplicate = True),
+    Output("select_regulated_molecule_handling", "value", allow_duplicate = True),
+    Output("multiselect_filter_molecules", "value", allow_duplicate = True),
+    Output("multiselect_filter_molecules", "data", allow_duplicate = True),
+    Output("select_term_representation", "value", allow_duplicate = True),
+    Output("select_test_method", "value", allow_duplicate = True),
+    Output("select_domains", "value", allow_duplicate = True),
+    Output("check_textarea_upregulated_lipids", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_lipids", "checked", allow_duplicate = True),
+    Output("check_textarea_upregulated_proteins", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_proteins", "checked", allow_duplicate = True),
+    Output("check_textarea_upregulated_metabolites", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_metabolites", "checked", allow_duplicate = True),
+    Output("check_textarea_upregulated_transcripts", "checked", allow_duplicate = True),
+    Output("check_textarea_downregulated_transcripts", "checked", allow_duplicate = True),
+    Output("graph_enrichment_results", "rowData", allow_duplicate = True),
+    Output("graph_enrichment_results", "selectedRows", allow_duplicate = True),
+    Output("graph_enrichment_results", "filterModel", allow_duplicate = True),
+    Input("button_reset", "n_clicks"),
+    prevent_initial_call = True,
+)
+def reset_maptogo(n_clicks):
+    if n_clicks == None:
+        raise dash.exceptions.PreventUpdate
+
+    return (
+        False,
+        "",
+        False,
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        False,
+        False,
+        False,
+        False,
+        False,
+        INIT_ORGANISM,
+        MOLECULE_HANDLING_REMOVE,
+        MOLECULE_HANDLING_REMOVE,
+        [],
+        [],
+        "greater",
+        "fdr_bh",
+        ["Biological process"],
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        [],
+        [],
+        {},
     )
 
 

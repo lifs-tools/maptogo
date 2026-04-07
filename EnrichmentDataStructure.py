@@ -445,10 +445,12 @@ class OntologyTerm:
         self.term_id_str = _term_id
         self.name = _name
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
+
+
+
         self.domains = sum([(1 << domain_dict.setdefault(d, len(domain_dict))) for d in _domains.split("|")]) if _domains else 0
         self.categories = sum([(1 << category_dict.setdefault(c, len(category_dict))) for c in _categories.split("|")]) if _categories else 0
         if self.term_type == TermType.GENERIC_REACTION and self.categories == 0: self.categories = (1 << category_dict.setdefault("Unclassified reaction", len(category_dict)))
-
 
 
 class OntologyResult:
@@ -470,9 +472,9 @@ class OntologyResult:
                 and 0 < (w2 := _fisher[1][0] + _fisher[1][2])
             ):
                 #Stouffer's method (weighted)
-                _pvalue = 0.5 * erfc((w1*erfcinv(2*p1) + w2*erfcinv(2*p2)) / (w1**2 + w2**2)**0.5)
+                self.pvalue = 0.5 * erfc((w1*erfcinv(2*p1) + w2*erfcinv(2*p2)) / (w1**2 + w2**2)**0.5)
             else:
-                _pvalue = _pvalue[0] if _pvalue[0] > 0 else _pvalue[1]
+                self.pvalue = _pvalue[0] if _pvalue[0] > 0 else _pvalue[1]
 
             if (min_f_up := min(_fisher[0])) < 0:
                 logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher[0]}")
@@ -484,45 +486,26 @@ class OntologyResult:
                 np.log2(_fisher[0][0] * _fisher[0][3] / (_fisher[0][1] * _fisher[0][2])) if min_f_up > 0 else 0,
                 np.log2(_fisher[1][0] * _fisher[1][3] / (_fisher[1][1] * _fisher[1][2])) if min_f_down > 0 else 0,
             ]
+            self.pvalue_corrected = [self.pvalue] + self.pvalue_up_down
 
         else:
             self.pvalue_up_down = None
             if (min_f := min(_fisher)) < 0:
                 logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher}")
             self.lor = np.log2(_fisher[0] * _fisher[3] / (_fisher[1] * _fisher[2])) if min_f > 0 else 0
+            self.pvalue = _pvalue
+            self.pvalue_corrected = self.pvalue
 
         self.term = _term
-        self.pvalue = _pvalue
-        self.pvalue_corrected = _pvalue
         self.source_terms = _source_terms
         self.fisher_data = _fisher
 
 
 
-class ReferenceDictionary(dict):
-    def __init__(self, r):
-        super().__init__()
-        self.reference = r
-
-    def __getitem__(self, k):
-        try:
-            return super().__getitem__(k)
-        except Exception:
-            return self.reference[k]
-
-    def __setitem__(self, k, v):
-        if k not in self.reference: super().__setitem__(k, v)
-
-    def __contains__(self, k):
-        return super().__contains__(k) or (k in self.reference)
-
-
-
 class EnrichmentOntology:
     @maptogo_profile
-    def __init__(self, file_name, ontology_name = "undefined", reference_dictionary = None):
-        if not reference_dictionary: reference_dictionary = {}
-        self.ontology_terms = ReferenceDictionary(reference_dictionary)
+    def __init__(self, file_name, ontology_name = "undefined"):
+        self.ontology_terms = {}
         self.lipids = {}
         self.lipid_classes = {}
         self.carbon_chains = {}
@@ -542,10 +525,10 @@ class EnrichmentOntology:
         ontology_terms = self.ontology_terms
         try:
             with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
-                term_list = [(OntologyTerm(category_dict, domain_dict, *row), row[4]) for line in f if (row := line.strip("\n").split("\t"))]
+                term_list = [(OntologyTerm(category_dict, domain_dict, *(row := line.strip("\n").split("\t"))), row[4]) for line in f]
 
             for term, synonyms in term_list:
-                term.relations = [reference_dictionary.setdefault(t.term_id[0], t) for p in term.relations if (t := term_list[p][0])]
+                term.relations = [term_list[p][0] for p in term.relations]
                 synonyms = synonyms.split("|") if len(synonyms) > 0 else []
                 for t_id in term.term_id: ontology_terms[t_id] = term
                 term_id_str, _name = term.term_id_str, term.name
@@ -820,7 +803,7 @@ class EnrichmentOntology:
                 for pvalue, pvalue_up, pvalue_down, r in zip(pvalues, pvalues_up, pvalues_down, results):
                     r.pvalue_corrected = [pvalue, pvalue_up, pvalue_down]
 
-            results.sort(key = lambda row: (row.pvalue_corrected[0], row.term.name))
+            results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
             return results
 
         else:
