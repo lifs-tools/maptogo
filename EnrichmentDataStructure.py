@@ -42,7 +42,8 @@ import time
 from math import erfc
 from scipy.special import erfcinv
 import numpy as np
-
+# import warnings
+# warnings.filterwarnings("error", category=RuntimeWarning)
 
 def maptogo_profile(func):
     def wrapper(*args, **kwargs):
@@ -416,7 +417,6 @@ def check_user_input(
 
 
 
-
 class OntologyTerm:
     __slots__ = ("term_id", "term_id_str", "term_type", "name", "domains", "relations", "categories")
     # Type hints for attributes
@@ -449,9 +449,6 @@ class OntologyTerm:
         self.categories = sum([(1 << category_dict.setdefault(c, len(category_dict))) for c in _categories.split("|")]) if _categories else 0
         if self.term_type == TermType.GENERIC_REACTION and self.categories == 0: self.categories = (1 << category_dict.setdefault("Unclassified reaction", len(category_dict)))
 
-    def get_term_id(self, space = True):
-        return " | ".join(self.term_id) if space else self.term_id_str
-
 
 
 class OntologyResult:
@@ -477,21 +474,22 @@ class OntologyResult:
             else:
                 _pvalue = _pvalue[0] if _pvalue[0] > 0 else _pvalue[1]
 
-            self.lor = [
-                _fisher[0][0] * _fisher[0][3] / (_fisher[0][1] * _fisher[0][2]) if _fisher[0][1] > 0 and _fisher[0][2] > 0 else 0,
-                _fisher[1][0] * _fisher[1][3] / (_fisher[1][1] * _fisher[1][2]) if _fisher[1][1] > 0 and _fisher[1][2] > 0 else 0,
-            ]
-            if min(_fisher[0]) < 0:
-                logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher[0]}")
+            if (min_f_up := min(_fisher[0])) < 0:
+                logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher[0]}")
 
-            if min(_fisher[1]) < 0:
-                logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher[1]}")
+            if (min_f_down :=min(_fisher[1])) < 0:
+                logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher[1]}")
+
+            self.lor = [
+                np.log2(_fisher[0][0] * _fisher[0][3] / (_fisher[0][1] * _fisher[0][2])) if min_f_up > 0 else 0,
+                np.log2(_fisher[1][0] * _fisher[1][3] / (_fisher[1][1] * _fisher[1][2])) if min_f_down > 0 else 0,
+            ]
 
         else:
             self.pvalue_up_down = None
-            self.lor = _fisher[0] * _fisher[3] / (_fisher[1] * _fisher[2]) if _fisher[1] > 0 and _fisher[2] > 0 else 0
-            if min(_fisher) < 0:
-                logger.error(f"ERROR: {self.term.name} / {self.term.get_term_id()} / {_fisher}")
+            if (min_f := min(_fisher)) < 0:
+                logger.error(f"ERROR: {self.term.name} / {self.term.term_id_str} / {_fisher}")
+            self.lor = np.log2(_fisher[0] * _fisher[3] / (_fisher[1] * _fisher[2])) if min_f > 0 else 0
 
         self.term = _term
         self.pvalue = _pvalue
@@ -547,28 +545,28 @@ class EnrichmentOntology:
                 term_list = [(OntologyTerm(category_dict, domain_dict, *row), row[4]) for line in f if (row := line.strip("\n").split("\t"))]
 
             for term, synonyms in term_list:
-                term.relations = [reference_dictionary[t.term_id[0]] if t.term_id[0] in reference_dictionary else t for p in term.relations if (t := term_list[p][0])]
+                term.relations = [reference_dictionary.setdefault(t.term_id[0], t) for p in term.relations if (t := term_list[p][0])]
                 synonyms = synonyms.split("|") if len(synonyms) > 0 else []
                 for t_id in term.term_id: ontology_terms[t_id] = term
                 term_id_str, _name = term.term_id_str, term.name
 
                 match term.term_type:
                     case TermType.LIPID_CLASS: # lipid class
-                        if _name not in self.lipid_classes: self.lipid_classes[_name] = []
+                        self.lipid_classes.setdefault(_name, [])
                         self.lipid_classes[_name].append(term)
                         for synonym in synonyms:
-                            if synonym not in self.lipid_classes: self.lipid_classes[synonym] = []
+                            self.lipid_classes.setdefault(synonym, [])
                             self.lipid_classes[synonym].append(term)
 
                     case TermType.LIPID_SPECIES: # lipid species
-                        if _name not in self.lipids: self.lipids[_name] = term
+                        self.lipids.setdefault(_name, term)
 
                     case TermType.CARBON_CHAIN: # carbon chain
-                        if _name not in self.carbon_chains: self.carbon_chains[_name] = term
+                        self.carbon_chains.setdefault(_name, term)
                         for synonym in synonyms: self.carbon_chains[synonym] = term
 
                     case TermType.UNSPECIFIC_LIPID:
-                        if _name.lower() not in self.unspecific_lipids: self.unspecific_lipids[_name.lower()] = term
+                        self.unspecific_lipids.setdefault(_name.lower(), term)
                         for synonym in synonyms:
                             if synonym.lower() not in self.unspecific_lipids: self.unspecific_lipids[synonym.lower()] = term
 
@@ -578,13 +576,13 @@ class EnrichmentOntology:
                             self.reviewed_proteins.add(term_id_str)
 
                     case TermType.UNREVIEWED_PROTEIN: # unreviewed protein
-                        if term_id_str not in self.proteins: self.proteins[term_id_str] = term
+                        self.proteins.setdefault(term_id_str, term)
 
                     case TermType.ENSEMBLE_PROTEIN | TermType.ENSEMBLE_TRANSCRIPT | TermType.ENSEMBLE_GENE: # ensemble
-                        if term_id_str not in self.transcripts: self.transcripts[term_id_str] = term
+                        self.transcripts.setdefault(term_id_str, term)
 
                     case TermType.METABOLITE: # metabolite
-                        if term_id_str not in self.metabolites: self.metabolites[term_id_str] = term
+                        self.metabolites.setdefault(term_id_str, term)
 
             self.categories = sorted(category_dict.keys(), key = lambda k: category_dict[k])
             self.domains = sorted(domain_dict.keys(), key = lambda k: domain_dict[k])

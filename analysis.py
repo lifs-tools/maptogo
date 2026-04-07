@@ -70,6 +70,7 @@ from datetime import datetime
 from collections import defaultdict, deque
 import configparser
 import gc
+import numpy as np
 from ApiRequest import *
 
 
@@ -604,7 +605,7 @@ def set_udata():
 
 api = Api(
     app.server,
-    version = "1.0",
+    version = get_latest_tag(),
     title = f"{APPLICATION_TITLE} - REST API",
     description = "Application programming interface for the GO multiomics analysis platform",
     doc = app.get_relative_path("/api/docs"),
