@@ -622,10 +622,8 @@ def submit():
     def is_true(value):
         return (type(value) == bool and param_value) or (type(value) == str and value.lower() in {"true", "1", "yes"})
 
-    print(data)
     try:
         for param_key, param_value in data.items():
-            print(param_key, is_true(param_value))
             match param_key:
                 case "separate_updown_switch":
                     ui["separate_updown_switch"] = is_true(param_value)
@@ -720,13 +718,9 @@ def submit():
 
 # Create the Dash app
 app = Dash("app", update_title = None, server = server)
-app.secret_key = "ce7a4618ff121b96faea2c896421ba5e"
+app.secret_key = "".join(chr(c) for c in np.random.randint(33, 127, 100))
 server.secret_key = app.secret_key
 app.title = APPLICATION_SHORT_TITLE
-
-
-
-
 
 
 # --- Key derivation ---
@@ -812,7 +806,6 @@ for tax_name, tax_id in organisms.items():
     logger.info(f"Loading {tax_name}")
     tax_id_number = tax_id.replace("NCBITaxon:", "")
     enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
-
 gc.enable()
 gc.collect()
 

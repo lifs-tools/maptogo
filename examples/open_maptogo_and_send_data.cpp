@@ -80,12 +80,47 @@ int main() {
     // data["use_proteins"] = ...
     // data["use_metabolites"] = ...
     // data["use_transcripts"] = ...
+
+    /* Mus musculus -> 'NCBITaxon:10090'
+       Homo sapiens -> 'NCBITaxon:9606'
+       Bacillus cereus -> "NCBITaxon:405534"
+       Saccharomyces cerevisiae -> 'NCBITaxon:4932'
+       Escherichia coli -> 'NCBITaxon:562'
+       Drosophila melanogaster -> 'NCBITaxon:7227'
+       Rattus norvegicus -> 'NCBITaxon:10116'
+       Bos taurus -> 'NCBITaxon:9913'
+       Caenorhabditis elegans -> 'NCBITaxon:6239'
+       Pseudomonas aeruginosa -> 'NCBITaxon:287'
+       Arabidopsis thaliana -> 'NCBITaxon:3702' */
     // data["organism"] = ...
+
+    /* molecule_handling can be "molecule_handling_error", "molecule_handling_remove", "molecule_handling_ignore" */
     // data["molecule_handling"] = ...
+
+    /* regulated_molecule_handling can be "molecule_handling_error", "molecule_handling_remove",
+       "molecule_handling_ignore" */
     // data["regulated_molecule_handling"] = ...
+
+    /* possible term_regulation:
+      "greater" -> significant biomolocules are overrepresented in domain term (default)
+      "less" -> significant biomolocules are underrepresented in domain term, means no effect on the term
+      "two-sided" -> either way */
     // data["term_representation"] = ...
+
+    /* possible multiple_test_correction:
+       "no" -> No correction
+       "bonferroni" -> Bonferroni
+       "fdr_bh" -> Benjamini/Hochberg (default)
+       "fdr_by" -> Benjamini/Yekutieli
+       "holm-sidak" -> Step down method using Sidak adjustment
+       "holm" -> Step-down method using Bonferroni adjustments
+       "simes-hochberg" -> Step-up method (independent)
+       "fdr_tsbh" -> Two stage fdr correction */
     // data["test_method"] = ...
-    // data["domains"] = ...
+    // possible domains: "Biological process", "Cellular component", "Disease", "Metabolic and signalling pathway", "Molecular function", "Phenotype", "Physical or chemical properties", or any combination
+    // data["domains"] = {"Biological process"};
+
+    /* true or false */
     // data["use_upregulated_lipids"] = ...
     // data["use_downregulated_lipids"] = ...
     // data["use_upregulated_proteins"] = ...
