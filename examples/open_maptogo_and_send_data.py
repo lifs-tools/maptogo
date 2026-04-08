@@ -4,7 +4,7 @@ import json
 
 session = requests.Session()
 # The URL you want to send the POST request to
-url = "http://localhost:8040"
+url = "https://maptogo.lifs-tools.org"
 
 # Data to send in the POST request (as a dictionary)
 data = {

@@ -29,7 +29,7 @@ std::string post_data(const std::string& host, int port,
                const std::string& endpoint,
                const std::string& body) {
 
-    httplib::Client cli(host, port);
+    httplib::Client cli(host);
     cli.set_connection_timeout(5);
     cli.set_read_timeout(30);
     cli.set_write_timeout(30);
@@ -51,8 +51,8 @@ std::string post_data(const std::string& host, int port,
 // main
 // ---------------------------------------------------------------------------
 int main() {
-    const std::string HOST     = "localhost";
-    const int         PORT     = 8040;
+    const std::string HOST     = "https://maptogo.lifs-tools.org";
+    const int         PORT     = 443;
     const std::string ENDPOINT = "/submit";
 
     json data;
