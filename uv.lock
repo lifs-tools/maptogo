@@ -497,7 +497,7 @@ requires-dist = [
     { name = "openpyxl", specifier = "==3.1.5" },
     { name = "pathlib", specifier = "==1.0.1" },
     { name = "plotly", specifier = "==5.14.1" },
-    { name = "pygoslin", specifier = "==2.1.6" },
+    { name = "pygoslin", specifier = "==2.2.1" },
     { name = "scipy", specifier = "==1.16.2" },
     { name = "statsmodels", specifier = "==0.14.5" },
     { name = "xlsxwriter", specifier = ">=3.2.9" },
@@ -754,9 +754,12 @@ wheels = [
 
 [[package]]
 name = "pygoslin"
-version = "2.1.6"
+version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/da/41/30f7e08164a6987e3fa4e7886901b047d80eee90e8b78b207ec5049d12ee/pygoslin-2.1.6.tar.gz", hash = "sha256:7b444e4d044551dd8a4788457ad1e3ecd69ad10d8e41ef83d31e1c060538a70f", size = 91871, upload-time = "2025-07-17T07:54:24.602Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/c2/c293ac5fcdf3f5916799ec9450b0ecdcb1cfc49e1ee847e99694532ea876/pygoslin-2.2.1.tar.gz", hash = "sha256:ad24cf9d6f2bce370bbb4915c6da5c1576f58ed7319e51bc9c7c8283e19b1821", size = 93419, upload-time = "2026-03-25T13:12:44.643Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/0f/4651dfbbb4d9553a333675c536fd51361825c73b8ff84eae1b2968873bad/pygoslin-2.2.1-py3-none-any.whl", hash = "sha256:f6b460d46ab055ff4f400aa44df169c4d3b1cccfc86484160688c270ebcc0413", size = 149834, upload-time = "2026-03-25T13:12:43.116Z" },
+]
 
 [[package]]
 name = "python-dateutil"
