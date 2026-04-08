@@ -42,7 +42,7 @@ DEFAULT_VERSION_NUMBER = "1.0.0"
 
 import dash
 from dash import Dash, dcc, html, Input, Output, State, callback, exceptions, no_update, MATCH, ALL, callback_context, clientside_callback, dash_table, ctx
-from flask import request, session as uuid_session
+from flask import Flask, request, jsonify, redirect, session as uuid_session
 import dash_mantine_components as dmc
 import plotly.graph_objs as go
 import dash_ag_grid as dag
@@ -50,7 +50,7 @@ from dash_iconify import DashIconify
 import json
 import numpy as np
 import pandas as pd
-import io
+import io, os
 from scipy.cluster.hierarchy import linkage, leaves_list, dendrogram
 from scipy.spatial.distance import squareform
 from EnrichmentDataStructure import *
@@ -72,6 +72,11 @@ import configparser
 import gc
 import numpy as np
 from ApiRequest import *
+import base64
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.fernet import Fernet
 
 
 INIT_ORGANISM = "NCBITaxon:10090"
@@ -591,20 +596,203 @@ example_options = html.Div(
     ),
 )
 
+server = Flask(__name__)
+
+@server.route("/submit", methods=["POST"], strict_slashes=False)
+def submit():
+    data = request.get_json()
+    if not data:
+        return "No JSON received", 400
+
+    if "uid" not in uuid_session:
+        return jsonify({"status": "ok"})
+    session_id = uuid_session.get("uid")
+    if not session_id:
+        return jsonify({"status": "error", "reason": "no uid"}), 403
+
+    if session_id not in sessions:
+        sessions[session_id] = SessionEntry()
+        logger.info(f"New session ->: {session_id}")
+
+    session = sessions[session_id]
+    ui = session.ui
+    organism = None
+    domain_values = []
+
+    def is_true(value):
+        return (type(value) == bool and param_value) or (type(value) == str and value.lower() in {"true", "1", "yes"})
+
+    print(data)
+    try:
+        for param_key, param_value in data.items():
+            print(param_key, is_true(param_value))
+            match param_key:
+                case "separate_updown_switch":
+                    ui["separate_updown_switch"] = is_true(param_value)
+                case "all_lipids":
+                    ui["all_lipids_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "regulated_lipids":
+                    ui["regulated_lipids_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "upregulated_lipids":
+                    ui["upregulated_lipids_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "downregulated_lipids":
+                    ui["downregulated_lipids_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "all_proteins":
+                    ui["all_proteins_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "regulated_proteins":
+                    ui["regulated_proteins_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "upregulated_proteins":
+                    ui["upregulated_proteins_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "downregulated_proteins":
+                    ui["downregulated_proteins_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "all_metabolites":
+                    ui["all_metabolites_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "regulated_metabolites":
+                    ui["regulated_metabolites_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "upregulated_metabolites":
+                    ui["upregulated_metabolites_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "downregulated_metabolites":
+                    ui["downregulated_metabolites_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "all_transcripts":
+                    ui["all_transcripts_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "regulated_transcripts":
+                    ui["regulated_transcripts_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "upregulated_transcripts":
+                    ui["upregulated_transcripts_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "downregulated_transcripts":
+                    ui["downregulated_transcripts_list"] = "\n".join(param_value) if type(param_value) == list else param_value
+                case "use_bounded_fatty_acyls":
+                    session.use_bounded_fatty_acyls = is_true(param_value)
+                case "use_lipids":
+                    ui["with_lipids"] = is_true(param_value)
+                case "use_proteins":
+                    ui["with_proteins"] = is_true(param_value)
+                case "use_metabolites":
+                    ui["with_metabolites"] = is_true(param_value)
+                case "use_transcripts":
+                    ui["with_transcripts"] = is_true(param_value)
+                case "organism":
+                    if param_value in enrichment_ontologies:
+                        ui["select_organism"] = param_value
+                        organism = param_value
+                case "molecule_handling":
+                    if param_value in {MOLECULE_HANDLING_ERROR, MOLECULE_HANDLING_REMOVE, MOLECULE_HANDLING_IGNORE}:
+                        ui["select_molecule_handling"] = param_value
+                case "regulated_molecule_handling":
+                    if param_value in {MOLECULE_HANDLING_ERROR, MOLECULE_HANDLING_REMOVE}:
+                        ui["select_regulated_molecule_handling"] = param_value
+                case "term_representation":
+                    if param_value in {t["value"] for t in term_representation}:
+                        ui["select_term_representation"] = param_value
+                case "test_method":
+                    if param_value in {c["value"] for c in correction_list}:
+                        ui["select_test_method"] = param_value
+                case "domains":
+                    domain_values = param_value if type(param_value) == list else [param_value]
+                case "use_upregulated_lipids":
+                    ui["check_textarea_upregulated_lipids"] = is_true(param_value)
+                case "use_downregulated_lipids":
+                    ui["check_textarea_downregulated_lipids"] = is_true(param_value)
+                case "use_upregulated_proteins":
+                    ui["check_textarea_upregulated_proteins"] = is_true(param_value)
+                case "use_downregulated_proteins":
+                    ui["check_textarea_downregulated_proteins"] = is_true(param_value)
+                case "use_upregulated_metabolites":
+                     ui["check_textarea_upregulated_metabolites"] = is_true(param_value)
+                case "use_downregulated_metabolites":
+                    ui["check_textarea_downregulated_metabolites"] = is_true(param_value)
+                case "use_upregulated_transcripts":
+                    ui["check_textarea_upregulated_transcripts"] = is_true(param_value)
+                case "use_downregulated_transcripts":
+                    ui["check_textarea_downregulated_transcripts"] = is_true(param_value)
+
+    except:
+        pass
+
+    if organism and domain_values:
+        ontology = enrichment_ontologies[organism]
+        ontology_domains = sorted(ontology.domains)
+        ui["select_domains"] = [v for v in domain_values if v in ontology_domains]
+
+    return jsonify({"status": "ok", "uid": session_id})
+
+
+
 # Create the Dash app
-app = Dash("app", update_title = None)
-app.server.secret_key = "ce7a4618ff121b96faea2c896421ba5e"
+app = Dash("app", update_title = None, server = server)
+app.secret_key = "ce7a4618ff121b96faea2c896421ba5e"
+server.secret_key = app.secret_key
 app.title = APPLICATION_SHORT_TITLE
 
 
 
-@app.server.before_request
+
+
+
+# --- Key derivation ---
+def derive_key(password: str, salt: bytes) -> bytes:
+    kdf = PBKDF2HMAC(
+        algorithm = hashes.SHA256(),
+        length = 32,
+        salt = salt,
+        iterations = 100_000,
+        backend = default_backend()
+    )
+    return base64.urlsafe_b64encode(kdf.derive(password.encode()))
+
+# --- Encrypt ---
+def encrypt_uuid(uuid_str: str, password: str) -> str:
+    salt = os.urandom(16)  # random salt
+    key = derive_key(password, salt)
+    f = Fernet(key)
+    token = f.encrypt(uuid_str.encode())
+    return base64.urlsafe_b64encode(salt + token).decode()
+
+
+# --- Decrypt ---
+def decrypt_uuid(encrypted_data: str, password: str) -> str:
+    data = base64.urlsafe_b64decode(encrypted_data.encode())
+    salt = data[:16]
+    token = data[16:]
+    key = derive_key(password, salt)
+    f = Fernet(key)
+    return f.decrypt(token).decode()
+
+
+
+
+
+@server.before_request
 def set_udata():
-    if "uid" not in uuid_session:
-        uuid_session["uid"] = str(uuid.uuid4())
+    uid = request.args.get("uid")
+    if uid:
+        uuid_session["uid"] = uid
+    else:
+        uid = request.cookies.get("uid")
+        if uid:
+            try:
+                uuid_session["uid"] = decrypt_uuid(uid, app.secret_key)
+            except Exception as e:
+                uuid_session["uid"] = str(uuid.uuid4())  # brand new user
+        elif "uid" not in uuid_session:
+            uuid_session["uid"] = str(uuid.uuid4())  # brand new user
+
+
+@server.after_request
+def save_uid_cookie(response):
+    if "uid" in uuid_session:
+        response.set_cookie(
+            "uid",
+            encrypt_uuid(uuid_session["uid"], app.secret_key),
+            max_age=60*60*24*365, # 1 year
+            httponly=True,
+            samesite="Lax"
+        )
+    return response
+
 
 api = Api(
-    app.server,
+    server,
     version = get_latest_tag(),
     title = f"{APPLICATION_TITLE} - REST API",
     description = "Application programming interface for the GO multiomics analysis platform",
@@ -1156,7 +1344,7 @@ def layout():
             html.P([
                 dmc.Title("Basic purpose of the website", order = 5),
                 dmc.Text(
-                    "Providing a web service for multiomics enrichment analyses.",
+                    "Providing a web service for multiomics enrichment analyses. This website uses cookies that are essential for its operation. These cookies enable core functionalities for, i.e., session storing. By using this website, you consent to the use of these essential cookies. No personal information are stored in these cookies.",
                     style = {"textAlign": "justify"},
                 ),
             ]),

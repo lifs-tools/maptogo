@@ -17,7 +17,7 @@ dependencies = [
     "openpyxl==3.1.5",
     "pathlib==1.0.1",
     "plotly==5.14.1",
-    "pygoslin==2.1.6",
+    "pygoslin==2.2.1",
     "scipy==1.16.2",
     "statsmodels==0.14.5",
     "xlsxwriter>=3.2.9",
