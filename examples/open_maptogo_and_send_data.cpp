@@ -1,50 +1,28 @@
 // open_maptogo_and_send_data.cpp
-// Sends large data to a Flask/Dash endpoint via HTTP POST
+// Sends large data to MAPtoGO endpoint via HTTP POST
 //
-// Dependencies (header-only, no build system needed):
-//   cpp-httplib:      https://github.com/yhirose/cpp-httplib  (single header: httplib.h)
+// Dependencies:
+//   libcurl:
 //   nlohmann/json:    https://github.com/nlohmann/json        (single header: json.hpp)
 //
 // Compile:
-//   g++ -std=c++17 -O3 open_maptogo_and_send_data.cpp -o open_maptogo_and_send_data
+//   g++ -std=c++17 -O3 open_maptogo_and_send_data.cpp -o open_maptogo_and_send_data -lcurl
 //   # On Linux you may also need: -lpthread
 //
 // Usage:
 //   ./open_maptogo_and_send_data
 
-#include "httplib.h"   // cpp-httplib (drop next to this file)
-#include "json.hpp"    // nlohmann/json (drop next to this file)
-
+#include <curl/curl.h>
+#include "json.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
 
 using json = nlohmann::json;
 
-
-// ---------------------------------------------------------------------------
-// Send to Flask
-// ---------------------------------------------------------------------------
-std::string post_data(const std::string& host, int port,
-               const std::string& endpoint,
-               const std::string& body) {
-
-    httplib::Client cli(host);
-    cli.set_connection_timeout(5);
-    cli.set_read_timeout(30);
-    cli.set_write_timeout(30);
-
-    auto res = cli.Post(endpoint.c_str(), body, "application/json");
-
-    if (!res) {
-        return "";
-    }
-
-    if (res->status == 200) {
-        return res->body;
-    } else {
-        return "";
-    }
+size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* output) {
+    output->append((char*)contents, size * nmemb);
+    return size * nmemb;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,7 +30,7 @@ std::string post_data(const std::string& host, int port,
 // ---------------------------------------------------------------------------
 int main() {
     const std::string HOST     = "https://maptogo.lifs-tools.org";
-    const int         PORT     = 443;
+    const std::string PORT     = "443";
     const std::string ENDPOINT = "/submit";
 
     json data;
@@ -81,18 +59,18 @@ int main() {
     // data["use_metabolites"] = ...
     // data["use_transcripts"] = ...
 
-    /* Mus musculus -> 'NCBITaxon:10090'
-       Homo sapiens -> 'NCBITaxon:9606'
+    /* Mus musculus -> "NCBITaxon:10090"
+       Homo sapiens -> "NCBITaxon:9606"
        Bacillus cereus -> "NCBITaxon:405534"
-       Saccharomyces cerevisiae -> 'NCBITaxon:4932'
-       Escherichia coli -> 'NCBITaxon:562'
-       Drosophila melanogaster -> 'NCBITaxon:7227'
-       Rattus norvegicus -> 'NCBITaxon:10116'
-       Bos taurus -> 'NCBITaxon:9913'
-       Caenorhabditis elegans -> 'NCBITaxon:6239'
-       Pseudomonas aeruginosa -> 'NCBITaxon:287'
-       Arabidopsis thaliana -> 'NCBITaxon:3702' */
-    // data["organism"] = ...
+       Saccharomyces cerevisiae -> "NCBITaxon:4932"
+       Escherichia coli -> "NCBITaxon:562"
+       Drosophila melanogaster -> "NCBITaxon:7227"
+       Rattus norvegicus -> "NCBITaxon:10116"
+       Bos taurus -> "NCBITaxon:9913"
+       Caenorhabditis elegans -> "NCBITaxon:6239"
+       Pseudomonas aeruginosa -> "NCBITaxon:287"
+       Arabidopsis thaliana -> "NCBITaxon:3702" */
+    data["organism"] = "NCBITaxon:9606";
 
     /* molecule_handling can be "molecule_handling_error", "molecule_handling_remove", "molecule_handling_ignore" */
     // data["molecule_handling"] = ...
@@ -118,10 +96,10 @@ int main() {
        "fdr_tsbh" -> Two stage fdr correction */
     // data["test_method"] = ...
     // possible domains: "Biological process", "Cellular component", "Disease", "Metabolic and signalling pathway", "Molecular function", "Phenotype", "Physical or chemical properties", or any combination
-    // data["domains"] = {"Biological process"};
+    data["domains"] = {"Molecular function"};
 
-    /* true or false */
-    // data["use_upregulated_lipids"] = ...
+    /* using these fields: true or false */
+    // data["use_upregulated_lipids"] = true;
     // data["use_downregulated_lipids"] = ...
     // data["use_upregulated_proteins"] = ...
     // data["use_downregulated_proteins"] = ...
@@ -131,11 +109,39 @@ int main() {
     // data["use_downregulated_transcripts"] = ...
 
     std::string body = data.dump();
-    std::string response = post_data(HOST, PORT, ENDPOINT, body);
 
-    if (!response.empty()) {
+
+    CURL* curl;
+    CURLcode res;
+    std::string response;
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+
+    if(curl) {
+        struct curl_slist* headers = nullptr;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+
+        std::string url = HOST + ((PORT != "443" && PORT != "80") ? ":" + PORT : "") + ENDPOINT;
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+        // Optional but often needed
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "my-cpp-app/1.0");
+
+        res = curl_easy_perform(curl);
+        if(res != CURLE_OK)
+            std::cerr << "Error: " << curl_easy_strerror(res) << std::endl;
+        else
+            std::cout << response << std::endl;
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+
         auto j = json::parse(response);
-        std::string url = "http://localhost:8040";
+        url = HOST + ((PORT != "443" && PORT != "80") ? ":" + PORT : "");
         if (j.contains("uid")) {
             std::string uid = j["uid"];
             url += "/?uid=" + uid;
@@ -148,9 +154,5 @@ int main() {
         #elif _WIN32
             int _ = system(("start \"" + url + "\"").c_str());
         #endif
-
-        return 0;
     }
-
-    return 1;
 }

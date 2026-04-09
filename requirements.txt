@@ -1,4 +1,4 @@
-pygoslin==2.1.6
+pygoslin==2.2.1
 scipy==1.16.2
 logging==0.4.9.6
 pathlib==1.0.1
@@ -11,3 +11,4 @@ statsmodels==0.14.5
 flask_restx==1.3.2
 freetype_py==2.5.1
 openpyxl==3.1.5
+werkzeug<3.1

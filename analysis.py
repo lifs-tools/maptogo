@@ -612,7 +612,7 @@ def submit():
 
     if session_id not in sessions:
         sessions[session_id] = SessionEntry()
-        logger.info(f"New session ->: {session_id}")
+        logger.info(f"New session via submit: {session_id}")
 
     session = sessions[session_id]
     ui = session.ui
