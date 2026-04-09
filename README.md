@@ -24,7 +24,7 @@ To build and run the **MAPtoGO** Docker image locally, follow these steps:
 
 
 ## Use MAPtoGO with a REST API
-The **MAPtoGO** instance at [https://lifs-tools.org/maptogo](https://lifs-tools.org/maptogo) has a built-in API. You can find the documentation [here](https://lipidomics.at:8040/maptogo/api/docs|here). We also provide an example shell script to send an API request:
+The **MAPtoGO** instance at [https://maptogo.lifs-tools.org/](https://maptogo.lifs-tools.org/) has a built-in API. You can find the documentation [here](https://maptogo.lifs-tools.org/api/docs|here). We also provide an example shell script to send an API request:
 ```bash
 cd examples
 ./api_request.sh
