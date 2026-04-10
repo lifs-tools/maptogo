@@ -268,8 +268,8 @@ domain_colors = {
 }
 REGULATED_COLOR = "#F49E4C"
 ASSOCIATED_COLOR = "#87BCDE"
-INNER_CIRCLE = 300
-CIRCLE_WIDTH = 300
+INNER_CIRCLE = 350
+CIRCLE_WIDTH = 350
 BAR_SORTING_PVALUE = "pvalue"
 BAR_SORTING_SIMILARITY = "sim"
 
@@ -277,7 +277,7 @@ LIPIDS_COLOR = "#A3DC9A"
 PROTEINS_COLOR = "#DEE791"
 METABOLITES_COLOR = "#FFF9BD"
 TRANSCRIPTS_COLOR = "#FFD6BA"
-
+NoneType = type(None)
 
 regulated_molecule_handling = [
     {"value": MOLECULE_HANDLING_ERROR, "label": "Halt analysis and report"},
@@ -1073,57 +1073,68 @@ def layout():
             id = "barplot_terms_modal",
             zIndex = 10000,
             children = [
-                html.Div(
-                    dcc.Graph(
-                        id = "barplot_terms",
-                        config = {**plotly_config, **{"responsive": True}},
+                html.Div([
+                    html.Div(
+                        dcc.Graph(
+                            id = "barplot_terms",
+                            config = {**plotly_config, **{"responsive": True}},
+                            style = {
+                                "height": "100%",
+                                "width": "100%",
+                            },
+                        ),
                         style = {
-                            "height": "100%",
+                            "resize": "both",
+                            "overflow": "hidden",
                             "width": "100%",
-                        },
+                            "height": f"{CIRCLE_WIDTH * 2}px",
+                        }
                     ),
-                    id = "barplot_terms_wrapper",
-                    style = {
-                        "resize": "both",
-                        "overflow": "hidden",
-                        "width": "100%",
-                        "height": "70vh",
-                    }
-                ),
-                html.Div(
-                    dmc.SimpleGrid(
+                    html.Div(
                         [
                             dmc.NumberInput(
                                 id = "barplot_numberinput_font_size",
-                                label = "Font size",
+                                label = "Font size:",
                                 value = 14,
                                 min = 1,
                                 max = 20,
                             ),
                             dmc.NumberInput(
                                 id = "barplot_numberinput_connect_ths",
-                                label = "Connectivity Threshold",
+                                label = "Connectivity Threshold:",
                                 value = 80,
                                 min = 0,
                                 max = 100,
+                                style = {"marginTop": "5px"},
                             ),
                             dmc.Select(
                                 id = "barplot_select_name",
                                 label = "Select bar label:",
                                 data = [{"value": "id", "label": "Term ID"}, {"value": "name", "label": "Term name"}],
                                 value = "id",
+                                style = {"marginTop": "5px"},
                             ),
                             dmc.Select(
                                 id = "barplot_select_sorting",
                                 label = "Select sorting:",
                                 data = [{"value": BAR_SORTING_PVALUE, "label": "p-value"}, {"value": BAR_SORTING_SIMILARITY, "label": "Molecule similarity in term"}],
                                 value = BAR_SORTING_PVALUE,
+                                style = {"marginTop": "5px"},
+                            ),
+                            dmc.Text(
+                                "Figure legend:",
+                                fw = 500,
+                                style = {"width": "350px", "marginTop": "25px", "fontSize": 14},
+                            ),
+                            dmc.Image(
+                                src = dash.get_app().get_asset_url(f"barplot-legend.png"),
+                                style = {"width": "350px", "marginTop": "10px"},
                             ),
                         ],
-                        cols = 2,
+                        id = "barplot_controls",
+                        style = {"marginTop": "10px"},
                     ),
-                    id = "barplot_controls",
-                    style = {"marginTop": "10px"},
+                    ], style={"display": "flex"}, id = "barplot_terms_wrapper",
                 ),
                 html.Div(
                     dmc.SimpleGrid(
@@ -1195,7 +1206,7 @@ def layout():
                                 "overflow": "hidden",
                                 "width": "100%",
                                 "height": "70vh",
-                                "flex": "1",
+                                "flex": "5",
                             }
                         ),
                         html.Div(
@@ -4117,7 +4128,6 @@ def open_sunburstplot(
 @callback(
     Output("sankey_modal", "opened", allow_duplicate = True),
     Output("sankey_graph", "figure", allow_duplicate = True),
-    Output("sankey_graph_wrapper", "style", allow_duplicate = True),
     Output("info_modal", "opened", allow_duplicate = True),
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("sankey_entries", "rowData", allow_duplicate = True),
@@ -4128,9 +4138,7 @@ def open_sunburstplot(
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
-    State("barplot_controls", "style"),
     State("sunburst_controls", "style"),
-    State("barplot_terms_wrapper", "style"),
     prevent_initial_call = True,
 )
 def open_sankeyplot(
@@ -4139,9 +4147,7 @@ def open_sankeyplot(
     row_data,
     selected_rows,
     session_id,
-    barplot_controls_style,
     sunburst_controls_style,
-    barplot_terms_wrapper_style,
 ):
     if session_id == None or n_clicks == None or radiogroup_sankey == None:
         raise exceptions.PreventUpdate
@@ -4163,7 +4169,6 @@ def open_sankeyplot(
     domains = session.domains
     terms = ontology.ontology_terms
 
-    barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "none"
 
     if ctx.triggered_id != "radiogroup_sankey":
@@ -4372,12 +4377,10 @@ def open_sankeyplot(
         autosize = True,
         height = None,
     )
-    barplot_terms_wrapper_style["height"] = "80vh"
 
     return (
         True,
         fig,
-        barplot_terms_wrapper_style,
         no_update,
         no_update,
         [],
@@ -4437,6 +4440,7 @@ def sankey_node_clicked(clickData, session_id):
     Output("info_modal_message", "children", allow_duplicate = True),
     Output("barplot_controls", "style", allow_duplicate = True),
     Output("sunburst_controls", "style", allow_duplicate = True),
+    Output("barplot_numberinput_connect_ths", "disabled", allow_duplicate = True),
     Input("chart_results", "n_clicks"),
     Input("barplot_numberinput_connect_ths", "value"),
     Input("barplot_numberinput_font_size", "value"),
@@ -4476,6 +4480,7 @@ def open_barplot(
             "Your session has expired. Please refresh the website.",
             no_update,
             no_update,
+            no_update,
         )
 
     session = sessions[session_id]
@@ -4504,20 +4509,29 @@ def open_barplot(
     source_terms = [
         set(session_data[term_id].source_terms) for term_id in selected_term_ids
     ]
-    jaccard_values = np.ones((n , n))
+
+    # distance matrix
+    jaccard_values = np.zeros((n , n))
     for i in range(0, n - 1):
+        i_terms = source_terms[i]
         for j in range(i + 1, n):
-            i_terms = source_terms[i]
             j_terms = source_terms[j]
-            jaccard_values[j, i] = jaccard_values[i, j] = len(i_terms & j_terms) / len(i_terms | j_terms)
+            jaccard_values[j, i] = jaccard_values[i, j] = 1 - len(i_terms & j_terms) / len(i_terms | j_terms)
 
+
+    Z, sort_order = None, None
     if bar_sorting == BAR_SORTING_SIMILARITY and n > 1:
-        Z = linkage(jaccard_values**8, method = 'average', metric = "cosine")
-        sort_order = leaves_list(Z)
-        selected_term_ids = selected_term_ids[sort_order]
-        jaccard_values = jaccard_values[sort_order]
-        jaccard_values = jaccard_values[:, sort_order]
+        if jaccard_values.var() < 1e-20:
+            jaccard_values += (r := np.random.uniform(0, 1e-5, (n, n))) * r.T * (1 - np.diag([1] * n))
 
+        try:
+            Z = linkage(squareform(jaccard_values), method = 'average')
+            sort_order = leaves_list(Z)
+            selected_term_ids = selected_term_ids[sort_order]
+            jaccard_values = jaccard_values[sort_order]
+            jaccard_values = jaccard_values[:, sort_order]
+        except Exception as e:
+            pass
 
     if session.separate_updown_switch:
         pvalues = -np.log10([session_data[term_id].pvalue_corrected[0] for term_id in selected_term_ids])
@@ -4796,21 +4810,20 @@ def open_barplot(
     outer_inner_radius = 25 + (not multiomics) * 10
     add_arc(fig, 0, 360, 0, outer_inner_radius, "#ffffff")
 
-    if bar_sorting == BAR_SORTING_SIMILARITY and n > 1:
+    if bar_sorting == BAR_SORTING_SIMILARITY and n > 1 and type(Z) != NoneType:
         add_arc(fig, 0, 360, 0, outer_inner_radius * 0.05, "#000000")
 
         dendrogram_points = np.zeros(((n - 1) * 4, 2))
         ddata = dendrogram(Z, no_plot = True)
         icoord = ddata['icoord']  # x-coordinates for each link
         dcoord = ddata['dcoord']  # y-coordinates (heights) for each link
+
         i = 0
         for xs, ys in zip(icoord, dcoord):
             for x, y in zip(xs, ys):
                 dendrogram_points[i, 0] = x
-                dendrogram_points[i, 1] = y
+                dendrogram_points[i, 1] = outer_inner_radius * (1 - y)
                 i += 1
-
-        dendrogram_points[:, 1] = outer_inner_radius * (1 - dendrogram_points[:,1] / max(dendrogram_points[:,1]))
 
         min_angle, max_angle = angles[0], angles[-1]
         min_left, max_left = min(dendrogram_points[:,0]), max(dendrogram_points[:,0])
@@ -4862,11 +4875,13 @@ def open_barplot(
             draw_arc(fig, dendrogram_points[i + 1, 0], dendrogram_points[i + 2, 0], dendrogram_points[i + 1, 1])
             draw_line(fig, dendrogram_points[i + 2, 0], dendrogram_points[i + 2, 1], dendrogram_points[i + 3, 1])
 
+        draw_line(fig, (dendrogram_points[-2, 0] + dendrogram_points[-3, 0]) / 2., dendrogram_points[-2, 1], 0)
+
     elif bar_sorting == BAR_SORTING_PVALUE:
         jaccard_max_saturation = 90
         for i in range(0, n - 1):
             for j in range(i + 1, n):
-                jaccard = jaccard_values[i, j]
+                jaccard = 1 - jaccard_values[i, j]
                 if jaccard < jaccard_ths: continue
                 if jaccard_ths < 1:
                     jaccard = int(jaccard_max_saturation - jaccard_max_saturation * (jaccard - jaccard_ths) / (1 - jaccard_ths))
@@ -4925,17 +4940,18 @@ def open_barplot(
         height = CIRCLE_WIDTH * 2,
         margin = dict(t = 5, l = 5, r = 5, b = 5),
     )
-    barplot_terms_wrapper_style["height"] = "50%"
+    barplot_terms_wrapper_style["height"] = "70%"
 
     return (
         True,
         fig,
-        CIRCLE_WIDTH * 2 + 50,
+        CIRCLE_WIDTH * 2 + 450,
         barplot_terms_wrapper_style,
         no_update,
         no_update,
         barplot_controls_style,
         sunburst_controls_style,
+        bar_sorting == BAR_SORTING_SIMILARITY,
     )
 
 
