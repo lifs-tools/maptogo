@@ -39,3 +39,19 @@ cd examples
 python3 use_MAPtoGO_library.py
 ```
 Please dissect the *use_MAPtoGO_library.py* and adapt it for your necessities.
+
+
+## Use data to MAPtoGO from third-party tools
+You can connect your biomolecule analysis tool with **MAPtoGO** by simply uploading the statistical results computed in your analysis tool. We provided two standalone code snippets that you can incorporate in your tool, one in Python:
+```bash
+cd examples
+python3 open_maptogo_and_send_data.py
+```
+
+and one in C++:
+```bash
+cd examples
+sudo apt install libcurl4-openssl-dev
+g++ -std=c++17 -O3 -o open_maptogo_and_send_data open_maptogo_and_send_data.cpp -lcurl
+./open_maptogo_and_send_data
+```
