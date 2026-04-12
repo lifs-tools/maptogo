@@ -205,7 +205,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        'Homo sapiens': 'NCBITaxon:9606',
+        #'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -2907,14 +2907,7 @@ def run_enrichment(
         return "", [], [], {}, True, "No organism selected.", histogram_disabled, [], [], num_enrichment_terms, no_update, no_update
     
     ontology = enrichment_ontologies[organism]
-    target_set = set()
-    lipidome, regulated_lipids = {}, set()
-    proteome, regulated_proteins = set(), set()
-    metabolome, regulated_metabolites = set(), set()
-    transcriptome, regulated_transcripts = set(), set()
-    background_list = []
     data_not_loaded = not session.data_loaded
-
     if data_not_loaded:
         omics_included = [with_lipids, with_proteins, with_metabolites, with_transcripts]
 
@@ -2939,7 +2932,7 @@ def run_enrichment(
 
         try:
             (
-                target_set,
+                target_molecules,
                 lipidome,
                 regulated_lipids,
                 upregulated_lipids,
@@ -3000,18 +2993,50 @@ def run_enrichment(
         session.downregulated_transcripts = downregulated_transcripts if with_transcripts else None
         background_list.sort(key = lambda row: row["value"])
         session.background_list = background_list
+        session.domains = set(domains)
+        session.separate_updown_switch = separate_updown_switch
 
     else:
-        target_set = set()
-        if with_lipids: target_set |= session.regulated_lipids
-        if with_proteins: target_set |= session.regulated_proteins
-        if with_metabolites: target_set |= session.regulated_metabolites
-        if with_transcripts: target_set |= session.regulated_transcripts
+        lipidome = session.background_lipids if session.background_lipids else {}
+        proteome = session.background_proteins if session.background_proteins else set()
+        metabolome = session.background_metabolites if session.background_metabolites else set()
+        transcriptome = session.background_transcripts if session.background_transcripts else set()
+        separate_updown_switch = session.separate_updown_switch
+        if separate_updown_switch:
+            target_molecules = [
+                {
+                    LIPIDOMICS: session.upregulated_lipids if with_lipids else set(),
+                    PROTEOMICS: session.upregulated_proteins if with_proteins else set(),
+                    METABOLOMICS: session.upregulated_metabolites if with_metabolites else set(),
+                    TRANSRIPTOMICS: session.upregulated_transcripts if with_transcripts else set(),
+                },
+                {
+                    LIPIDOMICS: session.downregulated_lipids if with_lipids else set(),
+                    PROTEOMICS: session.downregulated_proteins if with_proteins else set(),
+                    METABOLOMICS: session.downregulated_metabolites if with_metabolites else set(),
+                    TRANSRIPTOMICS: session.downregulated_transcripts if with_transcripts else set(),
+                },
+            ]
+
+        else:
+            target_molecules = {
+                LIPIDOMICS: session.regulated_lipids if with_lipids else set(),
+                PROTEOMICS: session.regulated_proteins if with_proteins else set(),
+                METABOLOMICS: session.regulated_metabolites if with_metabolites else set(),
+                TRANSRIPTOMICS: session.regulated_transcripts if with_transcripts else set(),
+            }
         background_list = no_update
+
 
     session.domains = set(domains)
     session.separate_updown_switch = separate_updown_switch
-    results = ontology.enrichment_analysis(separate_updown_switch, session.search_terms, session.num_background, target_set, domains, term_regulation, correction_method)
+    background_molecules = {
+        LIPIDOMICS: lipidome,
+        PROTEOMICS: proteome,
+        METABOLOMICS: metabolome,
+        TRANSRIPTOMICS: transcriptome,
+    }
+    results = ontology.enrichment_analysis(separate_updown_switch, session.search_terms, background_molecules, target_molecules, domains, term_regulation, correction_method)
     session.result = results
 
     data = []
@@ -3264,7 +3289,12 @@ def update_background(
         )
     session = sessions[session_id]
     session.time = time.time()
-    session.data_loaded = False
+    if ctx.triggered_id not in {
+        "multiselect_filter_molecules",
+        "select_test_method",
+        "select_term_representation",
+        "select_domains",
+    }: session.data_loaded = False
     session.use_bounded_fatty_acyls = use_bounded_fatty_acyls
     session.ui["all_lipids_list"] = all_lipids_list
     session.ui["regulated_lipids_list"] = regulated_lipids_list
@@ -5550,7 +5580,7 @@ class EnrichmentResource(Resource):
 
             try:
                 (
-                    target_set,
+                    target_molecules,
                     lipidome,
                     regulated_lipids,
                     upregulated_lipids,
@@ -5599,17 +5629,31 @@ class EnrichmentResource(Resource):
             analytics("api_enrichment_analysis")
             session.background_lipids = lipidome if with_lipids else None
             session.regulated_lipids = regulated_lipids if with_lipids else None
+            session.upregulated_lipids = upregulated_lipids if with_lipids else None
+            session.downregulated_lipids = downregulated_lipids if with_lipids else None
             session.background_proteins = proteome if with_proteins else None
             session.regulated_proteins = regulated_proteins if with_proteins else None
+            session.upregulated_proteins = upregulated_proteins if with_proteins else None
+            session.downregulated_proteins = downregulated_proteins if with_proteins else None
             session.background_metabolites = metabolome if with_metabolites else None
             session.regulated_metabolites = regulated_metabolites if with_metabolites else None
+            session.upregulated_metabolites = upregulated_metabolites if with_metabolites else None
+            session.downregulated_metabolites = downregulated_metabolites if with_metabolites else None
             session.background_transcripts = transcriptome if with_transcripts else None
             session.regulated_transcripts = regulated_transcripts if with_transcripts else None
+            session.upregulated_transcripts = upregulated_transcripts if with_transcripts else None
+            session.downregulated_transcripts = downregulated_transcripts if with_transcripts else None
             background_list.sort(key = lambda row: row["value"])
             session.background_list = background_list
 
             session.domains = set(domains_api)
-            results = ontology.enrichment_analysis(session.separate_updown_switch, session.search_terms, session.num_background, target_set, domains_api, term_representation_api, pvalue_correction_api)
+            background_molecules = {
+                LIPIDOMICS: lipidome,
+                PROTEOMICS: proteome,
+                METABOLOMICS: metabolome,
+                TRANSRIPTOMICS: transcriptome,
+            }
+            results = ontology.enrichment_analysis(session.separate_updown_switch, session.search_terms, background_molecules, target_molecules, domains_api, term_representation_api, pvalue_correction_api)
             session.result = results
 
             result_data = []

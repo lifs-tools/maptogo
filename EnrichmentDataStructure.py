@@ -59,6 +59,10 @@ lipid_parser = LipidParser()
 MOLECULE_HANDLING_ERROR = "molecule_handling_error"
 MOLECULE_HANDLING_REMOVE = "molecule_handling_remove"
 MOLECULE_HANDLING_IGNORE = "molecule_handling_ignore"
+LIPIDOMICS = "__lipidomics__"
+PROTEOMICS = "__proteomics__"
+METABOLOMICS = "__metabolomics__"
+TRANSRIPTOMICS = "__transcriptomics__"
 
 
 class TermType(Enum):
@@ -113,7 +117,26 @@ def check_user_input(
     ignore_unknown,
 ):
     with_lipids, with_proteins, with_metabolites, with_transcripts = omics_included
-    target_set = [set(), set()] if separate_updown_switch else set()
+    target_molecules = [
+        {
+            LIPIDOMICS: set(),
+            PROTEOMICS: set(),
+            METABOLOMICS: set(),
+            TRANSRIPTOMICS: set(),
+        },
+        {
+            LIPIDOMICS: set(),
+            PROTEOMICS: set(),
+            METABOLOMICS: set(),
+            TRANSRIPTOMICS: set(),
+        },
+
+    ] if separate_updown_switch else {
+        LIPIDOMICS: set(),
+        PROTEOMICS: set(),
+        METABOLOMICS: set(),
+        TRANSRIPTOMICS: set(),
+    }
     lipidome, regulated_lipids, upregulated_lipids, downregulated_lipids = {}, set(), set(), set()
     proteome, regulated_proteins, upregulated_proteins, downregulated_proteins = set(), set(), set(), set()
     metabolome, regulated_metabolites, upregulated_metabolites, downregulated_metabolites = set(), set(), set(), set()
@@ -198,12 +221,12 @@ def check_user_input(
             downregulated_lipids = check_lipids(downregulated_lipids_list, "down-", lipidome)
             if len(mixed := upregulated_lipids & downregulated_lipids) > 0:
                 raise Exception(f"The following lipids are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
-            target_set[0] |= upregulated_lipids
-            target_set[1] |= downregulated_lipids
+            target_molecules[0][LIPIDOMICS] |= upregulated_lipids
+            target_molecules[1][LIPIDOMICS] |= downregulated_lipids
 
         else:
             regulated_lipids = check_lipids(regulated_lipids_list, "", lipidome)
-            target_set |= regulated_lipids
+            target_molecules[LIPIDOMICS] |= regulated_lipids
 
     if with_proteins:
         if type(all_proteins_list) == str: all_proteins_list = all_proteins_list.split("\n")
@@ -261,12 +284,12 @@ def check_user_input(
             downregulated_proteins = check_proteins(downregulated_proteins_list, "down-", proteome)
             if len(mixed := upregulated_proteins & downregulated_proteins) > 0:
                 raise Exception(f"The following proteins are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
-            target_set[0] |= upregulated_proteins
-            target_set[1] |= downregulated_proteins
+            target_molecules[0][PROTEOMICS] |= upregulated_proteins
+            target_molecules[1][PROTEOMICS] |= downregulated_proteins
 
         else:
             regulated_proteins = check_proteins(regulated_proteins_list, "", proteome)
-            target_set |= regulated_proteins
+            target_molecules[PROTEOMICS] |= regulated_proteins
 
         proteome = set([f"UNIPROT:{protein}" for protein in proteome])
 
@@ -325,12 +348,12 @@ def check_user_input(
             downregulated_metabolites = check_metabolome(downregulated_metabolites_list, "down-", metabolome)
             if len(mixed := upregulated_metabolites & downregulated_metabolites) > 0:
                 raise Exception(f"The following metabolits are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
-            target_set[0] |= upregulated_metabolites
-            target_set[1] |= downregulated_metabolites
+            target_molecules[0][METABOLOMICS] |= upregulated_metabolites
+            target_molecules[1][METABOLOMICS] |= downregulated_metabolites
 
         else:
             regulated_metabolites = check_metabolome(regulated_metabolites_list, "", metabolome)
-            target_set |= regulated_metabolites
+            target_molecules[METABOLOMICS] |= regulated_metabolites
 
         metabolome = set([f"CHEBI:{metabolite}" if (type(metabolite) == int or not metabolite.startswith("CHEBI:")) and metabolite.lower() not in ontology.metabolite_names else metabolite for metabolite in metabolome])
 
@@ -387,15 +410,15 @@ def check_user_input(
             downregulated_transcripts = check_transcripts(downregulated_transcripts_list, "down-", transcriptome)
             if len(mixed := upregulated_transcripts & downregulated_transcripts) > 0:
                 raise Exception(f"The following transcripts are listed in both up-regulated and down-regulated lists: {', '.join(mixed)}")
-            target_set[0] |= upregulated_transcripts
-            target_set[1] |= downregulated_transcripts
+            target_molecules[0][TRANSRIPTOMICS] |= upregulated_transcripts
+            target_molecules[1][TRANSRIPTOMICS] |= downregulated_transcripts
 
         else:
             regulated_transcripts = check_transcripts(regulated_transcripts_list, "", transcriptome)
-            target_set |= regulated_transcripts
+            target_molecules[TRANSRIPTOMICS] |= regulated_transcripts
 
     return (
-        target_set,
+        target_molecules,
         lipidome,
         regulated_lipids,
         upregulated_lipids,
@@ -726,20 +749,31 @@ class EnrichmentOntology:
         return [self.domains[d] for d in range(domain_bit_field.bit_length()) if ((domain_bit_field >> d) & 1)]
 
 
-    def enrichment_analysis(self, separate_updown_switch, search_terms, num_background, target_set, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
+    def enrichment_analysis(self, separate_updown_switch, search_terms, background_molecules, target_molecules, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
+
+        num_background = sum(len(moleculome) for moleculome in background_molecules.values())
         if separate_updown_switch:
-            if (len(target_set[0]) == 0 and len(target_set[1]) == 0) or num_background < 2 or len(enrichment_domains) == 0: return []
+            if (
+                (
+                    sum(len(target) for target in target_molecules[0].values()) == 0
+                    and sum(len(target) for target in target_molecules[1].values()) == 0
+                )
+                or num_background < 2
+                or len(enrichment_domains) == 0
+            ): return []
             enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
             result_list = [None] * len(search_terms)
-            len_target_set_up = len(target_set[0])
-            len_target_set_down = len(target_set[1])
+            targets_up = set.union(*target_molecules[0].values())
+            targets_down = set.union(*target_molecules[1].values())
+            len_target_set_up = len(targets_up)
+            len_target_set_down = len(targets_down)
 
             try: # C++ implementation, just way faster
                 side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
                     if not (term.domains & enrichment_domains): continue
-                    target_number_up = len(term_molecules & target_set[0])
-                    target_number_down = len(term_molecules & target_set[1])
+                    target_number_up = len(term_molecules & targets_up)
+                    target_number_down = len(term_molecules & targets_down)
 
                     p_hyp_up = exact_fisher(target_number_up, len(term_molecules), len_target_set_up, num_background, side)
                     p_hyp_down = exact_fisher(target_number_down, len(term_molecules), len_target_set_down, num_background, side)
@@ -769,8 +803,8 @@ class EnrichmentOntology:
                 logger.error("C++ implementation of fisher exact test failed.")
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
                     if not (term.domains & enrichment_domains): continue
-                    target_number_up = len(term_molecules & target_set[0])
-                    target_number_down = len(term_molecules & target_set[1])
+                    target_number_up = len(term_molecules & targets_up)
+                    target_number_down = len(term_molecules & targets_down)
                     a_up, b_up, c_up, d_up = (
                         target_number_up,
                         len(term_molecules) - target_number_up,
@@ -811,16 +845,21 @@ class EnrichmentOntology:
             return results
 
         else:
-            if len(target_set) == 0 or num_background < 2 or len(enrichment_domains) == 0: return []
+            if (
+                sum(len(target) for target in target_molecules.values()) == 0
+                or num_background < 2
+                or len(enrichment_domains) == 0
+            ): return []
             enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
             result_list = [None] * len(search_terms)
-            len_target_set = len(target_set)
+            targets = set.union(*target_molecules.values())
+            len_target_set = len(targets)
 
             try: # C++ implementation, just way faster
                 side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
                     if not (term.domains & enrichment_domains): continue
-                    target_number = len(term_molecules & target_set)
+                    target_number = len(term_molecules & targets)
 
                     p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
                     if p_hyp == 0: continue
@@ -841,7 +880,7 @@ class EnrichmentOntology:
                 logger.error("C++ implementation of fisher exact test failed.")
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
                     if not (term.domains & enrichment_domains): continue
-                    target_number = len(term_molecules & target_set)
+                    target_number = len(term_molecules & targets)
                     a, b, c, d = (
                         target_number,
                         len(term_molecules) - target_number,
