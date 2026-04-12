@@ -445,9 +445,6 @@ class OntologyTerm:
         self.term_id_str = _term_id
         self.name = _name
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
-
-
-
         self.domains = sum([(1 << domain_dict.setdefault(d, len(domain_dict))) for d in _domains.split("|")]) if _domains else 0
         self.categories = sum([(1 << category_dict.setdefault(c, len(category_dict))) for c in _categories.split("|")]) if _categories else 0
         if self.term_type == TermType.GENERIC_REACTION and self.categories == 0: self.categories = (1 << category_dict.setdefault("Unclassified reaction", len(category_dict)))
@@ -586,13 +583,14 @@ class EnrichmentOntology:
             for line in open(f"{current_path}/Data/additional_links.csv").read().split("\n"):
                 if len(line) < 2: continue
                 tokens = line.split("\t")
-                if len(tokens) < 2 or tokens[0] not in self.ontology_terms or tokens[1] not in self.ontology_terms: continue
-                self.ontology_terms[tokens[0]].relations.append(ontology_terms[tokens[1]])
+                if len(tokens) < 2 or tokens[0] not in ontology_terms or tokens[1] not in ontology_terms: continue
+                ontology_terms[tokens[0]].relations.append(ontology_terms[tokens[1]])
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error(e)
 
 
+    @maptogo_profile
     def set_background(
         self,
         lipid_dict = {},
@@ -704,13 +702,19 @@ class EnrichmentOntology:
         # run all registered molecules
         for molecule_input_name, start_term, parent_nodes in all_paths:
             queue = [start_term]
+            queue_append = queue.append
+            queue_pop = queue.pop
+            search_terms_local = search_terms
+            parent_nodes_local = parent_nodes
+
             while queue:
-                term = queue.pop()
-                if term.domains: search_terms[term].append(molecule_input_name)
-                for relation_term in term.relations:
-                    if relation_term not in parent_nodes:
-                        queue.append(relation_term)
-                        parent_nodes[relation_term] = term
+                term = queue_pop()
+                term_relations = term.relations
+                if term.domains: search_terms_local[term].append(molecule_input_name)
+                for relation_term in term_relations:
+                    if relation_term in parent_nodes_local: continue
+                    parent_nodes_local[relation_term] = term
+                    queue_append(relation_term)
 
         for term, term_molecules in search_terms.items():
             search_terms[term] = set(term_molecules)
