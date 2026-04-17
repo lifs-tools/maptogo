@@ -79,7 +79,8 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet
 
 
-INIT_ORGANISM = "NCBITaxon:10090"
+#INIT_ORGANISM = "NCBITaxon:10090"
+INIT_ORGANISM = "NCBITaxon:9606"
 APPLICATION_SHORT_TITLE = "MAPtoGO"
 APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
 TEXTFIELD_HEIGHT = "350px"
@@ -205,7 +206,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        #'Homo sapiens': 'NCBITaxon:9606',
+        'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -2893,7 +2894,6 @@ def run_enrichment(
     if session_id not in sessions:
         return "", [], [], {}, True, "Your session has expired. Please refresh the website.",  histogram_disabled, [], [], no_update, num_enrichment_terms
 
-    logger.info(f"Enrichment session: {session_id}")
     session = sessions[session_id]
     session.time = time.time()
 
@@ -4302,7 +4302,7 @@ def open_sankeyplot(
 
             path_layers = [[TermType.INPUT_TERM, [input_molecule], ItemCounter(molecule)]]
 
-            for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
+            for i, term in enumerate(get_path(session.all_parent_nodes[molecule], target_term)):
                 term_id = term if type(term) == str else term.term_id[0]
 
                 if not term_id in terms:
@@ -5024,8 +5024,9 @@ def open_histogram(
             no_update,
         )
 
-    sessions[session_id].time = time.time()
-    results = sessions[session_id].result
+    session = sessions[session_id]
+    session.time = time.time()
+    results = session.result
     barplot_controls_style["display"] = "none"
     sunburst_controls_style["display"] = "none"
 
@@ -5234,12 +5235,13 @@ def show_molecule_term_path(
     if session_id not in sessions:
         return True, "Your session has expired. Please refresh the website.", ""
 
+    session = sessions[session_id]
     ontology = enrichment_ontologies[organism]
     if target_term_id not in ontology.ontology_terms:
         return True, "Your session has expired. Please refresh the website.", ""
 
     target_term = ontology.ontology_terms[target_term_id]
-    if target_term not in sessions[session_id].search_terms:
+    if target_term not in session.search_terms:
         return True, "Your session has expired. Please refresh the website.", ""
 
     trigger = callback_context.triggered[0]["prop_id"].split(".")[0]
@@ -5268,7 +5270,7 @@ def show_molecule_term_path(
         molecule = row_data_transcripts[row_index]["molecule_id"]
 
     term_path = []
-    for i, term in enumerate(get_path(sessions[session_id].all_parent_nodes[molecule], target_term)):
+    for i, term in enumerate(get_path(session.all_parent_nodes[molecule], target_term)):
         if type(term) == str: term_id = term
         else: term_id = list(term.term_id)[0]
         if i > 0: term_path.append(dmc.Text("▼", style = {"textAlign": "center"}))

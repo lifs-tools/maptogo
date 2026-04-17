@@ -625,105 +625,133 @@ class EnrichmentOntology:
         search_terms = defaultdict(list)
         all_parent_nodes = {}
         all_paths = []
+        start_term_counter = defaultdict(list)
 
-        for lipid_input_name, lipid in lipid_dict.items():
-            if lipid is None: continue
-            elif type(lipid) == OntologyTerm:
-                parent_nodes = {lipid: lipid_input_name, lipid_input_name: None}
-                all_paths.append([lipid_input_name, lipid, parent_nodes])
+        if lipid_dict:
+            lipids = self.lipids
+            lipid_classes = self.lipid_classes
+            carbon_chains = self.carbon_chains
+            for lipid_input_name, lipid in lipid_dict.items():
+                if lipid is None: continue
+                elif type(lipid) == OntologyTerm:
+                    parent_nodes = {lipid: lipid_input_name, lipid_input_name: None}
+                    all_paths.append([lipid_input_name, lipid, parent_nodes])
+                    start_term_counter[lipid].append(lipid_input_name)
+                    all_parent_nodes[lipid_input_name] = parent_nodes
+                    continue
+
+                lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
+                lipid_name = lipid.get_lipid_string()
+                lipid_name_class = lipid.get_lipid_string(LipidLevel.CLASS)
+                #lipid_name_class = lipid.get_extended_class()
+                parent_nodes, start_term = {}, None
                 all_parent_nodes[lipid_input_name] = parent_nodes
-                continue
+                lipid_term = lipids[lipid_name] if lipid_name in lipids else None
 
-            lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
-            lipid_name = lipid.get_lipid_string()
-            lipid_name_class = lipid.get_lipid_string(LipidLevel.CLASS)
-            #lipid_name_class = lipid.get_extended_class()
-            parent_nodes = {}
-            all_parent_nodes[lipid_input_name] = parent_nodes
-            lipid_term = self.lipids[lipid_name] if lipid_name in self.lipids else None
-
-            start_term = None
-            if not lipid_term:
-                parent_nodes[lipid_input_name] = None
-                if lipid_input_name != lipid_name:
-                    parent_nodes[lipid_name] = lipid_input_name
-                    start_term = lipid_name
-                else:
-                    start_term = lipid_input_name
-            else:
-                if lipid_input_name != lipid_term.name:
+                if not lipid_term:
                     parent_nodes[lipid_input_name] = None
-                    parent_nodes[lipid_term] = lipid_input_name
+                    if lipid_input_name != lipid_name:
+                        parent_nodes[lipid_name] = lipid_input_name
+                        start_term = lipid_name
+                    else:
+                        start_term = lipid_input_name
                 else:
-                    parent_nodes[lipid_term] = None
-                start_term = lipid_term
+                    if lipid_input_name != lipid_term.name:
+                        parent_nodes[lipid_input_name] = None
+                        parent_nodes[lipid_term] = lipid_input_name
+                    else:
+                        parent_nodes[lipid_term] = None
+                    start_term = lipid_term
 
-            if lipid_term != None:
-                all_paths.append([lipid_input_name, start_term, parent_nodes])
+                if lipid_term != None:
+                    all_paths.append([lipid_input_name, start_term, parent_nodes])
+                    start_term_counter[start_term].append(lipid_input_name)
 
-            if lipid_name_class in self.lipid_classes:
-                for class_term in self.lipid_classes[lipid_name_class]:
-                    parent_nodes[class_term] = start_term
-                    all_paths.append([lipid_input_name, class_term, parent_nodes])
+                if lipid_name_class in lipid_classes:
+                    for class_term in lipid_classes[lipid_name_class]:
+                        parent_nodes[class_term] = start_term
+                        all_paths.append([lipid_input_name, class_term, parent_nodes])
+                        start_term_counter[class_term].append(lipid_input_name)
 
-            if use_bounded_fatty_acyls:
-                for fa in lipid.lipid.fa_list:
-                    if fa.num_carbon == 0: continue
+                if use_bounded_fatty_acyls:
+                    for fa in lipid.lipid.fa_list:
+                        if fa.num_carbon == 0: continue
 
-                    if fa.lipid_FA_bond_type in {LipidFaBondType.LCB_REGULAR, LipidFaBondType.LCB_EXCEPTION}:
-                        lcb_string = "L" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
-                        if lcb_string in self.carbon_chains:
-                            lcb_term = self.carbon_chains[lcb_string]
-                            if lipid_term != lcb_term:
-                                parent_nodes[lipid_term] = start_term
-                                all_paths.append([lipid_input_name, lcb_term, parent_nodes])
-                        continue
+                        if fa.lipid_FA_bond_type in {LipidFaBondType.LCB_REGULAR, LipidFaBondType.LCB_EXCEPTION}:
+                            lcb_string = "L" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
+                            if lcb_string in carbon_chains:
+                                lcb_term = carbon_chains[lcb_string]
+                                if lipid_term != lcb_term:
+                                    parent_nodes[lipid_term] = start_term
+                                    all_paths.append([lipid_input_name, lcb_term, parent_nodes])
+                                    start_term_counter[lcb_term].append(lipid_input_name)
+                            continue
 
-                    fa_string = "FA " + fa.to_string(lipid.lipid.info.level)
-                    if fa_string in self.lipids:
-                        fa_term = self.lipids[fa_string]
-                        if lipid_term != fa_term:
-                            parent_nodes[fa_term] = start_term
-                            all_paths.append([lipid_input_name, fa_term, parent_nodes])
+                        fa_string = "FA " + fa.to_string(lipid.lipid.info.level)
+                        if fa_string in lipids:
+                            fa_term = lipids[fa_string]
+                            if lipid_term != fa_term:
+                                parent_nodes[fa_term] = start_term
+                                all_paths.append([lipid_input_name, fa_term, parent_nodes])
+                                start_term_counter[fa_term].append(lipid_input_name)
 
-                    fa_string = "C" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
-                    if fa_string in self.carbon_chains:
-                        c_term = self.carbon_chains[fa_string]
-                        if lipid_term != c_term:
-                            parent_nodes[c_term] = start_term
-                            all_paths.append([lipid_input_name, c_term, parent_nodes])
+                        fa_string = "C" + fa.to_string(LipidLevel.MOLECULAR_SPECIES)
+                        if fa_string in carbon_chains:
+                            c_term = carbon_chains[fa_string]
+                            if lipid_term != c_term:
+                                parent_nodes[c_term] = start_term
+                                all_paths.append([lipid_input_name, c_term, parent_nodes])
+                                start_term_counter[c_term].append(lipid_input_name)
 
-        for protein_input_name in protein_set:
-            if protein_input_name not in self.proteins: continue
-            protein_term = self.proteins[protein_input_name]
-            parent_nodes = {protein_term: None}
-            all_parent_nodes[protein_input_name] = parent_nodes
-            all_paths.append([protein_input_name, protein_term, parent_nodes])
+        if protein_set:
+            proteins = self.proteins
+            for protein_input_name in protein_set:
+                if protein_input_name not in proteins: continue
+                protein_term = proteins[protein_input_name]
+                parent_nodes = {protein_term: None}
+                all_parent_nodes[protein_input_name] = parent_nodes
+                all_paths.append([protein_input_name, protein_term, parent_nodes])
+                start_term_counter[protein_term].append(protein_input_name)
 
-        for metabolite_input_name in metabolite_set:
-            if metabolite_input_name in self.metabolites:
-                metabolite_term = self.metabolites[metabolite_input_name]
-                parent_nodes = {metabolite_term: None}
-                all_parent_nodes[metabolite_input_name] = parent_nodes
-                all_paths.append([metabolite_input_name, metabolite_term, parent_nodes])
-                continue
+        if metabolite_set:
+            metabolites = self.metabolites
+            metabolite_names = self.metabolite_names
+            for metabolite_input_name in metabolite_set:
+                if metabolite_input_name in metabolites:
+                    metabolite_term = metabolites[metabolite_input_name]
+                    parent_nodes = {metabolite_term: None}
+                    all_parent_nodes[metabolite_input_name] = parent_nodes
+                    all_paths.append([metabolite_input_name, metabolite_term, parent_nodes])
+                    start_term_counter[metabolite_term].append(metabolite_input_name)
+                    continue
 
-            elif metabolite_input_name.lower() in self.metabolite_names:
-                metabolite_term = self.metabolite_names[metabolite_input_name.lower()]
-                parent_nodes = {metabolite_term: None}
-                all_parent_nodes[metabolite_input_name] = parent_nodes
-                all_paths.append([metabolite_input_name, metabolite_term, parent_nodes])
+                elif (metabolite_lower := metabolite_input_name.lower()) in metabolite_names:
+                    metabolite_term = metabolite_names[metabolite_lower]
+                    parent_nodes = {metabolite_term: None}
+                    all_parent_nodes[metabolite_input_name] = parent_nodes
+                    all_paths.append([metabolite_input_name, metabolite_term, parent_nodes])
+                    start_term_counter[metabolite_term].append(metabolite_input_name)
 
-        for transcript_input_name in transcript_set:
-            transcript_name = transcript_input_name.split(".")[0]
-            if transcript_name not in self.transcripts: continue
-            transcript_term = self.transcripts[transcript_name]
-            parent_nodes = {transcript_term: None}
-            all_parent_nodes[transcript_input_name] = parent_nodes
-            all_paths.append([transcript_input_name, transcript_term, parent_nodes])
+        if transcript_set:
+            transcripts = self.transcripts
+            for transcript_input_name in transcript_set:
+                transcript_name = transcript_input_name.split(".")[0]
+                if transcript_name not in transcripts: continue
+                transcript_term = transcripts[transcript_name]
+                parent_nodes = {transcript_term: None}
+                all_parent_nodes[transcript_input_name] = parent_nodes
+                all_paths.append([transcript_input_name, transcript_term, parent_nodes])
+                start_term_counter[transcript_term].append(transcript_input_name)
 
         # run all registered molecules
+        aggregated_paths = {}
         for molecule_input_name, start_term, parent_nodes in all_paths:
+            if len(start_term_counter[start_term]) == 1:
+                aggregated_paths[start_term] = [[molecule_input_name], parent_nodes]
+            else:
+                aggregated_paths[start_term] = [start_term_counter[start_term], {}]
+
+        for start_term, (molecule_input_names, parent_nodes) in aggregated_paths.items():
             queue = [start_term]
             queue_append = queue.append
             queue_pop = queue.pop
@@ -733,16 +761,17 @@ class EnrichmentOntology:
             while queue:
                 term = queue_pop()
                 term_relations = term.relations
-                if term.domains: search_terms_local[term].append(molecule_input_name)
+                if term.domains: search_terms_local[term] += molecule_input_names
                 for relation_term in term_relations:
                     if relation_term in parent_nodes_local: continue
                     parent_nodes_local[relation_term] = term
                     queue_append(relation_term)
 
-        for term, term_molecules in search_terms.items():
-            search_terms[term] = set(term_molecules)
+        for _, start_term, parent_nodes in all_paths:
+                if len(start_term_counter[start_term]) == 1: continue
+                parent_nodes |= aggregated_paths[start_term][1]
 
-        return search_terms, all_parent_nodes
+        return {term: set(term_molecules) for term, term_molecules in search_terms.items()}, all_parent_nodes
 
 
     def get_domains(self, domain_bit_field):
