@@ -79,8 +79,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet
 
 
-#INIT_ORGANISM = "NCBITaxon:10090"
-INIT_ORGANISM = "NCBITaxon:9606"
+INIT_ORGANISM = "NCBITaxon:10090"
 APPLICATION_SHORT_TITLE = "MAPtoGO"
 APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
 TEXTFIELD_HEIGHT = "350px"
@@ -206,7 +205,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        'Homo sapiens': 'NCBITaxon:9606',
+        #'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',

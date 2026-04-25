@@ -12,6 +12,8 @@ import pandas as pd
 import zipfile
 import json
 
+
+
 with zipfile.ZipFile("Data/BioDolphin_vr1.1.zip") as z:
     with z.open("BioDolphin_vr1.1/BioDolphin_vr1.1.txt") as f:
         df_dolphin = pd.read_csv(f, sep = "\t")
@@ -386,7 +388,7 @@ def get_lipid_terms():
 
 
     # import chebi to lipid dictionary
-    chebi_to_lipid = {}
+    lipid_to_chebi = {}
     UNDEFINED = "UNDEFINED"
     for file_prefix in ["", "ChEBI_", "LipidMaps_", "SwissLipids_"]:
         for line in open(f"Data/{file_prefix}chebi_to_lipid.csv", "rt").read().split("\n"):
@@ -396,11 +398,15 @@ def get_lipid_terms():
 
             the_lipid = None
             for lipid_name in tokens[1:]:
+                if lipid_name in "PGE2":
+                    print("juup")
                 if lipid_name == "": continue
                 try:
                     lipid = parser.parse(lipid_name)
                     if not the_lipid or the_lipid.lipid.info.level.value < lipid.lipid.info.level.value:
                         the_lipid = lipid
+                        if lipid_name == "PGE2":
+                            print("juup 2")
                 except:
                     if lipid_name.startswith(UNDEFINED): continue
                     if lipid_name in lipid_class_terms:
@@ -409,20 +415,27 @@ def get_lipid_terms():
                                 lipid_class_term.relations.add("CHEBI:" + chebi_id)
             if not the_lipid: continue
 
-            for t in tokens[0].split(" | "):
-                if t not in chebi_to_lipid: chebi_to_lipid[t] = the_lipid
-                elif chebi_to_lipid[t].lipid.info.level.value < the_lipid.lipid.info.level.value:
-                    chebi_to_lipid[t] = the_lipid
+            normalized_lipid_name = the_lipid.get_lipid_string()
+            chebi_ids = tokens[0].split(" | ")
+            if normalized_lipid_name not in lipid_to_chebi:
+                lipid_to_chebi[normalized_lipid_name] = [the_lipid, chebi_ids]
+            else:
+                lipid_to_chebi[normalized_lipid_name][1].extend(chebi_ids)
+
+                # if t not in chebi_to_lipid: chebi_to_lipid[t] = the_lipid
+                # elif chebi_to_lipid[t].lipid.info.level.value < the_lipid.lipid.info.level.value:
+                #     chebi_to_lipid[t] = the_lipid
 
 
     chebi_lipid_terms = {}
     ls_id = 1000
-    for chebi_id, lipid in chebi_to_lipid.items():
-        lipid_name = lipid.get_lipid_string()
+    for lipid_name, (lipid, chebi_ids) in lipid_to_chebi.items():
+        if lipid_name == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
+            print("juup 3")
         if lipid_name.startswith(UNDEFINED) or lipid_name == "": continue
 
         lipid_category = lipid.get_lipid_string(LipidLevel.CATEGORY)
-        lipid_translates = [lipid.get_lipid_string()]
+        lipid_translates = [lipid_name]
 
         for lipid_level in [LipidLevel.COMPLETE_STRUCTURE, LipidLevel.FULL_STRUCTURE, LipidLevel.STRUCTURE_DEFINED, LipidLevel.SN_POSITION, LipidLevel.MOLECULAR_SPECIES, LipidLevel.SPECIES, LipidLevel.CLASS]:
             if lipid.lipid.info.level.value > lipid_level.value:
@@ -432,22 +445,29 @@ def get_lipid_terms():
 
         term_list = []
         for lipid_translate in lipid_translates:
+            if lipid_translate == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
+                print("juup 4")
             if lipid_translate not in lipid_species_terms:
+                if lipid_translate == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
+                    print("juup 5")
                 if lipid_translate not in chebi_lipid_terms:
                     term_id = f"MOEA:{ls_id:07}"
                     term = Term(term_id, lipid_translate, {"MOEA:0000002"}, _categories = {lipid_category})
                     ls_id += 1
                     chebi_lipid_terms[lipid_translate] = term
+                    if lipid_name == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
+                        print("juup 6")
                     term_list.append(term)
                 else:
                     term_list.append(chebi_lipid_terms[lipid_translate])
 
             else:
-                term_list.append(lipid_species_terms[lipid_translate][-1])
+                term_list += lipid_species_terms[lipid_translate]
 
-        term_list[0].relations.add("CHEBI:" + chebi_id)
-        for i in range(len(term_list) - 1):
-            term_list[i].relations.add(term_list[i + 1].get_first_id())
+        for chebi_id in chebi_ids:
+            term_list[0].relations.add("CHEBI:" + chebi_id)
+            for i in range(len(term_list) - 1):
+                term_list[i].relations.add(term_list[i + 1].get_first_id())
 
     return ontology_terms, chebi_lipid_terms
 

@@ -667,7 +667,7 @@ class EnrichmentOntology:
                     all_paths.append([lipid_input_name, start_term, parent_nodes])
                     start_term_counter[start_term].append(lipid_input_name)
 
-                if lipid_name_class in lipid_classes:
+                if False and lipid_name_class in lipid_classes:
                     for class_term in lipid_classes[lipid_name_class]:
                         parent_nodes[class_term] = start_term
                         all_paths.append([lipid_input_name, class_term, parent_nodes])
@@ -746,25 +746,21 @@ class EnrichmentOntology:
         # run all registered molecules
         aggregated_paths = {}
         for molecule_input_name, start_term, parent_nodes in all_paths:
-            if len(start_term_counter[start_term]) == 1:
-                aggregated_paths[start_term] = [[molecule_input_name], parent_nodes]
-            else:
-                aggregated_paths[start_term] = [start_term_counter[start_term], {}]
+            if start_term in aggregated_paths: continue
+            aggregated_paths[start_term] = [start_term_counter[start_term], parent_nodes if len(start_term_counter[start_term]) == 1 else {}]
 
         for start_term, (molecule_input_names, parent_nodes) in aggregated_paths.items():
             queue = [start_term]
-            queue_append = queue.append
-            queue_pop = queue.pop
+            queue_append, queue_pop = queue.append, queue.pop
             search_terms_local = search_terms
-            parent_nodes_local = parent_nodes
 
             while queue:
                 term = queue_pop()
                 term_relations = term.relations
                 if term.domains: search_terms_local[term] += molecule_input_names
                 for relation_term in term_relations:
-                    if relation_term in parent_nodes_local: continue
-                    parent_nodes_local[relation_term] = term
+                    if relation_term in parent_nodes: continue
+                    parent_nodes[relation_term] = term
                     queue_append(relation_term)
 
         for _, start_term, parent_nodes in all_paths:
@@ -886,12 +882,14 @@ class EnrichmentOntology:
 
             try: # C++ implementation, just way faster
                 side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
+                nn = []
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
                     if not (term.domains & enrichment_domains): continue
                     target_number = len(term_molecules & targets)
 
                     p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
                     if p_hyp == 0: continue
+                    nn.append(len(term_molecules))
                     result_list[i] = OntologyResult(
                         term,
                         p_hyp,
