@@ -398,15 +398,11 @@ def get_lipid_terms():
 
             the_lipid = None
             for lipid_name in tokens[1:]:
-                if lipid_name in "PGE2":
-                    print("juup")
                 if lipid_name == "": continue
                 try:
                     lipid = parser.parse(lipid_name)
                     if not the_lipid or the_lipid.lipid.info.level.value < lipid.lipid.info.level.value:
                         the_lipid = lipid
-                        if lipid_name == "PGE2":
-                            print("juup 2")
                 except:
                     if lipid_name.startswith(UNDEFINED): continue
                     if lipid_name in lipid_class_terms:
@@ -430,8 +426,6 @@ def get_lipid_terms():
     chebi_lipid_terms = {}
     ls_id = 1000
     for lipid_name, (lipid, chebi_ids) in lipid_to_chebi.items():
-        if lipid_name == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
-            print("juup 3")
         if lipid_name.startswith(UNDEFINED) or lipid_name == "": continue
 
         lipid_category = lipid.get_lipid_string(LipidLevel.CATEGORY)
@@ -445,18 +439,12 @@ def get_lipid_terms():
 
         term_list = []
         for lipid_translate in lipid_translates:
-            if lipid_translate == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
-                print("juup 4")
             if lipid_translate not in lipid_species_terms:
-                if lipid_translate == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
-                    print("juup 5")
                 if lipid_translate not in chebi_lipid_terms:
                     term_id = f"MOEA:{ls_id:07}"
                     term = Term(term_id, lipid_translate, {"MOEA:0000002"}, _categories = {lipid_category})
                     ls_id += 1
                     chebi_lipid_terms[lipid_translate] = term
-                    if lipid_name == "FA 20:2(5Z,13E);[8-12cy5:0;11OH;9oxo];15OH":
-                        print("juup 6")
                     term_list.append(term)
                 else:
                     term_list.append(chebi_lipid_terms[lipid_translate])
@@ -491,7 +479,26 @@ with open("Data/chebi.csv", "rt") as infile:
     print("reading chebi")
     for line in infile:
         tokens = line.strip().split("\t")
-        chebi_terms_all[tokens[0]] = Term("CHEBI:" + tokens[0], tokens[1], {"MOEA:0000008"} | {"CHEBI:" + t for t in tokens[2:]} if len(tokens) > 2 else {"MOEA:0000008"})
+        relations = {"MOEA:0000008"}
+        term_ids = []
+        i = 0
+        while True:
+            try:
+                a = int(tokens[i])
+                term_ids.append("CHEBI:" + tokens[i])
+                i += 1
+            except:
+                break
+        try:
+            name = tokens[i]
+        except:
+            continue
+        if len(tokens) > i + 1:
+            relations |= {"CHEBI:" + t for t in tokens[i + 1 : ]}
+
+        term = Term(term_ids, name, relations)
+        for t_id in term_ids:
+            chebi_terms_all[t_id] = term
 
 
 # max_depth = 2
@@ -1228,7 +1235,10 @@ for tax_name, tax_id in species.items():
             terms.append(rhea_term)
 
 
-    for _, chebi_term in chebi_terms.items():
+    added_chebi_terms = set()
+    for chebi_term_id, chebi_term in chebi_terms.items():
+        if chebi_term_id in added_chebi_terms: continue
+        added_chebi_terms |= chebi_term.id
         terms.append(chebi_term)
 
     # diseases and phenotypes

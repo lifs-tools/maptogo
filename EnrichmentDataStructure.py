@@ -585,7 +585,8 @@ class EnrichmentOntology:
                         self.transcripts.setdefault(term_id_str, term)
 
                     case TermType.METABOLITE: # metabolite
-                        self.metabolites.setdefault(term_id_str, term)
+                        for t_id in term.term_id:
+                            self.metabolites.setdefault(t_id, term)
 
             self.categories = sorted(category_dict.keys(), key = lambda k: category_dict[k])
             self.domains = sorted(domain_dict.keys(), key = lambda k: domain_dict[k])
@@ -764,8 +765,8 @@ class EnrichmentOntology:
                     queue_append(relation_term)
 
         for _, start_term, parent_nodes in all_paths:
-                if len(start_term_counter[start_term]) == 1: continue
-                parent_nodes |= aggregated_paths[start_term][1]
+            if len(start_term_counter[start_term]) == 1: continue
+            parent_nodes |= aggregated_paths[start_term][1]
 
         return {term: set(term_molecules) for term, term_molecules in search_terms.items()}, all_parent_nodes
 
@@ -880,16 +881,14 @@ class EnrichmentOntology:
             targets = set.union(*target_molecules.values())
             len_target_set = len(targets)
 
+
             try: # C++ implementation, just way faster
                 side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
-                nn = []
                 for i, (term, term_molecules) in enumerate(search_terms.items()):
                     if not (term.domains & enrichment_domains): continue
                     target_number = len(term_molecules & targets)
-
                     p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
                     if p_hyp == 0: continue
-                    nn.append(len(term_molecules))
                     result_list[i] = OntologyResult(
                         term,
                         p_hyp,
