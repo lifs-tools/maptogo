@@ -803,9 +803,10 @@ gc.disable()
 enrichment_ontologies = {}
 
 for tax_name, tax_id in organisms.items():
-    logger.info(f"Loading {tax_name}")
     tax_id_number = tax_id.replace("NCBITaxon:", "")
-    enrichment_ontologies[tax_id] = EnrichmentOntology(f"{current_path}/Data/ontology_{tax_id_number}.gz", tax_name)
+    file_name = f"{current_path}/Data/ontology_{tax_id_number}.gz"
+    logger.info(f"Loading {tax_name} ({os.path.getsize(file_name)} bytes)")
+    enrichment_ontologies[tax_id] = EnrichmentOntology(file_name, tax_name)
 gc.enable()
 gc.collect()
 
