@@ -529,6 +529,7 @@ class EnrichmentOntology:
         self.ontology_terms = {}
         self.lipids = {}
         self.lipid_classes = {}
+        self.lipid_subclasses = {}
         self.carbon_chains = {}
         self.transcripts = {}
         self.proteins = {}
@@ -564,6 +565,9 @@ class EnrichmentOntology:
 
                     case TermType.LIPID_SPECIES: # lipid species
                         self.lipids.setdefault(_name, term)
+
+                    case TermType.SPHINGOLIPID_SUBCLASS: # lipid species
+                        self.lipid_subclasses.setdefault(_name, term)
 
                     case TermType.CARBON_CHAIN: # carbon chain
                         self.carbon_chains.setdefault(_name, term)
@@ -632,6 +636,7 @@ class EnrichmentOntology:
         if lipid_dict:
             lipids = self.lipids
             lipid_classes = self.lipid_classes
+            lipid_subclasses = self.lipid_subclasses
             carbon_chains = self.carbon_chains
             for lipid_input_name, lipid in lipid_dict.items():
                 if lipid is None: continue
@@ -642,10 +647,7 @@ class EnrichmentOntology:
                     all_parent_nodes[lipid_input_name] = parent_nodes
                     continue
 
-                print(lipid.get_lipid_string(), lipid.lipid.info.level)
                 lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
-                print(lipid.get_lipid_string())
-                print()
                 lipid_name = lipid.get_lipid_string()
                 lipid_name_class = lipid.get_lipid_string(LipidLevel.CLASS)
                 #lipid_name_class = lipid.get_extended_class()
@@ -671,6 +673,16 @@ class EnrichmentOntology:
                 if lipid_term != None:
                     all_paths.append([lipid_input_name, start_term, parent_nodes])
                     start_term_counter[start_term].append(lipid_input_name)
+
+                try:
+                    sphingolipid_subclass_name = lipid.get_sphingolipid_subclass()
+                    if sphingolipid_subclass_name in lipid_subclasses:
+                        subclass_term = lipid_subclasses[sphingolipid_subclass_name]
+                        parent_nodes[subclass_term] = start_term
+                        all_paths.append([lipid_input_name, subclass_term, parent_nodes])
+                        start_term_counter[subclass_term].append(lipid_input_name)
+                except Exception as e:
+                    pass
 
                 if lipid_name_class in lipid_classes:
                     for class_term in lipid_classes[lipid_name_class]:

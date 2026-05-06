@@ -423,7 +423,6 @@ def get_lipid_terms():
                         for lipid_subclass_term in lipid_subclass_terms[lipid_name]:
                             for chebi_id in tokens[0].split(" | "):
                                 lipid_subclass_term.relations.add("CHEBI:" + chebi_id)
-                                print(chebi_id, lipid_subclass_term)
             if not the_lipid: continue
 
             normalized_lipid_name = the_lipid.get_lipid_string()
@@ -513,7 +512,7 @@ with open("Data/chebi.csv", "rt") as infile:
 
         term = Term(term_ids, name, relations)
         for t_id in term_ids:
-            chebi_terms_all[t_id] = term
+            chebi_terms_all[t_id.split(":")[-1]] = term
 
 
 # max_depth = 2
