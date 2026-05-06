@@ -308,9 +308,10 @@ def get_terms(term_file, prefix, upper = False, with_relationship = False):
 
 def get_lipid_terms():
     # import LION ontology
-    term_id, name, relations, synonyms, is_class, is_species, namespace, category = "", "", set(), [], False, False, "", None
+    term_id, name, relations, synonyms, is_class, is_subclass, is_species, namespace, category = "", "", set(), [], False, False, False, "", None
     ontology_terms = {}
     lipid_class_terms = {}
+    lipid_subclass_terms = {}
     lipid_species_terms = {}
     if True:
         with open("Data/LION.obo", "rt") as obo:
@@ -335,7 +336,11 @@ def get_lipid_terms():
                             if name not in lipid_species_terms: lipid_species_terms[name] = []
                             lipid_species_terms[name].append(term)
 
-                    term_id, name, relations, synonyms, is_class, is_species, namespace, category = "", "", set(), [], False, False, "", None
+                        if is_subclass:
+                            if name not in lipid_subclass_terms: lipid_subclass_terms[name] = []
+                            lipid_subclass_terms[name].append(term)
+
+                    term_id, name, relations, synonyms, is_class, is_subclass, is_species, namespace, category = "", "", set(), [], False, False, False, "", None
 
                 elif line.startswith("id:"):
                     term_id = line[3:].strip(" ")
@@ -363,6 +368,7 @@ def get_lipid_terms():
                     relations.add(relation)
                     if relation == "MOEA:0000001": is_class = True
                     elif relation == "MOEA:0000002": is_species = True
+                    elif relation == "MOEA:0000013": is_subclass = True
 
                 elif line.startswith("synonym:"):
                     synonyms.append(line.split("\"")[1])
@@ -383,6 +389,10 @@ def get_lipid_terms():
         if is_species:
             if name not in lipid_species_terms: lipid_species_terms[name] = []
             lipid_species_terms[name].append(term)
+
+        if is_subclass:
+            if name not in lipid_subclass_terms: lipid_subclass_terms[name] = []
+            lipid_subclass_terms[name].append(term)
 
 
 
@@ -409,6 +419,11 @@ def get_lipid_terms():
                         for lipid_class_term in lipid_class_terms[lipid_name]:
                             for chebi_id in tokens[0].split(" | "):
                                 lipid_class_term.relations.add("CHEBI:" + chebi_id)
+                    elif lipid_name in lipid_subclass_terms:
+                        for lipid_subclass_term in lipid_subclass_terms[lipid_name]:
+                            for chebi_id in tokens[0].split(" | "):
+                                lipid_subclass_term.relations.add("CHEBI:" + chebi_id)
+                                print(chebi_id, lipid_subclass_term)
             if not the_lipid: continue
 
             normalized_lipid_name = the_lipid.get_lipid_string()

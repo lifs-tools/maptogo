@@ -623,7 +623,7 @@
 50648	FA 15:4(2E,4E,6Z,8E);[10-15cy6:1(10);11Me,15Me,15Me];3Me,7Me					
 50899	FA 8:0;[4-8cy5:0]					
 52360	PC 18:1/18:1					
-52449	FA 20:4(6E,8Z,11Z,14Z);5oxo	FA 20:4;5oxo	FA 20:4;oxo	FA 20:4(6,8,11,14);oxo
+52449	FA 20:4(6E,8Z,11Z,14Z);5oxo	FA 20:4;5oxo	FA 20:4;oxo	FA 20:4(6,8,11,14);oxo		
 52450	PC O-18:0/2:0					
 52688	FOH 4:0;3OH					
 52977	CoA 26:0;3oxo					
@@ -7685,3 +7685,261 @@
 495150	Gal-Cer(1) 9:0;3OH,4OH/24:0					
 545687	FA 11:1(2);COOH	FA 11:1(2E);COOH				
 583099	HC 12:1(10);[cy6:2(1,3);Me];(Me)2					
+598	DG-O					
+4986	WE					
+12834	FAL					
+15850	MG-O					
+16038	PE-NMe					
+17389	MG					
+17408	MG					
+17615	MGDG					
+17761	Cer					
+17815	DG					
+17855	TG					
+18035	DG					
+18310	HC 					
+24026	FAOH					
+24360	GPG					
+24526	Hp					
+27499	GM4					
+27731	GA2					
+27938	GA1					
+28396	DGDG					
+28424	GD3					
+28648	GD2					
+28868	FA					
+30909	LPC-O					
+32167	SQDG					
+35759	MG					
+35766	GPS					
+35774	CDP-GL					
+35785	SPB					
+35915	SE					
+36313	GPC					
+36314	GPE					
+36315	GPI					
+36700	LSM					
+36702	PC-O					
+36727	TG-O					
+39161	DPE					
+47777	DG					
+49172	DG					
+50584	FOH					
+52595	DG-O					
+52640	NAE					
+57262	PS					
+57613	PE					
+57643	PC					
+57658	PIP2(3',4')					
+57739	PA					
+57795	PIP(5')					
+57836	PIP3(3',4',5')					
+57875	LPC					
+57880	PI					
+57923	PIP2(3',5')					
+57970	LPA					
+58014	LPA-O					
+58088	PIP(3')					
+58168	LPC					
+58178	PIP(4')					
+58332	CDPDAG					
+58436	PS					
+58456	PIP2(4',5')					
+58608	PA					
+58953	FA					
+60110	PA					
+60479	LPC					
+60520	PE-O					
+60522	PGP					
+60523	PG					
+62237	CL					
+62941	HexCer					
+63415	Hex2Cer					
+64379	LPS					
+64381	LPE					
+64482	PC					
+64583	SM					
+64595	DMPE					
+64612	PE					
+64615	TG					
+64683	MG					
+64716	PG					
+64743	LCL					
+64760	MG					
+64771	LPI					
+64840	LPG					
+64872	LPI					
+64916	IPC					
+64982	LPA					
+64997	MIPC					
+65213	LPE					
+65214	LPS					
+65218	PI-O					
+65220	PS-O					
+73202	PE-Cer					
+73204	EPC					
+73332	PA-O					
+73849	EA					
+74051	HH					
+74997	M(IP)2C					
+75137	DLCL					
+75524	DG					
+75883	MG-O					
+76168	LPE-O					
+76225	DG-O					
+76528	LPG					
+76529	GPGPG					
+76567	FA					
+76582	DG-O					
+76584	TG-O					
+76585	TG-O					
+77068	SPBP					
+77272	DG					
+77274	DG-O					
+77283	LPA-P					
+77284	PA-P					
+77286	PC-P					
+77287	LPC-P					
+77288	LPE-P					
+77290	PE-P					
+77296	DG-P					
+77297	MG-P					
+77997	MG-O					
+77998	MG-P					
+77999	DG-P					
+78166	LPA					
+78167	LPA					
+78168	LPA-O					
+78169	LPA-O					
+78170	LPE					
+78172	LPA					
+78174	LPA-P					
+78182	PA-O					
+78183	PA-P					
+78184	PA-O					
+78185	GPA					
+78186	PC-O					
+78188	PC-P					
+78189	PC-O					
+78191	LPC					
+78192	LPC					
+78193	LPC-O					
+78195	LPC-P					
+78196	LPC-O					
+78197	PE-O					
+78198	PE-P					
+78199	PE-O					
+78200	LPE					
+78201	LPE					
+78202	LPE-O					
+78203	LPE-P					
+78204	LPE-O					
+78210	LPG					
+78211	LPG					
+78212	LPG					
+78213	LPS					
+78214	LPS					
+78221	LPS					
+78224	PS-O					
+78225	PS-O					
+78231	PI					
+78232	LPI					
+78233	LPI					
+78234	LPI					
+78355	PS-O					
+78436	GD3					
+78789	LPS-P					
+78790	LPS-O					
+78792	PI-P					
+78793	LPI-O					
+78794	LPI-P					
+78871	LPI-O					
+78872	LPI-P					
+78873	LPI-O					
+78874	PI-O					
+78875	PI-P					
+78876	PI-O					
+78879	LPS-O					
+78880	LPS-O					
+78881	LPS-P					
+78882	PS-O					
+79208	LacCer					
+79209	GM3					
+79210	GM3					
+79213	GD3					
+79214	GD1					
+79216	GT3					
+79218	GA2					
+79219	GD2					
+79220	GD2					
+82637	GD1a					
+82639	GM1					
+82680	FA					
+82939	GD1b					
+82940	GT1b					
+83188	GPIP					
+83189	PIP					
+83190	GPIP2					
+83191	PIP2					
+83192	GPIP3					
+83193	PIP3					
+83195	GPGP					
+83237	BMP					
+83264	GlcCer					
+83273	Cer					
+84404	CerP					
+85216	NAPE					
+85226	GP-NAE 16:0					
+86063	CAR 					
+88056	GM1					
+88057	GD1a					
+88058	GT1					
+88059	GQ1					
+88060	GP1					
+88069	GA1					
+88075	GT3					
+88076	GM2					
+88078	GT2					
+88154	Hex3Cer					
+90085	GA2					
+90151	GM1b					
+90246	GD1a					
+90501	GT1a					
+90512	GP1c					
+90513	GQ1c					
+90549	HexDAG					
+90553	Hex2DAG					
+90856	GD1c					
+90862	GQ1b					
+132524	PG-O					
+132526	PG-P					
+132527	LPG-O					
+132528	LPG-P					
+132531	PG-O					
+132532	PG-P					
+132533	LPG-O					
+132534	LPG-P					
+132535	PG-O					
+132536	LPG-O					
+133227	GD3					
+141743	GT1c					
+141748	GT2					
+142049	GM1a					
+143593	GalCer					
+167057	LCL					
+195476	GA2					
+231546	CoA					
+17636	SM 18:1;O2/x:x					
+136277	SM 18:0;O2/x:x					
+52639	Cer 18:1;O2/x:x					
+31488	Cer 18:0;O2/x:x					
+67090	SM 18:0;O2/x:x					
+82917	HexCer 18:1;O2/x:x					
+82918	HexCer 18:0;O2/x:x					
+82919	HexCer 18:0;O2/x:x					
+82920	HexCer 18:0;O2/x:x					
+18390	HexCer 18:1;O2/x:x					
+83866	HexCer 18:1;O2/x:x					
+17950	Hex2Cer 18:1;O2/x:x					
+82926	Hex2Cer 18:0;O2/x:x					
+71984	Cer 20:0;O2/x:x					

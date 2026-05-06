@@ -79,6 +79,7 @@ class TermType(Enum):
     ENSEMBLE_TRANSCRIPT = 10        # special handling
     ENSEMBLE_GENE = 11              # special handling
     GENE = 12
+    SPHINGOLIPID_SUBCLASS = 13      # special handling
     INPUT_TERM = 90
     UNCLASSIFIED_TERM = 99
 
@@ -641,7 +642,10 @@ class EnrichmentOntology:
                     all_parent_nodes[lipid_input_name] = parent_nodes
                     continue
 
+                print(lipid.get_lipid_string(), lipid.lipid.info.level)
                 lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
+                print(lipid.get_lipid_string())
+                print()
                 lipid_name = lipid.get_lipid_string()
                 lipid_name_class = lipid.get_lipid_string(LipidLevel.CLASS)
                 #lipid_name_class = lipid.get_extended_class()
@@ -668,7 +672,7 @@ class EnrichmentOntology:
                     all_paths.append([lipid_input_name, start_term, parent_nodes])
                     start_term_counter[start_term].append(lipid_input_name)
 
-                if False and lipid_name_class in lipid_classes:
+                if lipid_name_class in lipid_classes:
                     for class_term in lipid_classes[lipid_name_class]:
                         parent_nodes[class_term] = start_term
                         all_paths.append([lipid_input_name, class_term, parent_nodes])

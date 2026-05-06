@@ -79,6 +79,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet
 
 
+
 INIT_ORGANISM = "NCBITaxon:10090"
 APPLICATION_SHORT_TITLE = "MAPtoGO"
 APPLICATION_TITLE = f"{APPLICATION_SHORT_TITLE} - Multiomics Analysis Platform towards Gene Ontology"
@@ -205,7 +206,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        #'Homo sapiens': 'NCBITaxon:9606',
+        'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -4291,13 +4292,13 @@ def open_sankeyplot(
                 or (radiogroup_sankey == "sankey_downregulated" and molecule not in downregulated_molecules)
             ): continue
 
-            if molecule in background_lipids.keys():
+            if background_lipids and molecule in background_lipids.keys():
                 input_molecule = "Input lipid"
-            elif molecule in background_proteins:
+            elif background_proteins and molecule in background_proteins:
                 input_molecule = "Input protein"
-            elif molecule in background_metabolites:
+            elif background_metabolites and molecule in background_metabolites:
                 input_molecule = "Input metabolite"
-            elif molecule in background_transcripts:
+            elif background_transcripts and molecule in background_transcripts:
                 input_molecule = "Input transcript"
 
             path_layers = [[TermType.INPUT_TERM, [input_molecule], ItemCounter(molecule)]]

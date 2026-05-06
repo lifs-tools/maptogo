@@ -17,6 +17,10 @@ id: MOEA:0000003
 name: Multiomics Enrichment Analysis carbon chain entry
 
 [Term]
+id: MOEA:0000013
+name: Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
 id: CAT:0000000
 name: lipid classification
 creation_date: 2017-03-15T11:18:48Z
@@ -844,6 +848,78 @@ is_a: LION:0000095 ! headgroup with positive charge / zwitter-ion
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
 synonym: "SM" EXACT []
 creation_date: 2017-03-15T12:19:22Z
+
+[Term]
+id: MOEA:0000130
+name: SM 18:1;O2/x:x
+is_a: LION:0000084 ! ceramide phosphocholines (sphingomyelins) [SP0301]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000131
+name: SM 18:0;O2/x:x
+is_a: LION:0000084 ! ceramide phosphocholines (sphingomyelins) [SP0301]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000132
+name: Cer 18:1;O2/x:x
+is_a: LION:0012441 ! N-acylsphingosines (ceramides) [SP0201]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000133
+name: Cer 18:0;O2/x:x
+is_a: LION:0012441 ! N-acylsphingosines (ceramides) [SP0201]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000134
+name: HexCer 18:1;O2/x:x
+is_a: LION:0012017 ! hexosylceramides
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000135
+name: HexCer 18:0;O2/x:x
+is_a: LION:0012017 ! hexosylceramides
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000136
+name: Hex2Cer 18:1;O2/x:x
+is_a: LION:0012018 ! dihexosylceramides
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000137
+name: Hex2Cer 18:0;O2/x:x
+is_a: LION:0012018 ! dihexosylceramides
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000138
+name: SHexCer 18:1;O2/x:x
+is_a: LION:0000088 ! sulfoglycosphingolipids (sulfatides) [SP0602]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000139
+name: SHexCer 18:0;O2/x:x
+is_a: LION:0000088 ! sulfoglycosphingolipids (sulfatides) [SP0602]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000140
+name: Cer 20:1;O2/x:x
+is_a: LION:0012441 ! N-acylsphingosines (ceramides) [SP0201]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
+
+[Term]
+id: MOEA:0000141
+name: Cer 20:0;O2/x:x
+is_a: LION:0012441 ! N-acylsphingosines (ceramides) [SP0201]
+is_a: MOEA:0000013 ! Multiomics Enrichment Analysis sphingolipid subclass entry
 
 [Term]
 id: LION:0000085
@@ -1853,6 +1929,356 @@ is_a: LION:0080970 ! average bilayer thickness
 is_a: LION:0080979 ! high lateral diffusion
 
 [Term]
+id: LION:0000270
+name: HexCer(32:4)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000271
+name: HexCer(32:2)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000272
+name: HexCer(32:1)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000273
+name: HexCer(32:0)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000274
+name: HexCer(34:5)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000275
+name: HexCer(34:4)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000276
+name: HexCer(34:3)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000277
+name: HexCer(34:2)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000278
+name: HexCer(34:1)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000279
+name: HexCer(34:0)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000280
+name: HexCer(36:5)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000281
+name: HexCer(36:1)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000282
+name: HexCer(36:0)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000283
+name: HexCer(38:1)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000284
+name: HexCer(40:1)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000285
+name: HexCer(42:7)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000286
+name: HexCer(42:3)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000287
+name: HexCer(42:2)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000288
+name: HexCer(42:1)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000289
+name: HexCer(42:0)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000290
+name: HexCer(44:7)
+is_a: LION:0012017 ! hexosylceramides
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000291
+name: PI(32:0)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000292
+name: PI(34:1)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000293
+name: PI(34:0)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000294
+name: PI(36:8)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000295
+name: PI(36:5)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000296
+name: PI(36:4)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000297
+name: PI(36:3)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000298
+name: PI(36:2)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000299
+name: PI(36:1)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000300
+name: PI(36:0)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000301
+name: PI(O-38:5)
+is_a: LION:0000048 ! 1-alkyl,2-acylglycerophosphoinositols [GP0602]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000302
+name: PI(O-38:4)
+is_a: LION:0000048 ! 1-alkyl,2-acylglycerophosphoinositols [GP0602]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000303
+name: PI(38:10)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000304
+name: PI(38:9)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000305
+name: PI(38:6)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000306
+name: PI(38:5)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000307
+name: PI(38:4)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000308
+name: PI(38:3)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000309
+name: PI(38:2)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000310
+name: PI(38:1)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000311
+name: PI(38:0)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000312
+name: PI(O-40:6)
+is_a: LION:0000048 ! 1-alkyl,2-acylglycerophosphoinositols [GP0602]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000313
+name: PI(40:10)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000314
+name: PI(40:9)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000315
+name: PI(40:0)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000316
+name: PI(42:5)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000317
+name: PI(42:4)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000318
+name: PI(42:3)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
+id: LION:0000319
+name: PI(42:2)
+is_a: LION:0000047 ! diacylglycerophosphoinositols [GP0601]
+created_by: molen116
+creation_date: 2017-09-28T15:09:18Z
+
+[Term]
 id: LION:0000320
 name: PE(30:0)
 is_a: LION:0000038 ! diacylglycerophosphoethanolamines [GP0201]
@@ -2512,11 +2938,6 @@ id: LION:0000453
 name: simple glc series [SP0501]
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
 is_a: LION:0000080 ! neutral glycosphingolipids [SP05]
-synonym: "GlcCer" EXACT []
-synonym: "LacCer" EXACT []
-synonym: "HexCer" EXACT []
-synonym: "Hex2Cer" EXACT []
-synonym: "GalCer" EXACT []
 creation_date: 2017-03-17T15:13:48Z
 
 [Term]
@@ -9964,6 +10385,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003305
 name: Hex2Cer(d18:0/14:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000228 ! Hex2Cer(32:0)
 is_a: LION:0000259 ! C14:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -9972,6 +10394,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003306
 name: Hex2Cer(d18:0/16:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000229 ! Hex2Cer(34:1)
 is_a: LION:0002900 ! C16:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -9980,6 +10403,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003307
 name: Hex2Cer(d18:1/16:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0000229 ! Hex2Cer(34:1)
 is_a: LION:0002882 ! C16:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -9988,6 +10412,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003308
 name: Hex2Cer(d18:0/16:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000230 ! Hex2Cer(34:0)
 is_a: LION:0002882 ! C16:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -9996,6 +10421,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003309
 name: Hex2Cer(d18:0/18:3)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000231 ! Hex2Cer(36:3)
 is_a: LION:0002924 ! C18:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10004,6 +10430,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003310
 name: Hex2Cer(d18:1/18:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0000231 ! Hex2Cer(36:3)
 is_a: LION:0002923 ! C18:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10012,6 +10439,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003311
 name: Hex2Cer(d18:0/18:2)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000232 ! Hex2Cer(36:2)
 is_a: LION:0002923 ! C18:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10020,6 +10448,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003312
 name: Hex2Cer(d18:1/18:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0000232 ! Hex2Cer(36:2)
 is_a: LION:0002922 ! C18:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10028,6 +10457,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003313
 name: Hex2Cer(d18:0/18:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000233 ! Hex2Cer(36:1)
 is_a: LION:0002922 ! C18:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10036,6 +10466,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003314
 name: Hex2Cer(d18:1/18:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0000233 ! Hex2Cer(36:1)
 is_a: LION:0002921 ! C18:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10044,6 +10475,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003315
 name: Hex2Cer(d18:0/20:3)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000234 ! Hex2Cer(38:3)
 is_a: LION:0002928 ! C20:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10052,6 +10484,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003316
 name: Hex2Cer(d18:1/20:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0000234 ! Hex2Cer(38:3)
 is_a: LION:0002927 ! C20:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10060,6 +10493,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003317
 name: SHexCer(d18:1/14:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000238 ! SHexCer(32:1)
 is_a: LION:0000259 ! C14:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10068,6 +10502,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003318
 name: SHexCer(d18:0/14:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000239 ! SHexCer(32:0)
 is_a: LION:0000259 ! C14:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10076,6 +10511,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003319
 name: SHexCer(d18:0/20:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000240 ! SHexCer(38:2)
 is_a: LION:0002927 ! C20:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10084,6 +10520,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003320
 name: SHexCer(d18:1/20:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000240 ! SHexCer(38:2)
 is_a: LION:0002926 ! C20:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10092,6 +10529,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003321
 name: SHexCer(d18:0/20:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000241 ! SHexCer(38:1)
 is_a: LION:0002926 ! C20:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10100,6 +10538,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003322
 name: SHexCer(d18:1/20:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000241 ! SHexCer(38:1)
 is_a: LION:0002925 ! C20:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10108,6 +10547,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003323
 name: SHexCer(d18:0/22:5)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000242 ! SHexCer(40:5)
 is_a: LION:0002936 ! C22:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10116,6 +10556,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003324
 name: SHexCer(d18:1/22:4)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000242 ! SHexCer(40:5)
 is_a: LION:0002935 ! C22:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10124,6 +10565,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003325
 name: SHexCer(d18:0/22:4)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000243 ! SHexCer(40:4)
 is_a: LION:0002935 ! C22:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10132,6 +10574,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003326
 name: SHexCer(d18:1/22:3)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000243 ! SHexCer(40:4)
 is_a: LION:0002934 ! C22:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10140,6 +10583,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003327
 name: SHexCer(d18:0/22:3)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000244 ! SHexCer(40:3)
 is_a: LION:0002934 ! C22:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10148,6 +10592,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003328
 name: SHexCer(d18:1/22:2)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000244 ! SHexCer(40:3)
 is_a: LION:0002933 ! C22:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10156,6 +10601,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003329
 name: SHexCer(d18:0/22:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000245 ! SHexCer(40:2)
 is_a: LION:0002933 ! C22:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10164,6 +10610,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003330
 name: SHexCer(d18:1/22:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000245 ! SHexCer(40:2)
 is_a: LION:0002932 ! C22:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10172,6 +10619,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003331
 name: SHexCer(d18:0/22:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000246 ! SHexCer(40:1)
 is_a: LION:0002932 ! C22:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10180,6 +10628,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003332
 name: SHexCer(d18:1/22:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000246 ! SHexCer(40:1)
 is_a: LION:0002931 ! C22:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10521,6 +10970,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003375
 name: HexCer(d18:1/14:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000259 ! C14:0
 is_a: LION:0000272 ! HexCer(32:1)
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10529,6 +10979,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003376
 name: HexCer(d18:0/14:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000259 ! C14:0
 is_a: LION:0000273 ! HexCer(32:0)
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10537,6 +10988,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003377
 name: HexCer(d18:1/16:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000277 ! HexCer(34:2)
 is_a: LION:0002900 ! C16:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10545,6 +10997,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003378
 name: HexCer(d18:0/16:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000278 ! HexCer(34:1)
 is_a: LION:0002900 ! C16:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10553,6 +11006,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003379
 name: HexCer(d18:1/16:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000278 ! HexCer(34:1)
 is_a: LION:0002882 ! C16:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10561,6 +11015,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003380
 name: HexCer(d18:0/16:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000279 ! HexCer(34:0)
 is_a: LION:0002882 ! C16:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10569,6 +11024,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003381
 name: HexCer(d18:0/18:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000281 ! HexCer(36:1)
 is_a: LION:0002922 ! C18:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10577,6 +11033,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003382
 name: HexCer(d18:1/18:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000281 ! HexCer(36:1)
 is_a: LION:0002921 ! C18:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10585,6 +11042,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003383
 name: HexCer(d18:0/18:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000282 ! HexCer(36:0)
 is_a: LION:0002921 ! C18:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10593,6 +11051,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003384
 name: HexCer(d18:0/20:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000283 ! HexCer(38:1)
 is_a: LION:0002926 ! C20:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10601,6 +11060,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003385
 name: HexCer(d18:1/20:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000283 ! HexCer(38:1)
 is_a: LION:0002925 ! C20:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10609,6 +11069,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003386
 name: HexCer(d18:0/22:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000284 ! HexCer(40:1)
 is_a: LION:0002932 ! C22:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10617,6 +11078,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003387
 name: HexCer(d18:1/22:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000284 ! HexCer(40:1)
 is_a: LION:0002931 ! C22:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10625,6 +11087,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003388
 name: HexCer(d18:1/24:6)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000285 ! HexCer(42:7)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10633,6 +11096,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003389
 name: HexCer(d18:0/24:3)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000286 ! HexCer(42:3)
 is_a: LION:0002941 ! C24:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10641,6 +11105,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003390
 name: HexCer(d18:1/24:2)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000286 ! HexCer(42:3)
 is_a: LION:0002940 ! C24:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10649,6 +11114,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003391
 name: HexCer(d18:0/24:2)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000287 ! HexCer(42:2)
 is_a: LION:0002940 ! C24:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10657,6 +11123,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003392
 name: HexCer(d18:1/24:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000287 ! HexCer(42:2)
 is_a: LION:0002939 ! C24:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10665,6 +11132,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003393
 name: HexCer(d18:0/24:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000288 ! HexCer(42:1)
 is_a: LION:0002939 ! C24:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10673,6 +11141,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003394
 name: HexCer(d18:1/24:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000288 ! HexCer(42:1)
 is_a: LION:0002938 ! C24:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -10681,6 +11150,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003395
 name: HexCer(d18:0/24:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000289 ! HexCer(42:0)
 is_a: LION:0002938 ! C24:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -10689,6 +11159,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003396
 name: HexCer(d18:1/26:6)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000290 ! HexCer(44:7)
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14193,11 +14664,13 @@ name: SM(d18:1/14:0)
 is_a: LION:0000259 ! C14:0
 is_a: LION:0000390 ! SM(32:1)
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003837
 name: SM(d18:0/14:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000259 ! C14:0
 is_a: LION:0000391 ! SM(32:0)
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14209,11 +14682,13 @@ name: SM(d18:1/16:1)
 is_a: LION:0000394 ! SM(34:2)
 is_a: LION:0002900 ! C16:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003839
 name: SM(d18:0/16:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000395 ! SM(34:1)
 is_a: LION:0002900 ! C16:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14225,11 +14700,13 @@ name: SM(d18:1/16:0)
 is_a: LION:0000395 ! SM(34:1)
 is_a: LION:0002882 ! C16:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003841
 name: SM(d18:0/16:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000396 ! SM(34:0)
 is_a: LION:0002882 ! C16:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14238,6 +14715,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003842
 name: SM(d18:0/18:3)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000398 ! SM(36:3)
 is_a: LION:0002924 ! C18:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14249,11 +14727,13 @@ name: SM(d18:1/18:2)
 is_a: LION:0000398 ! SM(36:3)
 is_a: LION:0002923 ! C18:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003844
 name: SM(d18:0/18:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000399 ! SM(36:2)
 is_a: LION:0002923 ! C18:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14265,11 +14745,13 @@ name: SM(d18:1/18:1)
 is_a: LION:0000399 ! SM(36:2)
 is_a: LION:0002922 ! C18:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003846
 name: SM(d18:0/18:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000400 ! SM(36:1)
 is_a: LION:0002922 ! C18:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14281,11 +14763,13 @@ name: SM(d18:1/18:0)
 is_a: LION:0000400 ! SM(36:1)
 is_a: LION:0002921 ! C18:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003848
 name: SM(d18:0/18:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000401 ! SM(36:0)
 is_a: LION:0002921 ! C18:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14297,11 +14781,13 @@ name: SM(d18:1/20:5)
 is_a: LION:0000402 ! SM(38:6)
 is_a: LION:0002930 ! C20:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003850
 name: SM(d18:0/20:5)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000403 ! SM(38:5)
 is_a: LION:0002930 ! C20:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14313,11 +14799,13 @@ name: SM(d18:1/20:4)
 is_a: LION:0000403 ! SM(38:5)
 is_a: LION:0002929 ! C20:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003852
 name: SM(d18:0/20:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000404 ! SM(38:2)
 is_a: LION:0002927 ! C20:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14329,11 +14817,13 @@ name: SM(d18:1/20:1)
 is_a: LION:0000404 ! SM(38:2)
 is_a: LION:0002926 ! C20:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 creation_date: 2017-10-02T14:02:21Z
 
 [Term]
 id: LION:0003854
 name: SM(d18:0/20:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000405 ! SM(38:1)
 is_a: LION:0002926 ! C20:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14342,6 +14832,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003855
 name: SM(d18:1/20:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000405 ! SM(38:1)
 is_a: LION:0002925 ! C20:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14350,6 +14841,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003856
 name: SM(d18:0/20:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000406 ! SM(38:0)
 is_a: LION:0002925 ! C20:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14358,6 +14850,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003857
 name: SM(d18:1/22:6)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000407 ! SM(40:7)
 is_a: LION:0002937 ! C22:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14366,6 +14859,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003858
 name: SM(d18:0/22:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000408 ! SM(40:2)
 is_a: LION:0002933 ! C22:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14374,6 +14868,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003859
 name: SM(d18:1/22:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000408 ! SM(40:2)
 is_a: LION:0002932 ! C22:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14382,6 +14877,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003860
 name: SM(d18:0/22:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000409 ! SM(40:1)
 is_a: LION:0002932 ! C22:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14390,6 +14886,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003861
 name: SM(d18:1/22:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000409 ! SM(40:1)
 is_a: LION:0002931 ! C22:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14398,6 +14895,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003862
 name: SM(d18:0/22:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000410 ! SM(40:0)
 is_a: LION:0002931 ! C22:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14406,6 +14904,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003863
 name: SM(d18:1/24:6)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000411 ! SM(42:7)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14414,6 +14913,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003864
 name: SM(d18:0/24:4)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000412 ! SM(42:4)
 is_a: LION:0002942 ! C24:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14422,6 +14922,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003865
 name: SM(d18:1/24:3)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000412 ! SM(42:4)
 is_a: LION:0002941 ! C24:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14430,6 +14931,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003866
 name: SM(d18:0/24:3)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000413 ! SM(42:3)
 is_a: LION:0002941 ! C24:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14438,6 +14940,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003867
 name: SM(d18:1/24:2)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000413 ! SM(42:3)
 is_a: LION:0002940 ! C24:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14446,6 +14949,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003868
 name: SM(d18:0/24:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000414 ! SM(42:2)
 is_a: LION:0002940 ! C24:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14454,6 +14958,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003869
 name: SM(d18:1/24:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000414 ! SM(42:2)
 is_a: LION:0002939 ! C24:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14462,6 +14967,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003870
 name: SM(d18:0/24:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000415 ! SM(42:1)
 is_a: LION:0002939 ! C24:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14470,6 +14976,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003871
 name: SM(d18:1/24:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000415 ! SM(42:1)
 is_a: LION:0002938 ! C24:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14478,6 +14985,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003872
 name: SM(d18:0/24:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000416 ! SM(42:0)
 is_a: LION:0002938 ! C24:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14486,6 +14994,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003873
 name: SM(d18:1/26:6)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000417 ! SM(44:7)
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14494,6 +15003,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003874
 name: SM(d18:0/26:4)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000418 ! SM(44:4)
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14502,6 +15012,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003875
 name: SM(d18:1/26:3)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000418 ! SM(44:4)
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14510,6 +15021,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003876
 name: SM(d18:0/26:3)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000419 ! SM(44:3)
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14518,6 +15030,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003877
 name: SM(d18:1/26:2)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000419 ! SM(44:3)
 is_a: LION:0002982 ! C26:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14526,6 +15039,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003878
 name: SM(d18:0/26:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000420 ! SM(44:2)
 is_a: LION:0002982 ! C26:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14534,6 +15048,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003879
 name: SM(d18:1/26:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000420 ! SM(44:2)
 is_a: LION:0002981 ! C26:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14542,6 +15057,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003880
 name: SM(d18:0/26:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000421 ! SM(44:1)
 is_a: LION:0002981 ! C26:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -14550,6 +15066,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003881
 name: SM(d18:1/26:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000421 ! SM(44:1)
 is_a: LION:0002979 ! C26:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -14558,6 +15075,7 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0003882
 name: SM(d18:0/26:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000422 ! SM(44:0)
 is_a: LION:0002979 ! C26:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -17210,12 +17728,17 @@ creation_date: 2017-10-05T12:25:36Z
 id: LION:0012017
 name: hexosylceramides
 is_a: LION:0000453 ! simple glc series [SP0501]
+synonym: "GlcCer" EXACT []
+synonym: "LacCer" EXACT []
+synonym: "HexCer" EXACT []
 creation_date: 2019-09-24T15:06:09Z
 
 [Term]
 id: LION:0012018
 name: dihexosylceramides
 is_a: LION:0000453 ! simple glc series [SP0501]
+synonym: "Hex2Cer" EXACT []
+synonym: "GalCer" EXACT []
 creation_date: 2019-09-24T15:06:09Z
 
 [Term]
@@ -376559,6 +377082,7 @@ is_a: LION:0000622 ! triacylglycerols [GL0301]
 [Term]
 id: LION:0143983
 name: SM(d18:0/12:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144050 ! SM(30:0)
@@ -376566,6 +377090,7 @@ is_a: LION:0144050 ! SM(30:0)
 [Term]
 id: LION:0143984
 name: SM(d18:0/13:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144051 ! SM(31:0)
@@ -376573,6 +377098,7 @@ is_a: LION:0144051 ! SM(31:0)
 [Term]
 id: LION:0143985
 name: SM(d18:0/15:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144052 ! SM(33:0)
@@ -376580,6 +377106,7 @@ is_a: LION:0144052 ! SM(33:0)
 [Term]
 id: LION:0143986
 name: SM(d18:0/15:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144053 ! SM(33:1)
@@ -376587,6 +377114,7 @@ is_a: LION:0144053 ! SM(33:1)
 [Term]
 id: LION:0143987
 name: SM(d18:0/17:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144054 ! SM(35:0)
@@ -376594,6 +377122,7 @@ is_a: LION:0144054 ! SM(35:0)
 [Term]
 id: LION:0143988
 name: SM(d18:0/17:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144055 ! SM(35:1)
@@ -376601,6 +377130,7 @@ is_a: LION:0144055 ! SM(35:1)
 [Term]
 id: LION:0143989
 name: SM(d18:0/17:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144056 ! SM(35:2)
@@ -376608,6 +377138,7 @@ is_a: LION:0144056 ! SM(35:2)
 [Term]
 id: LION:0143990
 name: SM(d18:0/19:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144057 ! SM(37:0)
@@ -376615,6 +377146,7 @@ is_a: LION:0144057 ! SM(37:0)
 [Term]
 id: LION:0143991
 name: SM(d18:0/19:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144058 ! SM(37:1)
@@ -376622,6 +377154,7 @@ is_a: LION:0144058 ! SM(37:1)
 [Term]
 id: LION:0143992
 name: SM(d18:0/19:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144059 ! SM(37:2)
@@ -376629,6 +377162,7 @@ is_a: LION:0144059 ! SM(37:2)
 [Term]
 id: LION:0143993
 name: SM(d18:0/19:3)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144060 ! SM(37:3)
@@ -376636,6 +377170,7 @@ is_a: LION:0144060 ! SM(37:3)
 [Term]
 id: LION:0143994
 name: SM(d18:0/21:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144061 ! SM(39:0)
@@ -376643,6 +377178,7 @@ is_a: LION:0144061 ! SM(39:0)
 [Term]
 id: LION:0143995
 name: SM(d18:0/21:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144062 ! SM(39:1)
@@ -376650,6 +377186,7 @@ is_a: LION:0144062 ! SM(39:1)
 [Term]
 id: LION:0143996
 name: SM(d18:0/21:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144063 ! SM(39:2)
@@ -376657,6 +377194,7 @@ is_a: LION:0144063 ! SM(39:2)
 [Term]
 id: LION:0143997
 name: SM(d18:0/21:3)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144064 ! SM(39:3)
@@ -376664,6 +377202,7 @@ is_a: LION:0144064 ! SM(39:3)
 [Term]
 id: LION:0143998
 name: SM(d18:0/21:4)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144065 ! SM(39:4)
@@ -376671,6 +377210,7 @@ is_a: LION:0144065 ! SM(39:4)
 [Term]
 id: LION:0143999
 name: SM(d18:0/23:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144066 ! SM(41:0)
@@ -376678,6 +377218,7 @@ is_a: LION:0144066 ! SM(41:0)
 [Term]
 id: LION:0144000
 name: SM(d18:0/23:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144067 ! SM(41:1)
@@ -376685,6 +377226,7 @@ is_a: LION:0144067 ! SM(41:1)
 [Term]
 id: LION:0144001
 name: SM(d18:0/23:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144068 ! SM(41:2)
@@ -376692,6 +377234,7 @@ is_a: LION:0144068 ! SM(41:2)
 [Term]
 id: LION:0144002
 name: SM(d18:0/23:3)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144069 ! SM(41:3)
@@ -376699,6 +377242,7 @@ is_a: LION:0144069 ! SM(41:3)
 [Term]
 id: LION:0144003
 name: SM(d18:0/23:4)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144070 ! SM(41:4)
@@ -376706,6 +377250,7 @@ is_a: LION:0144070 ! SM(41:4)
 [Term]
 id: LION:0144004
 name: SM(d18:0/23:5)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144071 ! SM(41:5)
@@ -376713,6 +377258,7 @@ is_a: LION:0144071 ! SM(41:5)
 [Term]
 id: LION:0144005
 name: SM(d18:0/24:6)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0002115 ! SM(42:6)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -376720,6 +377266,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144006
 name: SM(d18:0/25:0)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144072 ! SM(43:0)
@@ -376727,6 +377274,7 @@ is_a: LION:0144072 ! SM(43:0)
 [Term]
 id: LION:0144007
 name: SM(d18:0/25:1)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144073 ! SM(43:1)
@@ -376734,6 +377282,7 @@ is_a: LION:0144073 ! SM(43:1)
 [Term]
 id: LION:0144008
 name: SM(d18:0/25:2)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144074 ! SM(43:2)
@@ -376741,6 +377290,7 @@ is_a: LION:0144074 ! SM(43:2)
 [Term]
 id: LION:0144009
 name: SM(d18:0/25:3)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144075 ! SM(43:3)
@@ -376748,6 +377298,7 @@ is_a: LION:0144075 ! SM(43:3)
 [Term]
 id: LION:0144010
 name: SM(d18:0/25:4)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144076 ! SM(43:4)
@@ -376755,6 +377306,7 @@ is_a: LION:0144076 ! SM(43:4)
 [Term]
 id: LION:0144011
 name: SM(d18:0/25:5)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144077 ! SM(43:5)
@@ -376762,6 +377314,7 @@ is_a: LION:0144077 ! SM(43:5)
 [Term]
 id: LION:0144012
 name: SM(d18:0/25:6)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144078 ! SM(43:6)
@@ -376769,6 +377322,7 @@ is_a: LION:0144078 ! SM(43:6)
 [Term]
 id: LION:0144013
 name: SM(d18:0/25:7)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144079 ! SM(43:7)
@@ -376776,6 +377330,7 @@ is_a: LION:0144079 ! SM(43:7)
 [Term]
 id: LION:0144014
 name: SM(d18:0/26:5)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144080 ! SM(44:5)
@@ -376783,6 +377338,7 @@ is_a: LION:0144080 ! SM(44:5)
 [Term]
 id: LION:0144015
 name: SM(d18:0/26:6)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144081 ! SM(44:6)
@@ -376790,6 +377346,7 @@ is_a: LION:0144081 ! SM(44:6)
 [Term]
 id: LION:0144016
 name: SM(d18:0/26:7)
+is_a: MOEA:0000131 ! SM 18:0;O2/x:x
 is_a: LION:0000417 ! SM(44:7)
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -376797,6 +377354,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144017
 name: SM(d18:1/12:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144082 ! SM(30:1)
@@ -376804,6 +377362,7 @@ is_a: LION:0144082 ! SM(30:1)
 [Term]
 id: LION:0144018
 name: SM(d18:1/13:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144083 ! SM(31:1)
@@ -376811,6 +377370,7 @@ is_a: LION:0144083 ! SM(31:1)
 [Term]
 id: LION:0144019
 name: SM(d18:1/15:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144053 ! SM(33:1)
@@ -376818,6 +377378,7 @@ is_a: LION:0144053 ! SM(33:1)
 [Term]
 id: LION:0144020
 name: SM(d18:1/15:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144084 ! SM(33:2)
@@ -376825,6 +377386,7 @@ is_a: LION:0144084 ! SM(33:2)
 [Term]
 id: LION:0144021
 name: SM(d18:1/17:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144055 ! SM(35:1)
@@ -376832,6 +377394,7 @@ is_a: LION:0144055 ! SM(35:1)
 [Term]
 id: LION:0144022
 name: SM(d18:1/17:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144056 ! SM(35:2)
@@ -376839,6 +377402,7 @@ is_a: LION:0144056 ! SM(35:2)
 [Term]
 id: LION:0144023
 name: SM(d18:1/17:2)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144085 ! SM(35:3)
@@ -376846,6 +377410,7 @@ is_a: LION:0144085 ! SM(35:3)
 [Term]
 id: LION:0144024
 name: SM(d18:1/19:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144058 ! SM(37:1)
@@ -376853,6 +377418,7 @@ is_a: LION:0144058 ! SM(37:1)
 [Term]
 id: LION:0144025
 name: SM(d18:1/19:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144059 ! SM(37:2)
@@ -376860,6 +377426,7 @@ is_a: LION:0144059 ! SM(37:2)
 [Term]
 id: LION:0144026
 name: SM(d18:1/19:2)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144060 ! SM(37:3)
@@ -376867,6 +377434,7 @@ is_a: LION:0144060 ! SM(37:3)
 [Term]
 id: LION:0144027
 name: SM(d18:1/19:3)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144086 ! SM(37:4)
@@ -376874,6 +377442,7 @@ is_a: LION:0144086 ! SM(37:4)
 [Term]
 id: LION:0144028
 name: SM(d18:1/21:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144062 ! SM(39:1)
@@ -376881,6 +377450,7 @@ is_a: LION:0144062 ! SM(39:1)
 [Term]
 id: LION:0144029
 name: SM(d18:1/21:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144063 ! SM(39:2)
@@ -376888,6 +377458,7 @@ is_a: LION:0144063 ! SM(39:2)
 [Term]
 id: LION:0144030
 name: SM(d18:1/21:2)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144064 ! SM(39:3)
@@ -376895,6 +377466,7 @@ is_a: LION:0144064 ! SM(39:3)
 [Term]
 id: LION:0144031
 name: SM(d18:1/21:3)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144065 ! SM(39:4)
@@ -376902,6 +377474,7 @@ is_a: LION:0144065 ! SM(39:4)
 [Term]
 id: LION:0144032
 name: SM(d18:1/21:4)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144087 ! SM(39:5)
@@ -376909,6 +377482,7 @@ is_a: LION:0144087 ! SM(39:5)
 [Term]
 id: LION:0144033
 name: SM(d18:1/23:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144067 ! SM(41:1)
@@ -376916,6 +377490,7 @@ is_a: LION:0144067 ! SM(41:1)
 [Term]
 id: LION:0144034
 name: SM(d18:1/23:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144068 ! SM(41:2)
@@ -376923,6 +377498,7 @@ is_a: LION:0144068 ! SM(41:2)
 [Term]
 id: LION:0144035
 name: SM(d18:1/23:2)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144069 ! SM(41:3)
@@ -376930,6 +377506,7 @@ is_a: LION:0144069 ! SM(41:3)
 [Term]
 id: LION:0144036
 name: SM(d18:1/23:3)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144070 ! SM(41:4)
@@ -376937,6 +377514,7 @@ is_a: LION:0144070 ! SM(41:4)
 [Term]
 id: LION:0144037
 name: SM(d18:1/23:4)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144071 ! SM(41:5)
@@ -376944,6 +377522,7 @@ is_a: LION:0144071 ! SM(41:5)
 [Term]
 id: LION:0144038
 name: SM(d18:1/23:5)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144088 ! SM(41:6)
@@ -376951,6 +377530,7 @@ is_a: LION:0144088 ! SM(41:6)
 [Term]
 id: LION:0144039
 name: SM(d18:1/25:0)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144073 ! SM(43:1)
@@ -376958,6 +377538,7 @@ is_a: LION:0144073 ! SM(43:1)
 [Term]
 id: LION:0144040
 name: SM(d18:1/25:1)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144074 ! SM(43:2)
@@ -376965,6 +377546,7 @@ is_a: LION:0144074 ! SM(43:2)
 [Term]
 id: LION:0144041
 name: SM(d18:1/25:2)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144075 ! SM(43:3)
@@ -376972,6 +377554,7 @@ is_a: LION:0144075 ! SM(43:3)
 [Term]
 id: LION:0144042
 name: SM(d18:1/25:3)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144076 ! SM(43:4)
@@ -376979,6 +377562,7 @@ is_a: LION:0144076 ! SM(43:4)
 [Term]
 id: LION:0144043
 name: SM(d18:1/25:4)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144077 ! SM(43:5)
@@ -376986,6 +377570,7 @@ is_a: LION:0144077 ! SM(43:5)
 [Term]
 id: LION:0144044
 name: SM(d18:1/25:5)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144078 ! SM(43:6)
@@ -376993,6 +377578,7 @@ is_a: LION:0144078 ! SM(43:6)
 [Term]
 id: LION:0144045
 name: SM(d18:1/25:6)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144079 ! SM(43:7)
@@ -377000,6 +377586,7 @@ is_a: LION:0144079 ! SM(43:7)
 [Term]
 id: LION:0144046
 name: SM(d18:1/25:7)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144089 ! SM(43:8)
@@ -377007,6 +377594,7 @@ is_a: LION:0144089 ! SM(43:8)
 [Term]
 id: LION:0144047
 name: SM(d18:1/26:4)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144080 ! SM(44:5)
@@ -377014,6 +377602,7 @@ is_a: LION:0144080 ! SM(44:5)
 [Term]
 id: LION:0144048
 name: SM(d18:1/26:5)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144081 ! SM(44:6)
@@ -377021,6 +377610,7 @@ is_a: LION:0144081 ! SM(44:6)
 [Term]
 id: LION:0144049
 name: SM(d18:1/26:7)
+is_a: MOEA:0000130 ! SM 18:1;O2/x:x
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144090 ! SM(44:8)
@@ -377274,6 +377864,7 @@ is_a: LION:0001739 ! very high transition temperature
 [Term]
 id: LION:0144091
 name: Cer(d18:0/12:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144158 ! Cer(30:0)
@@ -377281,6 +377872,7 @@ is_a: LION:0144158 ! Cer(30:0)
 [Term]
 id: LION:0144092
 name: Cer(d18:0/13:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144159 ! Cer(31:0)
@@ -377288,6 +377880,7 @@ is_a: LION:0144159 ! Cer(31:0)
 [Term]
 id: LION:0144093
 name: Cer(d18:0/15:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144160 ! Cer(33:0)
@@ -377295,6 +377888,7 @@ is_a: LION:0144160 ! Cer(33:0)
 [Term]
 id: LION:0144094
 name: Cer(d18:0/15:1)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144161 ! Cer(33:1)
@@ -377302,6 +377896,7 @@ is_a: LION:0144161 ! Cer(33:1)
 [Term]
 id: LION:0144095
 name: Cer(d18:0/17:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144162 ! Cer(35:0)
@@ -377309,6 +377904,7 @@ is_a: LION:0144162 ! Cer(35:0)
 [Term]
 id: LION:0144096
 name: Cer(d18:0/17:1)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144163 ! Cer(35:1)
@@ -377316,6 +377912,7 @@ is_a: LION:0144163 ! Cer(35:1)
 [Term]
 id: LION:0144097
 name: Cer(d18:0/17:2)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144164 ! Cer(35:2)
@@ -377323,6 +377920,7 @@ is_a: LION:0144164 ! Cer(35:2)
 [Term]
 id: LION:0144098
 name: Cer(d18:0/19:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144165 ! Cer(37:0)
@@ -377330,6 +377928,7 @@ is_a: LION:0144165 ! Cer(37:0)
 [Term]
 id: LION:0144099
 name: Cer(d18:0/19:1)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144166 ! Cer(37:1)
@@ -377337,6 +377936,7 @@ is_a: LION:0144166 ! Cer(37:1)
 [Term]
 id: LION:0144100
 name: Cer(d18:0/19:2)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144167 ! Cer(37:2)
@@ -377344,6 +377944,7 @@ is_a: LION:0144167 ! Cer(37:2)
 [Term]
 id: LION:0144101
 name: Cer(d18:0/19:3)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144168 ! Cer(37:3)
@@ -377351,6 +377952,7 @@ is_a: LION:0144168 ! Cer(37:3)
 [Term]
 id: LION:0144102
 name: Cer(d18:0/21:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144169 ! Cer(39:0)
@@ -377358,6 +377960,7 @@ is_a: LION:0144169 ! Cer(39:0)
 [Term]
 id: LION:0144103
 name: Cer(d18:0/21:1)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144170 ! Cer(39:1)
@@ -377365,6 +377968,7 @@ is_a: LION:0144170 ! Cer(39:1)
 [Term]
 id: LION:0144104
 name: Cer(d18:0/21:2)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144171 ! Cer(39:2)
@@ -377372,6 +377976,7 @@ is_a: LION:0144171 ! Cer(39:2)
 [Term]
 id: LION:0144105
 name: Cer(d18:0/21:3)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144172 ! Cer(39:3)
@@ -377379,6 +377984,7 @@ is_a: LION:0144172 ! Cer(39:3)
 [Term]
 id: LION:0144106
 name: Cer(d18:0/21:4)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144173 ! Cer(39:4)
@@ -377386,6 +377992,7 @@ is_a: LION:0144173 ! Cer(39:4)
 [Term]
 id: LION:0144107
 name: Cer(d18:0/23:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144174 ! Cer(41:0)
@@ -377393,6 +378000,7 @@ is_a: LION:0144174 ! Cer(41:0)
 [Term]
 id: LION:0144108
 name: Cer(d18:0/23:1)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144175 ! Cer(41:1)
@@ -377400,6 +378008,7 @@ is_a: LION:0144175 ! Cer(41:1)
 [Term]
 id: LION:0144109
 name: Cer(d18:0/23:2)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144176 ! Cer(41:2)
@@ -377407,6 +378016,7 @@ is_a: LION:0144176 ! Cer(41:2)
 [Term]
 id: LION:0144110
 name: Cer(d18:0/23:3)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144177 ! Cer(41:3)
@@ -377414,6 +378024,7 @@ is_a: LION:0144177 ! Cer(41:3)
 [Term]
 id: LION:0144111
 name: Cer(d18:0/23:4)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144178 ! Cer(41:4)
@@ -377421,6 +378032,7 @@ is_a: LION:0144178 ! Cer(41:4)
 [Term]
 id: LION:0144112
 name: Cer(d18:0/23:5)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144179 ! Cer(41:5)
@@ -377428,6 +378040,7 @@ is_a: LION:0144179 ! Cer(41:5)
 [Term]
 id: LION:0144113
 name: Cer(d18:0/24:6)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0002084 ! Cer(42:6)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -377435,6 +378048,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144114
 name: Cer(d18:0/25:0)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144180 ! Cer(43:0)
@@ -377442,6 +378056,7 @@ is_a: LION:0144180 ! Cer(43:0)
 [Term]
 id: LION:0144115
 name: Cer(d18:0/25:1)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144181 ! Cer(43:1)
@@ -377449,6 +378064,7 @@ is_a: LION:0144181 ! Cer(43:1)
 [Term]
 id: LION:0144116
 name: Cer(d18:0/25:2)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144182 ! Cer(43:2)
@@ -377456,6 +378072,7 @@ is_a: LION:0144182 ! Cer(43:2)
 [Term]
 id: LION:0144117
 name: Cer(d18:0/25:3)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144183 ! Cer(43:3)
@@ -377463,6 +378080,7 @@ is_a: LION:0144183 ! Cer(43:3)
 [Term]
 id: LION:0144118
 name: Cer(d18:0/25:4)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144184 ! Cer(43:4)
@@ -377470,6 +378088,7 @@ is_a: LION:0144184 ! Cer(43:4)
 [Term]
 id: LION:0144119
 name: Cer(d18:0/25:5)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144185 ! Cer(43:5)
@@ -377477,6 +378096,7 @@ is_a: LION:0144185 ! Cer(43:5)
 [Term]
 id: LION:0144120
 name: Cer(d18:0/25:6)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144186 ! Cer(43:6)
@@ -377484,6 +378104,7 @@ is_a: LION:0144186 ! Cer(43:6)
 [Term]
 id: LION:0144121
 name: Cer(d18:0/25:7)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144187 ! Cer(43:7)
@@ -377491,6 +378112,7 @@ is_a: LION:0144187 ! Cer(43:7)
 [Term]
 id: LION:0144122
 name: Cer(d18:0/26:5)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144188 ! Cer(44:5)
@@ -377498,6 +378120,7 @@ is_a: LION:0144188 ! Cer(44:5)
 [Term]
 id: LION:0144123
 name: Cer(d18:0/26:6)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144189 ! Cer(44:6)
@@ -377505,6 +378128,7 @@ is_a: LION:0144189 ! Cer(44:6)
 [Term]
 id: LION:0144124
 name: Cer(d18:0/26:7)
+is_a: MOEA:0000133 ! Cer 18:0;O2/x:x
 is_a: LION:0001732 ! Cer(44:7)
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -377512,6 +378136,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144125
 name: Cer(d18:1/12:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144190 ! Cer(30:1)
@@ -377519,6 +378144,7 @@ is_a: LION:0144190 ! Cer(30:1)
 [Term]
 id: LION:0144126
 name: Cer(d18:1/13:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144191 ! Cer(31:1)
@@ -377526,6 +378152,7 @@ is_a: LION:0144191 ! Cer(31:1)
 [Term]
 id: LION:0144127
 name: Cer(d18:1/15:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144161 ! Cer(33:1)
@@ -377533,6 +378160,7 @@ is_a: LION:0144161 ! Cer(33:1)
 [Term]
 id: LION:0144128
 name: Cer(d18:1/15:1)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144192 ! Cer(33:2)
@@ -377540,6 +378168,7 @@ is_a: LION:0144192 ! Cer(33:2)
 [Term]
 id: LION:0144129
 name: Cer(d18:1/17:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144163 ! Cer(35:1)
@@ -377547,6 +378176,7 @@ is_a: LION:0144163 ! Cer(35:1)
 [Term]
 id: LION:0144130
 name: Cer(d18:1/17:1)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144164 ! Cer(35:2)
@@ -377554,6 +378184,7 @@ is_a: LION:0144164 ! Cer(35:2)
 [Term]
 id: LION:0144131
 name: Cer(d18:1/17:2)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144193 ! Cer(35:3)
@@ -377561,6 +378192,7 @@ is_a: LION:0144193 ! Cer(35:3)
 [Term]
 id: LION:0144132
 name: Cer(d18:1/19:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144166 ! Cer(37:1)
@@ -377568,6 +378200,7 @@ is_a: LION:0144166 ! Cer(37:1)
 [Term]
 id: LION:0144133
 name: Cer(d18:1/19:1)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144167 ! Cer(37:2)
@@ -377575,6 +378208,7 @@ is_a: LION:0144167 ! Cer(37:2)
 [Term]
 id: LION:0144134
 name: Cer(d18:1/19:2)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144168 ! Cer(37:3)
@@ -377582,6 +378216,7 @@ is_a: LION:0144168 ! Cer(37:3)
 [Term]
 id: LION:0144135
 name: Cer(d18:1/19:3)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144194 ! Cer(37:4)
@@ -377589,6 +378224,7 @@ is_a: LION:0144194 ! Cer(37:4)
 [Term]
 id: LION:0144136
 name: Cer(d18:1/21:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144170 ! Cer(39:1)
@@ -377596,6 +378232,7 @@ is_a: LION:0144170 ! Cer(39:1)
 [Term]
 id: LION:0144137
 name: Cer(d18:1/21:1)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144171 ! Cer(39:2)
@@ -377603,6 +378240,7 @@ is_a: LION:0144171 ! Cer(39:2)
 [Term]
 id: LION:0144138
 name: Cer(d18:1/21:2)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144172 ! Cer(39:3)
@@ -377610,6 +378248,7 @@ is_a: LION:0144172 ! Cer(39:3)
 [Term]
 id: LION:0144139
 name: Cer(d18:1/21:3)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144173 ! Cer(39:4)
@@ -377617,6 +378256,7 @@ is_a: LION:0144173 ! Cer(39:4)
 [Term]
 id: LION:0144140
 name: Cer(d18:1/21:4)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144195 ! Cer(39:5)
@@ -377624,6 +378264,7 @@ is_a: LION:0144195 ! Cer(39:5)
 [Term]
 id: LION:0144141
 name: Cer(d18:1/23:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144175 ! Cer(41:1)
@@ -377631,6 +378272,7 @@ is_a: LION:0144175 ! Cer(41:1)
 [Term]
 id: LION:0144142
 name: Cer(d18:1/23:1)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144176 ! Cer(41:2)
@@ -377638,6 +378280,7 @@ is_a: LION:0144176 ! Cer(41:2)
 [Term]
 id: LION:0144143
 name: Cer(d18:1/23:2)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144177 ! Cer(41:3)
@@ -377645,6 +378288,7 @@ is_a: LION:0144177 ! Cer(41:3)
 [Term]
 id: LION:0144144
 name: Cer(d18:1/23:3)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144178 ! Cer(41:4)
@@ -377652,6 +378296,7 @@ is_a: LION:0144178 ! Cer(41:4)
 [Term]
 id: LION:0144145
 name: Cer(d18:1/23:4)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144179 ! Cer(41:5)
@@ -377659,6 +378304,7 @@ is_a: LION:0144179 ! Cer(41:5)
 [Term]
 id: LION:0144146
 name: Cer(d18:1/23:5)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144196 ! Cer(41:6)
@@ -377666,6 +378312,7 @@ is_a: LION:0144196 ! Cer(41:6)
 [Term]
 id: LION:0144147
 name: Cer(d18:1/25:0)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144181 ! Cer(43:1)
@@ -377673,6 +378320,7 @@ is_a: LION:0144181 ! Cer(43:1)
 [Term]
 id: LION:0144148
 name: Cer(d18:1/25:1)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144182 ! Cer(43:2)
@@ -377680,6 +378328,7 @@ is_a: LION:0144182 ! Cer(43:2)
 [Term]
 id: LION:0144149
 name: Cer(d18:1/25:2)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144183 ! Cer(43:3)
@@ -377687,6 +378336,7 @@ is_a: LION:0144183 ! Cer(43:3)
 [Term]
 id: LION:0144150
 name: Cer(d18:1/25:3)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144184 ! Cer(43:4)
@@ -377694,6 +378344,7 @@ is_a: LION:0144184 ! Cer(43:4)
 [Term]
 id: LION:0144151
 name: Cer(d18:1/25:4)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144185 ! Cer(43:5)
@@ -377701,6 +378352,7 @@ is_a: LION:0144185 ! Cer(43:5)
 [Term]
 id: LION:0144152
 name: Cer(d18:1/25:5)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144186 ! Cer(43:6)
@@ -377708,6 +378360,7 @@ is_a: LION:0144186 ! Cer(43:6)
 [Term]
 id: LION:0144153
 name: Cer(d18:1/25:6)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144187 ! Cer(43:7)
@@ -377715,6 +378368,7 @@ is_a: LION:0144187 ! Cer(43:7)
 [Term]
 id: LION:0144154
 name: Cer(d18:1/25:7)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144197 ! Cer(43:8)
@@ -377722,6 +378376,7 @@ is_a: LION:0144197 ! Cer(43:8)
 [Term]
 id: LION:0144155
 name: Cer(d18:1/26:4)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144188 ! Cer(44:5)
@@ -377729,6 +378384,7 @@ is_a: LION:0144188 ! Cer(44:5)
 [Term]
 id: LION:0144156
 name: Cer(d18:1/26:5)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144189 ! Cer(44:6)
@@ -377736,6 +378392,7 @@ is_a: LION:0144189 ! Cer(44:6)
 [Term]
 id: LION:0144157
 name: Cer(d18:1/26:7)
+is_a: MOEA:0000132 ! Cer 18:1;O2/x:x
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144198 ! Cer(44:8)
@@ -377948,6 +378605,7 @@ is_a: LION:0012441 ! N-acylsphingosines (ceramides) [SP0201]
 [Term]
 id: LION:0144199
 name: HexCer(d18:0/12:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144270 ! HexCer(30:0)
@@ -377955,6 +378613,7 @@ is_a: LION:0144270 ! HexCer(30:0)
 [Term]
 id: LION:0144200
 name: HexCer(d18:0/13:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144271 ! HexCer(31:0)
@@ -377962,6 +378621,7 @@ is_a: LION:0144271 ! HexCer(31:0)
 [Term]
 id: LION:0144201
 name: HexCer(d18:0/15:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144272 ! HexCer(33:0)
@@ -377969,6 +378629,7 @@ is_a: LION:0144272 ! HexCer(33:0)
 [Term]
 id: LION:0144202
 name: HexCer(d18:0/15:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144273 ! HexCer(33:1)
@@ -377976,6 +378637,7 @@ is_a: LION:0144273 ! HexCer(33:1)
 [Term]
 id: LION:0144203
 name: HexCer(d18:0/17:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144274 ! HexCer(35:0)
@@ -377983,6 +378645,7 @@ is_a: LION:0144274 ! HexCer(35:0)
 [Term]
 id: LION:0144204
 name: HexCer(d18:0/17:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144275 ! HexCer(35:1)
@@ -377990,6 +378653,7 @@ is_a: LION:0144275 ! HexCer(35:1)
 [Term]
 id: LION:0144205
 name: HexCer(d18:0/17:2)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144276 ! HexCer(35:2)
@@ -377997,6 +378661,7 @@ is_a: LION:0144276 ! HexCer(35:2)
 [Term]
 id: LION:0144206
 name: HexCer(d18:0/19:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144277 ! HexCer(37:0)
@@ -378004,6 +378669,7 @@ is_a: LION:0144277 ! HexCer(37:0)
 [Term]
 id: LION:0144207
 name: HexCer(d18:0/19:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144278 ! HexCer(37:1)
@@ -378011,6 +378677,7 @@ is_a: LION:0144278 ! HexCer(37:1)
 [Term]
 id: LION:0144208
 name: HexCer(d18:0/19:2)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144279 ! HexCer(37:2)
@@ -378018,6 +378685,7 @@ is_a: LION:0144279 ! HexCer(37:2)
 [Term]
 id: LION:0144209
 name: HexCer(d18:0/19:3)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144280 ! HexCer(37:3)
@@ -378025,6 +378693,7 @@ is_a: LION:0144280 ! HexCer(37:3)
 [Term]
 id: LION:0144210
 name: HexCer(d18:0/21:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144281 ! HexCer(39:0)
@@ -378032,6 +378701,7 @@ is_a: LION:0144281 ! HexCer(39:0)
 [Term]
 id: LION:0144211
 name: HexCer(d18:0/21:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144282 ! HexCer(39:1)
@@ -378039,6 +378709,7 @@ is_a: LION:0144282 ! HexCer(39:1)
 [Term]
 id: LION:0144212
 name: HexCer(d18:0/21:2)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144283 ! HexCer(39:2)
@@ -378046,6 +378717,7 @@ is_a: LION:0144283 ! HexCer(39:2)
 [Term]
 id: LION:0144213
 name: HexCer(d18:0/21:3)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144284 ! HexCer(39:3)
@@ -378053,6 +378725,7 @@ is_a: LION:0144284 ! HexCer(39:3)
 [Term]
 id: LION:0144214
 name: HexCer(d18:0/21:4)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144285 ! HexCer(39:4)
@@ -378060,6 +378733,7 @@ is_a: LION:0144285 ! HexCer(39:4)
 [Term]
 id: LION:0144215
 name: HexCer(d18:0/23:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144286 ! HexCer(41:0)
@@ -378067,6 +378741,7 @@ is_a: LION:0144286 ! HexCer(41:0)
 [Term]
 id: LION:0144216
 name: HexCer(d18:0/23:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144287 ! HexCer(41:1)
@@ -378074,6 +378749,7 @@ is_a: LION:0144287 ! HexCer(41:1)
 [Term]
 id: LION:0144217
 name: HexCer(d18:0/23:2)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144288 ! HexCer(41:2)
@@ -378081,6 +378757,7 @@ is_a: LION:0144288 ! HexCer(41:2)
 [Term]
 id: LION:0144218
 name: HexCer(d18:0/23:3)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144289 ! HexCer(41:3)
@@ -378088,6 +378765,7 @@ is_a: LION:0144289 ! HexCer(41:3)
 [Term]
 id: LION:0144219
 name: HexCer(d18:0/23:4)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144290 ! HexCer(41:4)
@@ -378095,6 +378773,7 @@ is_a: LION:0144290 ! HexCer(41:4)
 [Term]
 id: LION:0144220
 name: HexCer(d18:0/23:5)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144291 ! HexCer(41:5)
@@ -378102,6 +378781,7 @@ is_a: LION:0144291 ! HexCer(41:5)
 [Term]
 id: LION:0144221
 name: HexCer(d18:0/24:6)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0001988 ! HexCer(42:6)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -378109,6 +378789,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144222
 name: HexCer(d18:0/25:0)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144292 ! HexCer(43:0)
@@ -378116,6 +378797,7 @@ is_a: LION:0144292 ! HexCer(43:0)
 [Term]
 id: LION:0144223
 name: HexCer(d18:0/25:1)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144293 ! HexCer(43:1)
@@ -378123,6 +378805,7 @@ is_a: LION:0144293 ! HexCer(43:1)
 [Term]
 id: LION:0144224
 name: HexCer(d18:0/25:2)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144294 ! HexCer(43:2)
@@ -378130,6 +378813,7 @@ is_a: LION:0144294 ! HexCer(43:2)
 [Term]
 id: LION:0144225
 name: HexCer(d18:0/25:3)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144295 ! HexCer(43:3)
@@ -378137,6 +378821,7 @@ is_a: LION:0144295 ! HexCer(43:3)
 [Term]
 id: LION:0144226
 name: HexCer(d18:0/25:4)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144296 ! HexCer(43:4)
@@ -378144,6 +378829,7 @@ is_a: LION:0144296 ! HexCer(43:4)
 [Term]
 id: LION:0144227
 name: HexCer(d18:0/25:5)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144297 ! HexCer(43:5)
@@ -378151,6 +378837,7 @@ is_a: LION:0144297 ! HexCer(43:5)
 [Term]
 id: LION:0144228
 name: HexCer(d18:0/25:6)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144298 ! HexCer(43:6)
@@ -378158,6 +378845,7 @@ is_a: LION:0144298 ! HexCer(43:6)
 [Term]
 id: LION:0144229
 name: HexCer(d18:0/25:7)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144299 ! HexCer(43:7)
@@ -378165,6 +378853,7 @@ is_a: LION:0144299 ! HexCer(43:7)
 [Term]
 id: LION:0144230
 name: HexCer(d18:0/26:3)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144300 ! HexCer(44:3)
@@ -378172,6 +378861,7 @@ is_a: LION:0144300 ! HexCer(44:3)
 [Term]
 id: LION:0144231
 name: HexCer(d18:0/26:4)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144301 ! HexCer(44:4)
@@ -378179,6 +378869,7 @@ is_a: LION:0144301 ! HexCer(44:4)
 [Term]
 id: LION:0144232
 name: HexCer(d18:0/26:5)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144302 ! HexCer(44:5)
@@ -378186,6 +378877,7 @@ is_a: LION:0144302 ! HexCer(44:5)
 [Term]
 id: LION:0144233
 name: HexCer(d18:0/26:6)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144303 ! HexCer(44:6)
@@ -378193,6 +378885,7 @@ is_a: LION:0144303 ! HexCer(44:6)
 [Term]
 id: LION:0144234
 name: HexCer(d18:0/26:7)
+is_a: MOEA:0000135 ! HexCer 18:0;O2/x:x
 is_a: LION:0000290 ! HexCer(44:7)
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -378200,6 +378893,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144235
 name: HexCer(d18:1/12:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144304 ! HexCer(30:1)
@@ -378207,6 +378901,7 @@ is_a: LION:0144304 ! HexCer(30:1)
 [Term]
 id: LION:0144236
 name: HexCer(d18:1/13:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144305 ! HexCer(31:1)
@@ -378214,6 +378909,7 @@ is_a: LION:0144305 ! HexCer(31:1)
 [Term]
 id: LION:0144237
 name: HexCer(d18:1/15:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144273 ! HexCer(33:1)
@@ -378221,6 +378917,7 @@ is_a: LION:0144273 ! HexCer(33:1)
 [Term]
 id: LION:0144238
 name: HexCer(d18:1/15:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144306 ! HexCer(33:2)
@@ -378228,6 +378925,7 @@ is_a: LION:0144306 ! HexCer(33:2)
 [Term]
 id: LION:0144239
 name: HexCer(d18:1/17:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144275 ! HexCer(35:1)
@@ -378235,6 +378933,7 @@ is_a: LION:0144275 ! HexCer(35:1)
 [Term]
 id: LION:0144240
 name: HexCer(d18:1/17:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144276 ! HexCer(35:2)
@@ -378242,6 +378941,7 @@ is_a: LION:0144276 ! HexCer(35:2)
 [Term]
 id: LION:0144241
 name: HexCer(d18:1/17:2)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144307 ! HexCer(35:3)
@@ -378249,6 +378949,7 @@ is_a: LION:0144307 ! HexCer(35:3)
 [Term]
 id: LION:0144242
 name: HexCer(d18:1/19:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144278 ! HexCer(37:1)
@@ -378256,6 +378957,7 @@ is_a: LION:0144278 ! HexCer(37:1)
 [Term]
 id: LION:0144243
 name: HexCer(d18:1/19:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144279 ! HexCer(37:2)
@@ -378263,6 +378965,7 @@ is_a: LION:0144279 ! HexCer(37:2)
 [Term]
 id: LION:0144244
 name: HexCer(d18:1/19:2)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144280 ! HexCer(37:3)
@@ -378270,6 +378973,7 @@ is_a: LION:0144280 ! HexCer(37:3)
 [Term]
 id: LION:0144245
 name: HexCer(d18:1/19:3)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144308 ! HexCer(37:4)
@@ -378277,6 +378981,7 @@ is_a: LION:0144308 ! HexCer(37:4)
 [Term]
 id: LION:0144246
 name: HexCer(d18:1/21:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144282 ! HexCer(39:1)
@@ -378284,6 +378989,7 @@ is_a: LION:0144282 ! HexCer(39:1)
 [Term]
 id: LION:0144247
 name: HexCer(d18:1/21:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144283 ! HexCer(39:2)
@@ -378291,6 +378997,7 @@ is_a: LION:0144283 ! HexCer(39:2)
 [Term]
 id: LION:0144248
 name: HexCer(d18:1/21:2)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144284 ! HexCer(39:3)
@@ -378298,6 +379005,7 @@ is_a: LION:0144284 ! HexCer(39:3)
 [Term]
 id: LION:0144249
 name: HexCer(d18:1/21:3)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144285 ! HexCer(39:4)
@@ -378305,6 +379013,7 @@ is_a: LION:0144285 ! HexCer(39:4)
 [Term]
 id: LION:0144250
 name: HexCer(d18:1/21:4)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144309 ! HexCer(39:5)
@@ -378312,6 +379021,7 @@ is_a: LION:0144309 ! HexCer(39:5)
 [Term]
 id: LION:0144251
 name: HexCer(d18:1/23:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144287 ! HexCer(41:1)
@@ -378319,6 +379029,7 @@ is_a: LION:0144287 ! HexCer(41:1)
 [Term]
 id: LION:0144252
 name: HexCer(d18:1/23:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144288 ! HexCer(41:2)
@@ -378326,6 +379037,7 @@ is_a: LION:0144288 ! HexCer(41:2)
 [Term]
 id: LION:0144253
 name: HexCer(d18:1/23:2)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144289 ! HexCer(41:3)
@@ -378333,6 +379045,7 @@ is_a: LION:0144289 ! HexCer(41:3)
 [Term]
 id: LION:0144254
 name: HexCer(d18:1/23:3)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144290 ! HexCer(41:4)
@@ -378340,6 +379053,7 @@ is_a: LION:0144290 ! HexCer(41:4)
 [Term]
 id: LION:0144255
 name: HexCer(d18:1/23:4)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144291 ! HexCer(41:5)
@@ -378347,6 +379061,7 @@ is_a: LION:0144291 ! HexCer(41:5)
 [Term]
 id: LION:0144256
 name: HexCer(d18:1/23:5)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144310 ! HexCer(41:6)
@@ -378354,6 +379069,7 @@ is_a: LION:0144310 ! HexCer(41:6)
 [Term]
 id: LION:0144257
 name: HexCer(d18:1/25:0)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144293 ! HexCer(43:1)
@@ -378361,6 +379077,7 @@ is_a: LION:0144293 ! HexCer(43:1)
 [Term]
 id: LION:0144258
 name: HexCer(d18:1/25:1)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144294 ! HexCer(43:2)
@@ -378368,6 +379085,7 @@ is_a: LION:0144294 ! HexCer(43:2)
 [Term]
 id: LION:0144259
 name: HexCer(d18:1/25:2)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144295 ! HexCer(43:3)
@@ -378375,6 +379093,7 @@ is_a: LION:0144295 ! HexCer(43:3)
 [Term]
 id: LION:0144260
 name: HexCer(d18:1/25:3)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144296 ! HexCer(43:4)
@@ -378382,6 +379101,7 @@ is_a: LION:0144296 ! HexCer(43:4)
 [Term]
 id: LION:0144261
 name: HexCer(d18:1/25:4)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144297 ! HexCer(43:5)
@@ -378389,6 +379109,7 @@ is_a: LION:0144297 ! HexCer(43:5)
 [Term]
 id: LION:0144262
 name: HexCer(d18:1/25:5)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144298 ! HexCer(43:6)
@@ -378396,6 +379117,7 @@ is_a: LION:0144298 ! HexCer(43:6)
 [Term]
 id: LION:0144263
 name: HexCer(d18:1/25:6)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144299 ! HexCer(43:7)
@@ -378403,6 +379125,7 @@ is_a: LION:0144299 ! HexCer(43:7)
 [Term]
 id: LION:0144264
 name: HexCer(d18:1/25:7)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144311 ! HexCer(43:8)
@@ -378410,6 +379133,7 @@ is_a: LION:0144311 ! HexCer(43:8)
 [Term]
 id: LION:0144265
 name: HexCer(d18:1/26:2)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0002982 ! C26:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144300 ! HexCer(44:3)
@@ -378417,6 +379141,7 @@ is_a: LION:0144300 ! HexCer(44:3)
 [Term]
 id: LION:0144266
 name: HexCer(d18:1/26:3)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144301 ! HexCer(44:4)
@@ -378424,6 +379149,7 @@ is_a: LION:0144301 ! HexCer(44:4)
 [Term]
 id: LION:0144267
 name: HexCer(d18:1/26:4)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144302 ! HexCer(44:5)
@@ -378431,6 +379157,7 @@ is_a: LION:0144302 ! HexCer(44:5)
 [Term]
 id: LION:0144268
 name: HexCer(d18:1/26:5)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144303 ! HexCer(44:6)
@@ -378438,6 +379165,7 @@ is_a: LION:0144303 ! HexCer(44:6)
 [Term]
 id: LION:0144269
 name: HexCer(d18:1/26:7)
+is_a: MOEA:0000134 ! HexCer 18:1;O2/x:x
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144312 ! HexCer(44:8)
@@ -378660,6 +379388,7 @@ is_a: LION:0012017 ! hexosylceramides
 [Term]
 id: LION:0144313
 name: Hex2Cer(d18:0/12:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144391 ! Hex2Cer(30:0)
@@ -378667,6 +379396,7 @@ is_a: LION:0144391 ! Hex2Cer(30:0)
 [Term]
 id: LION:0144314
 name: Hex2Cer(d18:0/13:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144392 ! Hex2Cer(31:0)
@@ -378674,6 +379404,7 @@ is_a: LION:0144392 ! Hex2Cer(31:0)
 [Term]
 id: LION:0144315
 name: Hex2Cer(d18:0/15:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144393 ! Hex2Cer(33:0)
@@ -378681,6 +379412,7 @@ is_a: LION:0144393 ! Hex2Cer(33:0)
 [Term]
 id: LION:0144316
 name: Hex2Cer(d18:0/15:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144394 ! Hex2Cer(33:1)
@@ -378688,6 +379420,7 @@ is_a: LION:0144394 ! Hex2Cer(33:1)
 [Term]
 id: LION:0144317
 name: Hex2Cer(d18:0/17:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144395 ! Hex2Cer(35:0)
@@ -378695,6 +379428,7 @@ is_a: LION:0144395 ! Hex2Cer(35:0)
 [Term]
 id: LION:0144318
 name: Hex2Cer(d18:0/17:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144396 ! Hex2Cer(35:1)
@@ -378702,6 +379436,7 @@ is_a: LION:0144396 ! Hex2Cer(35:1)
 [Term]
 id: LION:0144319
 name: Hex2Cer(d18:0/17:2)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144397 ! Hex2Cer(35:2)
@@ -378709,6 +379444,7 @@ is_a: LION:0144397 ! Hex2Cer(35:2)
 [Term]
 id: LION:0144320
 name: Hex2Cer(d18:0/19:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144398 ! Hex2Cer(37:0)
@@ -378716,6 +379452,7 @@ is_a: LION:0144398 ! Hex2Cer(37:0)
 [Term]
 id: LION:0144321
 name: Hex2Cer(d18:0/19:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144399 ! Hex2Cer(37:1)
@@ -378723,6 +379460,7 @@ is_a: LION:0144399 ! Hex2Cer(37:1)
 [Term]
 id: LION:0144322
 name: Hex2Cer(d18:0/19:2)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144400 ! Hex2Cer(37:2)
@@ -378730,6 +379468,7 @@ is_a: LION:0144400 ! Hex2Cer(37:2)
 [Term]
 id: LION:0144323
 name: Hex2Cer(d18:0/19:3)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144401 ! Hex2Cer(37:3)
@@ -378737,6 +379476,7 @@ is_a: LION:0144401 ! Hex2Cer(37:3)
 [Term]
 id: LION:0144324
 name: Hex2Cer(d18:0/21:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144402 ! Hex2Cer(39:0)
@@ -378744,6 +379484,7 @@ is_a: LION:0144402 ! Hex2Cer(39:0)
 [Term]
 id: LION:0144325
 name: Hex2Cer(d18:0/21:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144403 ! Hex2Cer(39:1)
@@ -378751,6 +379492,7 @@ is_a: LION:0144403 ! Hex2Cer(39:1)
 [Term]
 id: LION:0144326
 name: Hex2Cer(d18:0/21:2)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144404 ! Hex2Cer(39:2)
@@ -378758,6 +379500,7 @@ is_a: LION:0144404 ! Hex2Cer(39:2)
 [Term]
 id: LION:0144327
 name: Hex2Cer(d18:0/21:3)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144405 ! Hex2Cer(39:3)
@@ -378765,6 +379508,7 @@ is_a: LION:0144405 ! Hex2Cer(39:3)
 [Term]
 id: LION:0144328
 name: Hex2Cer(d18:0/21:4)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144406 ! Hex2Cer(39:4)
@@ -378772,6 +379516,7 @@ is_a: LION:0144406 ! Hex2Cer(39:4)
 [Term]
 id: LION:0144329
 name: Hex2Cer(d18:0/23:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144407 ! Hex2Cer(41:0)
@@ -378779,6 +379524,7 @@ is_a: LION:0144407 ! Hex2Cer(41:0)
 [Term]
 id: LION:0144330
 name: Hex2Cer(d18:0/23:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144408 ! Hex2Cer(41:1)
@@ -378786,6 +379532,7 @@ is_a: LION:0144408 ! Hex2Cer(41:1)
 [Term]
 id: LION:0144331
 name: Hex2Cer(d18:0/23:2)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144409 ! Hex2Cer(41:2)
@@ -378793,6 +379540,7 @@ is_a: LION:0144409 ! Hex2Cer(41:2)
 [Term]
 id: LION:0144332
 name: Hex2Cer(d18:0/23:3)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144410 ! Hex2Cer(41:3)
@@ -378800,6 +379548,7 @@ is_a: LION:0144410 ! Hex2Cer(41:3)
 [Term]
 id: LION:0144333
 name: Hex2Cer(d18:0/23:4)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144411 ! Hex2Cer(41:4)
@@ -378807,6 +379556,7 @@ is_a: LION:0144411 ! Hex2Cer(41:4)
 [Term]
 id: LION:0144334
 name: Hex2Cer(d18:0/23:5)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144412 ! Hex2Cer(41:5)
@@ -378814,6 +379564,7 @@ is_a: LION:0144412 ! Hex2Cer(41:5)
 [Term]
 id: LION:0144335
 name: Hex2Cer(d18:0/24:6)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0001936 ! Hex2Cer(42:6)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -378821,6 +379572,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144336
 name: Hex2Cer(d18:0/25:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144413 ! Hex2Cer(43:0)
@@ -378828,6 +379580,7 @@ is_a: LION:0144413 ! Hex2Cer(43:0)
 [Term]
 id: LION:0144337
 name: Hex2Cer(d18:0/25:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144414 ! Hex2Cer(43:1)
@@ -378835,6 +379588,7 @@ is_a: LION:0144414 ! Hex2Cer(43:1)
 [Term]
 id: LION:0144338
 name: Hex2Cer(d18:0/25:2)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144415 ! Hex2Cer(43:2)
@@ -378842,6 +379596,7 @@ is_a: LION:0144415 ! Hex2Cer(43:2)
 [Term]
 id: LION:0144339
 name: Hex2Cer(d18:0/25:3)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144416 ! Hex2Cer(43:3)
@@ -378849,6 +379604,7 @@ is_a: LION:0144416 ! Hex2Cer(43:3)
 [Term]
 id: LION:0144340
 name: Hex2Cer(d18:0/25:4)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144417 ! Hex2Cer(43:4)
@@ -378856,6 +379612,7 @@ is_a: LION:0144417 ! Hex2Cer(43:4)
 [Term]
 id: LION:0144341
 name: Hex2Cer(d18:0/25:5)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144418 ! Hex2Cer(43:5)
@@ -378863,6 +379620,7 @@ is_a: LION:0144418 ! Hex2Cer(43:5)
 [Term]
 id: LION:0144342
 name: Hex2Cer(d18:0/25:6)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144419 ! Hex2Cer(43:6)
@@ -378870,6 +379628,7 @@ is_a: LION:0144419 ! Hex2Cer(43:6)
 [Term]
 id: LION:0144343
 name: Hex2Cer(d18:0/25:7)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144420 ! Hex2Cer(43:7)
@@ -378877,6 +379636,7 @@ is_a: LION:0144420 ! Hex2Cer(43:7)
 [Term]
 id: LION:0144344
 name: Hex2Cer(d18:0/26:0)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002979 ! C26:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144421 ! Hex2Cer(44:0)
@@ -378884,6 +379644,7 @@ is_a: LION:0144421 ! Hex2Cer(44:0)
 [Term]
 id: LION:0144345
 name: Hex2Cer(d18:0/26:1)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002981 ! C26:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144422 ! Hex2Cer(44:1)
@@ -378891,6 +379652,7 @@ is_a: LION:0144422 ! Hex2Cer(44:1)
 [Term]
 id: LION:0144346
 name: Hex2Cer(d18:0/26:2)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002982 ! C26:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144423 ! Hex2Cer(44:2)
@@ -378898,6 +379660,7 @@ is_a: LION:0144423 ! Hex2Cer(44:2)
 [Term]
 id: LION:0144347
 name: Hex2Cer(d18:0/26:3)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144424 ! Hex2Cer(44:3)
@@ -378905,6 +379668,7 @@ is_a: LION:0144424 ! Hex2Cer(44:3)
 [Term]
 id: LION:0144348
 name: Hex2Cer(d18:0/26:4)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144425 ! Hex2Cer(44:4)
@@ -378912,6 +379676,7 @@ is_a: LION:0144425 ! Hex2Cer(44:4)
 [Term]
 id: LION:0144349
 name: Hex2Cer(d18:0/26:5)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144426 ! Hex2Cer(44:5)
@@ -378919,6 +379684,7 @@ is_a: LION:0144426 ! Hex2Cer(44:5)
 [Term]
 id: LION:0144350
 name: Hex2Cer(d18:0/26:6)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144427 ! Hex2Cer(44:6)
@@ -378926,6 +379692,7 @@ is_a: LION:0144427 ! Hex2Cer(44:6)
 [Term]
 id: LION:0144351
 name: Hex2Cer(d18:0/26:7)
+is_a: MOEA:0000137 ! Hex2Cer 18:0;O2/x:x
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144428 ! Hex2Cer(44:7)
@@ -378933,6 +379700,7 @@ is_a: LION:0144428 ! Hex2Cer(44:7)
 [Term]
 id: LION:0144352
 name: Hex2Cer(d18:1/12:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144429 ! Hex2Cer(30:1)
@@ -378940,6 +379708,7 @@ is_a: LION:0144429 ! Hex2Cer(30:1)
 [Term]
 id: LION:0144353
 name: Hex2Cer(d18:1/13:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144430 ! Hex2Cer(31:1)
@@ -378947,6 +379716,7 @@ is_a: LION:0144430 ! Hex2Cer(31:1)
 [Term]
 id: LION:0144354
 name: Hex2Cer(d18:1/15:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144394 ! Hex2Cer(33:1)
@@ -378954,6 +379724,7 @@ is_a: LION:0144394 ! Hex2Cer(33:1)
 [Term]
 id: LION:0144355
 name: Hex2Cer(d18:1/15:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144431 ! Hex2Cer(33:2)
@@ -378961,6 +379732,7 @@ is_a: LION:0144431 ! Hex2Cer(33:2)
 [Term]
 id: LION:0144356
 name: Hex2Cer(d18:1/17:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144396 ! Hex2Cer(35:1)
@@ -378968,6 +379740,7 @@ is_a: LION:0144396 ! Hex2Cer(35:1)
 [Term]
 id: LION:0144357
 name: Hex2Cer(d18:1/17:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144397 ! Hex2Cer(35:2)
@@ -378975,6 +379748,7 @@ is_a: LION:0144397 ! Hex2Cer(35:2)
 [Term]
 id: LION:0144358
 name: Hex2Cer(d18:1/17:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144432 ! Hex2Cer(35:3)
@@ -378982,6 +379756,7 @@ is_a: LION:0144432 ! Hex2Cer(35:3)
 [Term]
 id: LION:0144359
 name: Hex2Cer(d18:1/19:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144399 ! Hex2Cer(37:1)
@@ -378989,6 +379764,7 @@ is_a: LION:0144399 ! Hex2Cer(37:1)
 [Term]
 id: LION:0144360
 name: Hex2Cer(d18:1/19:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144400 ! Hex2Cer(37:2)
@@ -378996,6 +379772,7 @@ is_a: LION:0144400 ! Hex2Cer(37:2)
 [Term]
 id: LION:0144361
 name: Hex2Cer(d18:1/19:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144401 ! Hex2Cer(37:3)
@@ -379003,6 +379780,7 @@ is_a: LION:0144401 ! Hex2Cer(37:3)
 [Term]
 id: LION:0144362
 name: Hex2Cer(d18:1/19:3)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144433 ! Hex2Cer(37:4)
@@ -379010,6 +379788,7 @@ is_a: LION:0144433 ! Hex2Cer(37:4)
 [Term]
 id: LION:0144363
 name: Hex2Cer(d18:1/21:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144403 ! Hex2Cer(39:1)
@@ -379017,6 +379796,7 @@ is_a: LION:0144403 ! Hex2Cer(39:1)
 [Term]
 id: LION:0144364
 name: Hex2Cer(d18:1/21:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144404 ! Hex2Cer(39:2)
@@ -379024,6 +379804,7 @@ is_a: LION:0144404 ! Hex2Cer(39:2)
 [Term]
 id: LION:0144365
 name: Hex2Cer(d18:1/21:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144405 ! Hex2Cer(39:3)
@@ -379031,6 +379812,7 @@ is_a: LION:0144405 ! Hex2Cer(39:3)
 [Term]
 id: LION:0144366
 name: Hex2Cer(d18:1/21:3)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144406 ! Hex2Cer(39:4)
@@ -379038,6 +379820,7 @@ is_a: LION:0144406 ! Hex2Cer(39:4)
 [Term]
 id: LION:0144367
 name: Hex2Cer(d18:1/21:4)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144434 ! Hex2Cer(39:5)
@@ -379045,6 +379828,7 @@ is_a: LION:0144434 ! Hex2Cer(39:5)
 [Term]
 id: LION:0144368
 name: Hex2Cer(d18:1/23:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144408 ! Hex2Cer(41:1)
@@ -379052,6 +379836,7 @@ is_a: LION:0144408 ! Hex2Cer(41:1)
 [Term]
 id: LION:0144369
 name: Hex2Cer(d18:1/23:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144409 ! Hex2Cer(41:2)
@@ -379059,6 +379844,7 @@ is_a: LION:0144409 ! Hex2Cer(41:2)
 [Term]
 id: LION:0144370
 name: Hex2Cer(d18:1/23:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144410 ! Hex2Cer(41:3)
@@ -379066,6 +379852,7 @@ is_a: LION:0144410 ! Hex2Cer(41:3)
 [Term]
 id: LION:0144371
 name: Hex2Cer(d18:1/23:3)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144411 ! Hex2Cer(41:4)
@@ -379073,6 +379860,7 @@ is_a: LION:0144411 ! Hex2Cer(41:4)
 [Term]
 id: LION:0144372
 name: Hex2Cer(d18:1/23:4)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144412 ! Hex2Cer(41:5)
@@ -379080,6 +379868,7 @@ is_a: LION:0144412 ! Hex2Cer(41:5)
 [Term]
 id: LION:0144373
 name: Hex2Cer(d18:1/23:5)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144435 ! Hex2Cer(41:6)
@@ -379087,6 +379876,7 @@ is_a: LION:0144435 ! Hex2Cer(41:6)
 [Term]
 id: LION:0144374
 name: Hex2Cer(d18:1/24:6)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0001930 ! Hex2Cer(42:7)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -379094,6 +379884,7 @@ is_a: LION:0080947 ! d18:1 (sphingosine)
 [Term]
 id: LION:0144375
 name: Hex2Cer(d18:1/25:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144414 ! Hex2Cer(43:1)
@@ -379101,6 +379892,7 @@ is_a: LION:0144414 ! Hex2Cer(43:1)
 [Term]
 id: LION:0144376
 name: Hex2Cer(d18:1/25:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144415 ! Hex2Cer(43:2)
@@ -379108,6 +379900,7 @@ is_a: LION:0144415 ! Hex2Cer(43:2)
 [Term]
 id: LION:0144377
 name: Hex2Cer(d18:1/25:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144416 ! Hex2Cer(43:3)
@@ -379115,6 +379908,7 @@ is_a: LION:0144416 ! Hex2Cer(43:3)
 [Term]
 id: LION:0144378
 name: Hex2Cer(d18:1/25:3)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144417 ! Hex2Cer(43:4)
@@ -379122,6 +379916,7 @@ is_a: LION:0144417 ! Hex2Cer(43:4)
 [Term]
 id: LION:0144379
 name: Hex2Cer(d18:1/25:4)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144418 ! Hex2Cer(43:5)
@@ -379129,6 +379924,7 @@ is_a: LION:0144418 ! Hex2Cer(43:5)
 [Term]
 id: LION:0144380
 name: Hex2Cer(d18:1/25:5)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144419 ! Hex2Cer(43:6)
@@ -379136,6 +379932,7 @@ is_a: LION:0144419 ! Hex2Cer(43:6)
 [Term]
 id: LION:0144381
 name: Hex2Cer(d18:1/25:6)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144420 ! Hex2Cer(43:7)
@@ -379143,6 +379940,7 @@ is_a: LION:0144420 ! Hex2Cer(43:7)
 [Term]
 id: LION:0144382
 name: Hex2Cer(d18:1/25:7)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144436 ! Hex2Cer(43:8)
@@ -379150,6 +379948,7 @@ is_a: LION:0144436 ! Hex2Cer(43:8)
 [Term]
 id: LION:0144383
 name: Hex2Cer(d18:1/26:0)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002979 ! C26:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144422 ! Hex2Cer(44:1)
@@ -379157,6 +379956,7 @@ is_a: LION:0144422 ! Hex2Cer(44:1)
 [Term]
 id: LION:0144384
 name: Hex2Cer(d18:1/26:1)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002981 ! C26:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144423 ! Hex2Cer(44:2)
@@ -379164,6 +379964,7 @@ is_a: LION:0144423 ! Hex2Cer(44:2)
 [Term]
 id: LION:0144385
 name: Hex2Cer(d18:1/26:2)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002982 ! C26:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144424 ! Hex2Cer(44:3)
@@ -379171,6 +379972,7 @@ is_a: LION:0144424 ! Hex2Cer(44:3)
 [Term]
 id: LION:0144386
 name: Hex2Cer(d18:1/26:3)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144425 ! Hex2Cer(44:4)
@@ -379178,6 +379980,7 @@ is_a: LION:0144425 ! Hex2Cer(44:4)
 [Term]
 id: LION:0144387
 name: Hex2Cer(d18:1/26:4)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144426 ! Hex2Cer(44:5)
@@ -379185,6 +379988,7 @@ is_a: LION:0144426 ! Hex2Cer(44:5)
 [Term]
 id: LION:0144388
 name: Hex2Cer(d18:1/26:5)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144427 ! Hex2Cer(44:6)
@@ -379192,6 +379996,7 @@ is_a: LION:0144427 ! Hex2Cer(44:6)
 [Term]
 id: LION:0144389
 name: Hex2Cer(d18:1/26:6)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144428 ! Hex2Cer(44:7)
@@ -379199,6 +380004,7 @@ is_a: LION:0144428 ! Hex2Cer(44:7)
 [Term]
 id: LION:0144390
 name: Hex2Cer(d18:1/26:7)
+is_a: MOEA:0000136 ! Hex2Cer 18:1;O2/x:x
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144437 ! Hex2Cer(44:8)
@@ -379441,6 +380247,7 @@ is_a: LION:0012018 ! dihexosylceramides
 [Term]
 id: LION:0144438
 name: SHexCer(d18:0/12:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144516 ! SHexCer(30:0)
@@ -379448,6 +380255,7 @@ is_a: LION:0144516 ! SHexCer(30:0)
 [Term]
 id: LION:0144439
 name: SHexCer(d18:0/13:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144517 ! SHexCer(31:0)
@@ -379455,6 +380263,7 @@ is_a: LION:0144517 ! SHexCer(31:0)
 [Term]
 id: LION:0144440
 name: SHexCer(d18:0/15:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144518 ! SHexCer(33:0)
@@ -379462,6 +380271,7 @@ is_a: LION:0144518 ! SHexCer(33:0)
 [Term]
 id: LION:0144441
 name: SHexCer(d18:0/15:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144519 ! SHexCer(33:1)
@@ -379469,6 +380279,7 @@ is_a: LION:0144519 ! SHexCer(33:1)
 [Term]
 id: LION:0144442
 name: SHexCer(d18:0/17:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144520 ! SHexCer(35:0)
@@ -379476,6 +380287,7 @@ is_a: LION:0144520 ! SHexCer(35:0)
 [Term]
 id: LION:0144443
 name: SHexCer(d18:0/17:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144521 ! SHexCer(35:1)
@@ -379483,6 +380295,7 @@ is_a: LION:0144521 ! SHexCer(35:1)
 [Term]
 id: LION:0144444
 name: SHexCer(d18:0/17:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144522 ! SHexCer(35:2)
@@ -379490,6 +380303,7 @@ is_a: LION:0144522 ! SHexCer(35:2)
 [Term]
 id: LION:0144445
 name: SHexCer(d18:0/19:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144523 ! SHexCer(37:0)
@@ -379497,6 +380311,7 @@ is_a: LION:0144523 ! SHexCer(37:0)
 [Term]
 id: LION:0144446
 name: SHexCer(d18:0/19:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144524 ! SHexCer(37:1)
@@ -379504,6 +380319,7 @@ is_a: LION:0144524 ! SHexCer(37:1)
 [Term]
 id: LION:0144447
 name: SHexCer(d18:0/19:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144525 ! SHexCer(37:2)
@@ -379511,6 +380327,7 @@ is_a: LION:0144525 ! SHexCer(37:2)
 [Term]
 id: LION:0144448
 name: SHexCer(d18:0/19:3)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144526 ! SHexCer(37:3)
@@ -379518,6 +380335,7 @@ is_a: LION:0144526 ! SHexCer(37:3)
 [Term]
 id: LION:0144449
 name: SHexCer(d18:0/21:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144527 ! SHexCer(39:0)
@@ -379525,6 +380343,7 @@ is_a: LION:0144527 ! SHexCer(39:0)
 [Term]
 id: LION:0144450
 name: SHexCer(d18:0/21:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144528 ! SHexCer(39:1)
@@ -379532,6 +380351,7 @@ is_a: LION:0144528 ! SHexCer(39:1)
 [Term]
 id: LION:0144451
 name: SHexCer(d18:0/21:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144529 ! SHexCer(39:2)
@@ -379539,6 +380359,7 @@ is_a: LION:0144529 ! SHexCer(39:2)
 [Term]
 id: LION:0144452
 name: SHexCer(d18:0/21:3)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144530 ! SHexCer(39:3)
@@ -379546,6 +380367,7 @@ is_a: LION:0144530 ! SHexCer(39:3)
 [Term]
 id: LION:0144453
 name: SHexCer(d18:0/21:4)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144531 ! SHexCer(39:4)
@@ -379553,6 +380375,7 @@ is_a: LION:0144531 ! SHexCer(39:4)
 [Term]
 id: LION:0144454
 name: SHexCer(d18:0/23:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144532 ! SHexCer(41:0)
@@ -379560,6 +380383,7 @@ is_a: LION:0144532 ! SHexCer(41:0)
 [Term]
 id: LION:0144455
 name: SHexCer(d18:0/23:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144533 ! SHexCer(41:1)
@@ -379567,6 +380391,7 @@ is_a: LION:0144533 ! SHexCer(41:1)
 [Term]
 id: LION:0144456
 name: SHexCer(d18:0/23:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144534 ! SHexCer(41:2)
@@ -379574,6 +380399,7 @@ is_a: LION:0144534 ! SHexCer(41:2)
 [Term]
 id: LION:0144457
 name: SHexCer(d18:0/23:3)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144535 ! SHexCer(41:3)
@@ -379581,6 +380407,7 @@ is_a: LION:0144535 ! SHexCer(41:3)
 [Term]
 id: LION:0144458
 name: SHexCer(d18:0/23:4)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144536 ! SHexCer(41:4)
@@ -379588,6 +380415,7 @@ is_a: LION:0144536 ! SHexCer(41:4)
 [Term]
 id: LION:0144459
 name: SHexCer(d18:0/23:5)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144537 ! SHexCer(41:5)
@@ -379595,6 +380423,7 @@ is_a: LION:0144537 ! SHexCer(41:5)
 [Term]
 id: LION:0144460
 name: SHexCer(d18:0/24:6)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002053 ! SHexCer(42:6)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
@@ -379602,6 +380431,7 @@ is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 [Term]
 id: LION:0144461
 name: SHexCer(d18:0/25:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144538 ! SHexCer(43:0)
@@ -379609,6 +380439,7 @@ is_a: LION:0144538 ! SHexCer(43:0)
 [Term]
 id: LION:0144462
 name: SHexCer(d18:0/25:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144539 ! SHexCer(43:1)
@@ -379616,6 +380447,7 @@ is_a: LION:0144539 ! SHexCer(43:1)
 [Term]
 id: LION:0144463
 name: SHexCer(d18:0/25:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144540 ! SHexCer(43:2)
@@ -379623,6 +380455,7 @@ is_a: LION:0144540 ! SHexCer(43:2)
 [Term]
 id: LION:0144464
 name: SHexCer(d18:0/25:3)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144541 ! SHexCer(43:3)
@@ -379630,6 +380463,7 @@ is_a: LION:0144541 ! SHexCer(43:3)
 [Term]
 id: LION:0144465
 name: SHexCer(d18:0/25:4)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144542 ! SHexCer(43:4)
@@ -379637,6 +380471,7 @@ is_a: LION:0144542 ! SHexCer(43:4)
 [Term]
 id: LION:0144466
 name: SHexCer(d18:0/25:5)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144543 ! SHexCer(43:5)
@@ -379644,6 +380479,7 @@ is_a: LION:0144543 ! SHexCer(43:5)
 [Term]
 id: LION:0144467
 name: SHexCer(d18:0/25:6)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144544 ! SHexCer(43:6)
@@ -379651,6 +380487,7 @@ is_a: LION:0144544 ! SHexCer(43:6)
 [Term]
 id: LION:0144468
 name: SHexCer(d18:0/25:7)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144545 ! SHexCer(43:7)
@@ -379658,6 +380495,7 @@ is_a: LION:0144545 ! SHexCer(43:7)
 [Term]
 id: LION:0144469
 name: SHexCer(d18:0/26:0)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002979 ! C26:0
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144546 ! SHexCer(44:0)
@@ -379665,6 +380503,7 @@ is_a: LION:0144546 ! SHexCer(44:0)
 [Term]
 id: LION:0144470
 name: SHexCer(d18:0/26:1)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002981 ! C26:1
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144547 ! SHexCer(44:1)
@@ -379672,6 +380511,7 @@ is_a: LION:0144547 ! SHexCer(44:1)
 [Term]
 id: LION:0144471
 name: SHexCer(d18:0/26:2)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002982 ! C26:2
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144548 ! SHexCer(44:2)
@@ -379679,6 +380519,7 @@ is_a: LION:0144548 ! SHexCer(44:2)
 [Term]
 id: LION:0144472
 name: SHexCer(d18:0/26:3)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144549 ! SHexCer(44:3)
@@ -379686,6 +380527,7 @@ is_a: LION:0144549 ! SHexCer(44:3)
 [Term]
 id: LION:0144473
 name: SHexCer(d18:0/26:4)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144550 ! SHexCer(44:4)
@@ -379693,6 +380535,7 @@ is_a: LION:0144550 ! SHexCer(44:4)
 [Term]
 id: LION:0144474
 name: SHexCer(d18:0/26:5)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144551 ! SHexCer(44:5)
@@ -379700,6 +380543,7 @@ is_a: LION:0144551 ! SHexCer(44:5)
 [Term]
 id: LION:0144475
 name: SHexCer(d18:0/26:6)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144552 ! SHexCer(44:6)
@@ -379707,6 +380551,7 @@ is_a: LION:0144552 ! SHexCer(44:6)
 [Term]
 id: LION:0144476
 name: SHexCer(d18:0/26:7)
+is_a: MOEA:0000139 ! SHexCer 18:0;O2/x:x
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080948 ! d18:0 (dihydrosphingosine)
 is_a: LION:0144553 ! SHexCer(44:7)
@@ -379714,6 +380559,7 @@ is_a: LION:0144553 ! SHexCer(44:7)
 [Term]
 id: LION:0144477
 name: SHexCer(d18:1/12:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0000254 ! C12:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144554 ! SHexCer(30:1)
@@ -379721,6 +380567,7 @@ is_a: LION:0144554 ! SHexCer(30:1)
 [Term]
 id: LION:0144478
 name: SHexCer(d18:1/13:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022223 ! C13:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144555 ! SHexCer(31:1)
@@ -379728,6 +380575,7 @@ is_a: LION:0144555 ! SHexCer(31:1)
 [Term]
 id: LION:0144479
 name: SHexCer(d18:1/15:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022229 ! C15:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144519 ! SHexCer(33:1)
@@ -379735,6 +380583,7 @@ is_a: LION:0144519 ! SHexCer(33:1)
 [Term]
 id: LION:0144480
 name: SHexCer(d18:1/15:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022230 ! C15:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144556 ! SHexCer(33:2)
@@ -379742,6 +380591,7 @@ is_a: LION:0144556 ! SHexCer(33:2)
 [Term]
 id: LION:0144481
 name: SHexCer(d18:1/17:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022231 ! C17:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144521 ! SHexCer(35:1)
@@ -379749,6 +380599,7 @@ is_a: LION:0144521 ! SHexCer(35:1)
 [Term]
 id: LION:0144482
 name: SHexCer(d18:1/17:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022234 ! C17:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144522 ! SHexCer(35:2)
@@ -379756,6 +380607,7 @@ is_a: LION:0144522 ! SHexCer(35:2)
 [Term]
 id: LION:0144483
 name: SHexCer(d18:1/17:2)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022236 ! C17:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144557 ! SHexCer(35:3)
@@ -379763,6 +380615,7 @@ is_a: LION:0144557 ! SHexCer(35:3)
 [Term]
 id: LION:0144484
 name: SHexCer(d18:1/19:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022241 ! C19:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144524 ! SHexCer(37:1)
@@ -379770,6 +380623,7 @@ is_a: LION:0144524 ! SHexCer(37:1)
 [Term]
 id: LION:0144485
 name: SHexCer(d18:1/19:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022242 ! C19:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144525 ! SHexCer(37:2)
@@ -379777,6 +380631,7 @@ is_a: LION:0144525 ! SHexCer(37:2)
 [Term]
 id: LION:0144486
 name: SHexCer(d18:1/19:2)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x3
 is_a: LION:0022245 ! C19:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144526 ! SHexCer(37:3)
@@ -379784,6 +380639,7 @@ is_a: LION:0144526 ! SHexCer(37:3)
 [Term]
 id: LION:0144487
 name: SHexCer(d18:1/19:3)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022247 ! C19:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144558 ! SHexCer(37:4)
@@ -379791,6 +380647,7 @@ is_a: LION:0144558 ! SHexCer(37:4)
 [Term]
 id: LION:0144488
 name: SHexCer(d18:1/21:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022261 ! C21:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144528 ! SHexCer(39:1)
@@ -379798,6 +380655,7 @@ is_a: LION:0144528 ! SHexCer(39:1)
 [Term]
 id: LION:0144489
 name: SHexCer(d18:1/21:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022262 ! C21:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144529 ! SHexCer(39:2)
@@ -379805,6 +380663,7 @@ is_a: LION:0144529 ! SHexCer(39:2)
 [Term]
 id: LION:0144490
 name: SHexCer(d18:1/21:2)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022263 ! C21:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144530 ! SHexCer(39:3)
@@ -379812,6 +380671,7 @@ is_a: LION:0144530 ! SHexCer(39:3)
 [Term]
 id: LION:0144491
 name: SHexCer(d18:1/21:3)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022264 ! C21:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144531 ! SHexCer(39:4)
@@ -379819,6 +380679,7 @@ is_a: LION:0144531 ! SHexCer(39:4)
 [Term]
 id: LION:0144492
 name: SHexCer(d18:1/21:4)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022265 ! C21:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144559 ! SHexCer(39:5)
@@ -379826,6 +380687,7 @@ is_a: LION:0144559 ! SHexCer(39:5)
 [Term]
 id: LION:0144493
 name: SHexCer(d18:1/23:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022266 ! C23:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144533 ! SHexCer(41:1)
@@ -379833,6 +380695,7 @@ is_a: LION:0144533 ! SHexCer(41:1)
 [Term]
 id: LION:0144494
 name: SHexCer(d18:1/23:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022267 ! C23:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144534 ! SHexCer(41:2)
@@ -379840,6 +380703,7 @@ is_a: LION:0144534 ! SHexCer(41:2)
 [Term]
 id: LION:0144495
 name: SHexCer(d18:1/23:2)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022268 ! C23:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144535 ! SHexCer(41:3)
@@ -379847,6 +380711,7 @@ is_a: LION:0144535 ! SHexCer(41:3)
 [Term]
 id: LION:0144496
 name: SHexCer(d18:1/23:3)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022269 ! C23:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144536 ! SHexCer(41:4)
@@ -379854,6 +380719,7 @@ is_a: LION:0144536 ! SHexCer(41:4)
 [Term]
 id: LION:0144497
 name: SHexCer(d18:1/23:4)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022270 ! C23:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144537 ! SHexCer(41:5)
@@ -379861,6 +380727,7 @@ is_a: LION:0144537 ! SHexCer(41:5)
 [Term]
 id: LION:0144498
 name: SHexCer(d18:1/23:5)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022271 ! C23:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144560 ! SHexCer(41:6)
@@ -379868,6 +380735,7 @@ is_a: LION:0144560 ! SHexCer(41:6)
 [Term]
 id: LION:0144499
 name: SHexCer(d18:1/24:6)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002048 ! SHexCer(42:7)
 is_a: LION:0002944 ! C24:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
@@ -379875,6 +380743,7 @@ is_a: LION:0080947 ! d18:1 (sphingosine)
 [Term]
 id: LION:0144500
 name: SHexCer(d18:1/25:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022272 ! C25:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144539 ! SHexCer(43:1)
@@ -379882,6 +380751,7 @@ is_a: LION:0144539 ! SHexCer(43:1)
 [Term]
 id: LION:0144501
 name: SHexCer(d18:1/25:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022273 ! C25:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144540 ! SHexCer(43:2)
@@ -379889,6 +380759,7 @@ is_a: LION:0144540 ! SHexCer(43:2)
 [Term]
 id: LION:0144502
 name: SHexCer(d18:1/25:2)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022274 ! C25:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144541 ! SHexCer(43:3)
@@ -379896,6 +380767,7 @@ is_a: LION:0144541 ! SHexCer(43:3)
 [Term]
 id: LION:0144503
 name: SHexCer(d18:1/25:3)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022275 ! C25:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144542 ! SHexCer(43:4)
@@ -379903,6 +380775,7 @@ is_a: LION:0144542 ! SHexCer(43:4)
 [Term]
 id: LION:0144504
 name: SHexCer(d18:1/25:4)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022276 ! C25:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144543 ! SHexCer(43:5)
@@ -379910,6 +380783,7 @@ is_a: LION:0144543 ! SHexCer(43:5)
 [Term]
 id: LION:0144505
 name: SHexCer(d18:1/25:5)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022277 ! C25:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144544 ! SHexCer(43:6)
@@ -379917,6 +380791,7 @@ is_a: LION:0144544 ! SHexCer(43:6)
 [Term]
 id: LION:0144506
 name: SHexCer(d18:1/25:6)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022278 ! C25:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144545 ! SHexCer(43:7)
@@ -379924,6 +380799,7 @@ is_a: LION:0144545 ! SHexCer(43:7)
 [Term]
 id: LION:0144507
 name: SHexCer(d18:1/25:7)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0022279 ! C25:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144561 ! SHexCer(43:8)
@@ -379931,6 +380807,7 @@ is_a: LION:0144561 ! SHexCer(43:8)
 [Term]
 id: LION:0144508
 name: SHexCer(d18:1/26:0)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002979 ! C26:0
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144547 ! SHexCer(44:1)
@@ -379938,6 +380815,7 @@ is_a: LION:0144547 ! SHexCer(44:1)
 [Term]
 id: LION:0144509
 name: SHexCer(d18:1/26:1)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002981 ! C26:1
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144548 ! SHexCer(44:2)
@@ -379945,6 +380823,7 @@ is_a: LION:0144548 ! SHexCer(44:2)
 [Term]
 id: LION:0144510
 name: SHexCer(d18:1/26:2)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002982 ! C26:2
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144549 ! SHexCer(44:3)
@@ -379952,6 +380831,7 @@ is_a: LION:0144549 ! SHexCer(44:3)
 [Term]
 id: LION:0144511
 name: SHexCer(d18:1/26:3)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002983 ! C26:3
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144550 ! SHexCer(44:4)
@@ -379959,6 +380839,7 @@ is_a: LION:0144550 ! SHexCer(44:4)
 [Term]
 id: LION:0144512
 name: SHexCer(d18:1/26:4)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002984 ! C26:4
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144551 ! SHexCer(44:5)
@@ -379966,6 +380847,7 @@ is_a: LION:0144551 ! SHexCer(44:5)
 [Term]
 id: LION:0144513
 name: SHexCer(d18:1/26:5)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002985 ! C26:5
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144552 ! SHexCer(44:6)
@@ -379973,6 +380855,7 @@ is_a: LION:0144552 ! SHexCer(44:6)
 [Term]
 id: LION:0144514
 name: SHexCer(d18:1/26:6)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002986 ! C26:6
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144553 ! SHexCer(44:7)
@@ -379980,6 +380863,7 @@ is_a: LION:0144553 ! SHexCer(44:7)
 [Term]
 id: LION:0144515
 name: SHexCer(d18:1/26:7)
+is_a: MOEA:0000138 ! SHexCer 18:1;O2/x:x
 is_a: LION:0002987 ! C26:7
 is_a: LION:0080947 ! d18:1 (sphingosine)
 is_a: LION:0144562 ! SHexCer(44:8)
