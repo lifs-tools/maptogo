@@ -618,10 +618,6 @@ class EnrichmentOntology:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error(e)
 
-        if "HGNC:30802" in self.ontology_terms:
-            for rel in self.ontology_terms["HGNC:30802"].relations:
-                print(rel.name, rel.term_id)
-
 
     @maptogo_profile
     def set_background(
