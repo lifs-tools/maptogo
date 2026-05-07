@@ -227,9 +227,10 @@ class Term:
                     visited.add(p)
                     relations.append(str(p))
         relations_str = self.joining(self.relations)
-        moea_pos = relations_str.find("MOEA:00000")
+        moea_pos = relations_str.find("MOEA:00000") # needs to be MOEA:00000, term types between 001 and 099
         term_type = EDS.TermType(int(relations_str[moea_pos + 5 : moea_pos + 12])) if moea_pos > -1 else EDS.TermType.UNCLASSIFIED_TERM
-        return f"{self.joining(self.id)}\t{self.name}\t{term_type.value}\t{'|'.join(relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}"
+        id_str = self.joining(self.id)
+        return f"{id_str}\t{self.name}\t{term_type.value}\t{'|'.join(relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}"
 
 
     def copy(self):

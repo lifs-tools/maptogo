@@ -747,42 +747,42 @@ is_a: LION:0012009 ! lipid-mediated signalling
 creation_date: 2017-03-15T12:15:18Z
 
 [Term]
-id: MOEA:0000010
+id: MOEA:0000142
 name: sphing-4-enines (sphingosines) [SP0101]
 is_a: LION:0000076 ! sphingoid bases [SP01]
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
 synonym: "SPB" EXACT []
 
 [Term]
-id: MOEA:0000011
+id: MOEA:0000143
 name: sphinganines [SP0102]
 is_a: LION:0000076 ! sphingoid bases [SP01]
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
 synonym: "SPB" EXACT []
 
 [Term]
-id: MOEA:0000012
+id: MOEA:0000143
 name: 4-hydroxysphinganines (phytosphingosines) [SP0103]
 is_a: LION:0000076 ! sphingoid bases [SP01]
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
 synonym: "SPB" EXACT []
 
 [Term]
-id: MOEA:0000013
+id: MOEA:0000144
 name: sphingoid base homologs and variants [SP0104]
 is_a: LION:0000076 ! sphingoid bases [SP01]
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
 synonym: "SPB" EXACT []
 
 [Term]
-id: MOEA:0000014
+id: MOEA:0000145
 name: sphingoid base 1-phosphates [SP0105]
 is_a: LION:0000076 ! sphingoid bases [SP01]
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
 synonym: "SPBP" EXACT []
 
 [Term]
-id: MOEA:0000015
+id: MOEA:0000146
 name: lysosphingomyelins and lysoglycosphingolipids [SP0106]
 is_a: LION:0000076 ! sphingoid bases [SP01]
 is_a: MOEA:0000001 ! Multiomics Enrichment Analysis lipid class entry
@@ -381628,7 +381628,7 @@ is_a: LION:0012056 ! all-trans-retinyl esters
 [Term]
 id: LION:0144650
 name: SPBP 18:1;O2
-is_a: MOEA:0000014 ! sphingoid base 1-phosphates [SP0105]
+is_a: MOEA:0000145 ! sphingoid base 1-phosphates [SP0105]
 is_a: LION:0080947 ! d18:1 (sphingosine)
 creation_date: 2017-10-02T14:02:21Z
 

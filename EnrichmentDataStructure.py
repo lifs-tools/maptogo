@@ -618,6 +618,10 @@ class EnrichmentOntology:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
             logger.error(e)
 
+        if "HGNC:30802" in self.ontology_terms:
+            for rel in self.ontology_terms["HGNC:30802"].relations:
+                print(rel.name, rel.term_id)
+
 
     @maptogo_profile
     def set_background(
@@ -766,19 +770,17 @@ class EnrichmentOntology:
             if start_term in aggregated_paths: continue
             aggregated_paths[start_term] = [start_term_counter[start_term], parent_nodes if len(start_term_counter[start_term]) == 1 else {}]
 
-        for start_term, (molecule_input_names, parent_nodes) in aggregated_paths.items():
-            queue = [start_term]
-            queue_append, queue_pop = queue.append, queue.pop
-            search_terms_local = search_terms
+        # define a recursive knowlegde graph traversal function
+        def knowlegde_graph_traversal(term, search_terms, parent_nodes, molecule_input_names):
+            if term.domains: search_terms[term] += molecule_input_names
+            for relation_term in term.relations:
+                if relation_term in parent_nodes: continue
+                parent_nodes[relation_term] = term
+                knowlegde_graph_traversal(relation_term, search_terms, parent_nodes, molecule_input_names)
 
-            while queue:
-                term = queue_pop()
-                term_relations = term.relations
-                if term.domains: search_terms_local[term] += molecule_input_names
-                for relation_term in term_relations:
-                    if relation_term in parent_nodes: continue
-                    parent_nodes[relation_term] = term
-                    queue_append(relation_term)
+        # run  the knowlegde graph traversal function with the start terms
+        for start_term, (molecule_input_names, parent_nodes) in aggregated_paths.items():
+            knowlegde_graph_traversal(start_term, search_terms, parent_nodes, molecule_input_names)
 
         for _, start_term, parent_nodes in all_paths:
             if len(start_term_counter[start_term]) == 1: continue
@@ -787,161 +789,178 @@ class EnrichmentOntology:
         return {term: set(term_molecules) for term, term_molecules in search_terms.items()}, all_parent_nodes
 
 
+
     def get_domains(self, domain_bit_field):
         return [self.domains[d] for d in range(domain_bit_field.bit_length()) if ((domain_bit_field >> d) & 1)]
 
 
-    def enrichment_analysis(self, separate_updown_switch, search_terms, background_molecules, target_molecules, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
+
+    def enrichment_analysis_separate_updown(self, separate_updown_switch, search_terms, background_molecules, target_molecules, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
 
         num_background = sum(len(moleculome) for moleculome in background_molecules.values())
-        if separate_updown_switch:
-            if (
-                (
-                    sum(len(target) for target in target_molecules[0].values()) == 0
-                    and sum(len(target) for target in target_molecules[1].values()) == 0
+        if (
+            (
+                sum(len(target) for target in target_molecules[0].values()) == 0
+                and sum(len(target) for target in target_molecules[1].values()) == 0
+            )
+            or num_background < 2
+            or len(enrichment_domains) == 0
+        ): return []
+        enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
+        result_list = [None] * len(search_terms)
+        targets_up = set.union(*target_molecules[0].values())
+        targets_down = set.union(*target_molecules[1].values())
+        len_target_set_up = len(targets_up)
+        len_target_set_down = len(targets_down)
+
+        try: # C++ implementation, just way faster
+            side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
+            for i, (term, term_molecules) in enumerate(search_terms.items()):
+                if not (term.domains & enrichment_domains): continue
+                target_number_up = len(term_molecules & targets_up)
+                target_number_down = len(term_molecules & targets_down)
+
+                p_hyp_up = exact_fisher(target_number_up, len(term_molecules), len_target_set_up, num_background, side)
+                p_hyp_down = exact_fisher(target_number_down, len(term_molecules), len_target_set_down, num_background, side)
+                if p_hyp_up == 0 and p_hyp_down == 0: continue
+                result_list[i] = OntologyResult(
+                    term,
+                    [p_hyp_up, p_hyp_down],
+                    term_molecules,
+                    [
+                        [
+                            target_number_up,
+                            len(term_molecules) - target_number_up,
+                            len_target_set_up - target_number_up,
+                            num_background - len(term_molecules) - len_target_set_up + target_number_up,
+                        ],
+                        [
+                            target_number_down,
+                            len(term_molecules) - target_number_down,
+                            len_target_set_down - target_number_down,
+                            num_background - len(term_molecules) - len_target_set_down + target_number_down,
+                        ],
+                    ],
                 )
-                or num_background < 2
-                or len(enrichment_domains) == 0
-            ): return []
-            enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
-            result_list = [None] * len(search_terms)
-            targets_up = set.union(*target_molecules[0].values())
-            targets_down = set.union(*target_molecules[1].values())
-            len_target_set_up = len(targets_up)
-            len_target_set_down = len(targets_down)
 
-            try: # C++ implementation, just way faster
-                side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
-                for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if not (term.domains & enrichment_domains): continue
-                    target_number_up = len(term_molecules & targets_up)
-                    target_number_down = len(term_molecules & targets_down)
+        except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
+            logger.error("C++ implementation of fisher exact test failed.")
+            for i, (term, term_molecules) in enumerate(search_terms.items()):
+                if not (term.domains & enrichment_domains): continue
+                target_number_up = len(term_molecules & targets_up)
+                target_number_down = len(term_molecules & targets_down)
+                a_up, b_up, c_up, d_up = (
+                    target_number_up,
+                    len(term_molecules) - target_number_up,
+                    len_target_set_up - target_number_up,
+                    num_background - len(term_molecules) - len_target_set_up + target_number_up,
+                )
+                a_down, b_down, c_down, d_down = (
+                    target_number_down,
+                    len(term_molecules) - target_number_down,
+                    len_target_set_down - target_number_down,
+                    num_background - len(term_molecules) - len_target_set_down + target_number_down,
+                )
+                p_hyp_up = stats.fisher_exact([[a_up, b_up], [c_up, d_up]], alternative = term_regulation)[1]
+                p_hyp_down = stats.fisher_exact([[a_down, b_down], [c_down, d_down]], alternative = term_regulation)[1]
+                if p_hyp_up == 0 and p_hyp_down == 0: continue
+                result_list[i] = OntologyResult(
+                    term,
+                    [p_hyp_up, p_hyp_down],
+                    term_molecules,
+                    [
+                        [a_up, b_up, c_up, d_up],
+                        [a_down, b_down, c_down, d_down],
+                    ],
+                )
+        results = [result for result in result_list if result != None]
 
-                    p_hyp_up = exact_fisher(target_number_up, len(term_molecules), len_target_set_up, num_background, side)
-                    p_hyp_down = exact_fisher(target_number_down, len(term_molecules), len_target_set_down, num_background, side)
-                    if p_hyp_up == 0 and p_hyp_down == 0: continue
-                    result_list[i] = OntologyResult(
-                        term,
-                        [p_hyp_up, p_hyp_down],
-                        term_molecules,
-                        [
-                            [
-                                target_number_up,
-                                len(term_molecules) - target_number_up,
-                                len_target_set_up - target_number_up,
-                                num_background - len(term_molecules) - len_target_set_up + target_number_up,
-                            ],
-                            [
-                                target_number_down,
-                                len(term_molecules) - target_number_down,
-                                len_target_set_down - target_number_down,
-                                num_background - len(term_molecules) - len_target_set_down + target_number_down,
-                            ],
-                        ],
-                    )
+        if multiple_test_correction != "no" and len(results) > 1:
+            pvalues = [r.pvalue for r in results]
+            pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
+            pvalues_up = [r.pvalue_up_down[0] for r in results]
+            pvalues_up = multipletests(pvalues_up, method = multiple_test_correction)[1]
+            pvalues_down = [r.pvalue_up_down[1] for r in results]
+            pvalues_down = multipletests(pvalues_down, method = multiple_test_correction)[1]
+            for pvalue, pvalue_up, pvalue_down, r in zip(pvalues, pvalues_up, pvalues_down, results):
+                r.pvalue_corrected = [pvalue, pvalue_up, pvalue_down]
 
-            except Exception as e:
-                logger.error("".join(traceback.format_tb(e.__traceback__)))
-                logger.error("C++ implementation of fisher exact test failed.")
-                for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if not (term.domains & enrichment_domains): continue
-                    target_number_up = len(term_molecules & targets_up)
-                    target_number_down = len(term_molecules & targets_down)
-                    a_up, b_up, c_up, d_up = (
-                        target_number_up,
-                        len(term_molecules) - target_number_up,
-                        len_target_set_up - target_number_up,
-                        num_background - len(term_molecules) - len_target_set_up + target_number_up,
-                    )
-                    a_down, b_down, c_down, d_down = (
-                        target_number_down,
-                        len(term_molecules) - target_number_down,
-                        len_target_set_down - target_number_down,
-                        num_background - len(term_molecules) - len_target_set_down + target_number_down,
-                    )
-                    p_hyp_up = stats.fisher_exact([[a_up, b_up], [c_up, d_up]], alternative = term_regulation)[1]
-                    p_hyp_down = stats.fisher_exact([[a_down, b_down], [c_down, d_down]], alternative = term_regulation)[1]
-                    if p_hyp_up == 0 and p_hyp_down == 0: continue
-                    result_list[i] = OntologyResult(
-                        term,
-                        [p_hyp_up, p_hyp_down],
-                        term_molecules,
-                        [
-                            [a_up, b_up, c_up, d_up],
-                            [a_down, b_down, c_down, d_down],
-                        ],
-                    )
-            results = [result for result in result_list if result != None]
-
-            if multiple_test_correction != "no" and len(results) > 1:
-                pvalues = [r.pvalue for r in results]
-                pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
-                pvalues_up = [r.pvalue_up_down[0] for r in results]
-                pvalues_up = multipletests(pvalues_up, method = multiple_test_correction)[1]
-                pvalues_down = [r.pvalue_up_down[1] for r in results]
-                pvalues_down = multipletests(pvalues_down, method = multiple_test_correction)[1]
-                for pvalue, pvalue_up, pvalue_down, r in zip(pvalues, pvalues_up, pvalues_down, results):
-                    r.pvalue_corrected = [pvalue, pvalue_up, pvalue_down]
-
-            results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
-            return results
-
-        else:
-            if (
-                sum(len(target) for target in target_molecules.values()) == 0
-                or num_background < 2
-                or len(enrichment_domains) == 0
-            ): return []
-            enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
-            result_list = [None] * len(search_terms)
-            targets = set.union(*target_molecules.values())
-            len_target_set = len(targets)
+        results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
+        return results
 
 
-            try: # C++ implementation, just way faster
-                side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
-                for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if not (term.domains & enrichment_domains): continue
-                    target_number = len(term_molecules & targets)
-                    p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
-                    if p_hyp == 0: continue
-                    result_list[i] = OntologyResult(
-                        term,
-                        p_hyp,
-                        term_molecules,
-                        [
-                            target_number,
-                            len(term_molecules) - target_number,
-                            len_target_set - target_number,
-                            num_background - len(term_molecules) - len_target_set + target_number,
-                        ],
-                    )
+    def enrichment_analysis(self, separate_updown_switch, search_terms, background_molecules, target_molecules, enrichment_domains, term_regulation = "greater", multiple_test_correction = "no"):
+        if separate_updown_switch:
+            return self.enrichment_analysis_separate_updown(
+                separate_updown_switch,
+                search_terms,
+                background_molecules,
+                target_molecules,
+                enrichment_domains,
+                term_regulation,
+                multiple_test_correction,
+            )
 
-            except Exception as e:
-                logger.error("".join(traceback.format_tb(e.__traceback__)))
-                logger.error("C++ implementation of fisher exact test failed.")
-                for i, (term, term_molecules) in enumerate(search_terms.items()):
-                    if not (term.domains & enrichment_domains): continue
-                    target_number = len(term_molecules & targets)
-                    a, b, c, d = (
+        num_background = sum(len(moleculome) for moleculome in background_molecules.values())
+        if (
+            sum(len(target) for target in target_molecules.values()) == 0
+            or num_background < 2
+            or len(enrichment_domains) == 0
+        ): return []
+        enrichment_domains = sum((1 << (self.domains.index(d))) for d in enrichment_domains)
+        result_list = [None] * len(search_terms)
+        targets = set.union(*target_molecules.values())
+        len_target_set = len(targets)
+
+        try: # C++ implementation, just way faster
+            side = 2 if term_regulation == "greater" else (1 if term_regulation == "less" else 0)
+            for i, (term, term_molecules) in enumerate(search_terms.items()):
+                if not (term.domains & enrichment_domains): continue
+                target_number = len(term_molecules & targets)
+                p_hyp = exact_fisher(target_number, len(term_molecules), len_target_set, num_background, side)
+                if p_hyp == 0: continue
+                result_list[i] = OntologyResult(
+                    term,
+                    p_hyp,
+                    term_molecules,
+                    [
                         target_number,
                         len(term_molecules) - target_number,
                         len_target_set - target_number,
                         num_background - len(term_molecules) - len_target_set + target_number,
-                    )
-                    p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
-                    if p_hyp == 0: continue
-                    result_list[i] = OntologyResult(
-                        term,
-                        p_hyp,
-                        term_molecules,
-                        [a, b, c, d]
-                    )
+                    ],
+                )
 
-            results = [result for result in result_list if result != None]
-            if multiple_test_correction != "no" and len(results) > 1:
-                pvalues = [r.pvalue for r in results]
-                pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
-                for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
-            results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
-            return results
+        except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
+            logger.error("C++ implementation of fisher exact test failed.")
+            for i, (term, term_molecules) in enumerate(search_terms.items()):
+                if not (term.domains & enrichment_domains): continue
+                target_number = len(term_molecules & targets)
+                a, b, c, d = (
+                    target_number,
+                    len(term_molecules) - target_number,
+                    len_target_set - target_number,
+                    num_background - len(term_molecules) - len_target_set + target_number,
+                )
+                p_hyp = stats.fisher_exact([[a, b], [c, d]], alternative = term_regulation)[1]
+                if p_hyp == 0: continue
+                result_list[i] = OntologyResult(
+                    term,
+                    p_hyp,
+                    term_molecules,
+                    [a, b, c, d]
+                )
+
+        results = [result for result in result_list if result != None]
+        if multiple_test_correction != "no" and len(results) > 1:
+            pvalues = [r.pvalue for r in results]
+            pvalues = multipletests(pvalues, method = multiple_test_correction)[1]
+            for pvalue, r in zip(pvalues, results): r.pvalue_corrected = pvalue
+        results.sort(key = lambda row: (row.pvalue_corrected, row.term.name))
+        return results
+
+
+
+
