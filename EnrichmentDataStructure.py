@@ -25,6 +25,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import zstandard as zstd
 import gzip
 from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
@@ -546,7 +547,7 @@ class EnrichmentOntology:
         category_dict, domain_dict = {}, {}
         ontology_terms = self.ontology_terms
         try:
-            with gzip.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
+            with zstd.open(file_name, mode="rt", encoding="utf-8", newline = "") as f:
                 term_list = [(OntologyTerm(category_dict, domain_dict, *(row := line.strip("\n").split("\t"))), row[4]) for line in f]
 
             for term, synonyms in term_list:
@@ -774,7 +775,7 @@ class EnrichmentOntology:
                 parent_nodes[relation_term] = term
                 knowlegde_graph_traversal(relation_term, search_terms, parent_nodes, molecule_input_names)
 
-        # run  the knowlegde graph traversal function with the start terms
+        # run the knowlegde graph traversal function with the start terms
         for start_term, (molecule_input_names, parent_nodes) in aggregated_paths.items():
             knowlegde_graph_traversal(start_term, search_terms, parent_nodes, molecule_input_names)
 

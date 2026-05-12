@@ -206,7 +206,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        'Homo sapiens': 'NCBITaxon:9606',
+        # 'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -805,7 +805,7 @@ enrichment_ontologies = {}
 
 for tax_name, tax_id in organisms.items():
     tax_id_number = tax_id.replace("NCBITaxon:", "")
-    file_name = f"{current_path}/Data/ontology_{tax_id_number}.gz"
+    file_name = f"{current_path}/Data/ontology_{tax_id_number}.zst"
     logger.info(f"Loading {tax_name} ({os.path.getsize(file_name)} bytes)")
     enrichment_ontologies[tax_id] = EnrichmentOntology(file_name, tax_name)
 gc.enable()

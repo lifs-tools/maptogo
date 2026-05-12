@@ -2,7 +2,7 @@ DOWNLOAD_FILES = Data/doid-base.obo Data/go-basic.obo Data/chebi_lite.obo Data/c
 
 SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Data/pathbank_to_uniprot.csv Data/chebi_to_pathway.csv Data/hgnc_to_mondo.csv ../CHEBI_synonyms.csv.gz Data/goa_uniprot.csv.gz
 
-ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz Data/Saccharomyces_cerevisiae.all.tsv.gz Data/Drosophila_melanogaster.all.tsv.gz Data/Rattus_norvegicus.all.tsv.gz Data/Bos_taurus.all.tsv.gz Data/Caenorhabditis_elegans.all.tsv.gz
+ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Saccharomyces_cerevisiae.all.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Drosophila_melanogaster.all.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Rattus_norvegicus.all.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Bos_taurus.all.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz Data/Caenorhabditis_elegans.all.tsv.gz Data/Danio_rerio.uniprot.tsv.gz Data/Danio_rerio.all.tsv.gz Data/Gallus_gallus.uniprot.tsv.gz Data/Gallus_gallus.all.tsv.gz Data/Sus_scrofa.uniprot.tsv.gz Data/Sus_scrofa.all.tsv.gz
 
 ######## OWN DATA ########
 # Data/LION.obo
@@ -136,6 +136,24 @@ Data/Caenorhabditis_elegans.uniprot.tsv.gz:
 Data/Caenorhabditis_elegans.all.tsv.gz:
 	wget --tries=10 -O Data/Caenorhabditis_elegans.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/caenorhabditis_elegans/cds/Caenorhabditis_elegans.WBcel235.cds.all.fa.gz"
 
+Data/Danio_rerio.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Danio_rerio.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/danio_rerio/Danio_rerio.GRCz11.115.uniprot.tsv.gz"
+
+Data/Danio_rerio.all.tsv.gz:
+	wget --tries=10 -O Data/Danio_rerio.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/danio_rerio/cds/Danio_rerio.GRCz11.cds.all.fa.gz"
+
+Data/Gallus_gallus.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Gallus_gallus.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/gallus_gallus/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.115.uniprot.tsv.gz"
+
+Data/Gallus_gallus.all.tsv.gz:
+	wget --tries=10 -O Data/Gallus_gallus.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/gallus_gallus/cds/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.cds.all.fa.gz"
+
+Data/Sus_scrofa.uniprot.tsv.gz:
+	wget --tries=10 -O Data/Sus_scrofa.uniprot.tsv.gz "ftp://ftp.ensembl.org/pub/current_tsv/sus_scrofa/Sus_scrofa.Sscrofa11.1.115.uniprot.tsv.gz"
+
+Data/Sus_scrofa.all.tsv.gz:
+	wget --tries=10 -O Data/Sus_scrofa.all.tsv.gz "ftp://ftp.ensembl.org/pub/current/fasta/sus_scrofa/cds/Sus_scrofa.Sscrofa11.1.cds.all.fa.gz"
+
 # HGNC
 Data/HGNC.csv:
 	wget --tries=10 -O Data/HGNC.csv "https://www.genenames.org/cgi-bin/download/custom?col=gd_hgnc_id&col=gd_app_sym&col=md_prot_id&col=gd_pub_eg_id&col=gd_pub_ensembl_id&status=Approved&status=Entry%20Withdrawn&hgnc_dbtag=on&order_by=gd_app_sym_sort&format=text&submit=submit"
@@ -143,7 +161,7 @@ Data/HGNC.csv:
 # Uniprot
 Data/uniprot.csv.gz:
 	# revieved = True
-	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cec%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full%2Cxref_geneid%2Creviewed%2Ckeyword%2Ccc_function&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A405534%29+OR+%28taxonomy_id%3A3702%29%29"
+	wget --tries=10 -O Data/uniprot.csv.gz "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Corganism_id%2Cgene_primary%2Cgo%2Cec%2Cprotein_families%2Cxref_mim_full%2Cxref_hgnc_full%2Cxref_ensembl_full%2Cxref_geneid%2Creviewed%2Ckeyword%2Ccc_function&format=tsv&query=%28%28taxonomy_id%3A9606%29+OR+%28taxonomy_id%3A10090%29+OR+%28taxonomy_id%3A4932%29+OR+%28taxonomy_id%3A562%29+OR+%28taxonomy_id%3A7227%29+OR+%28taxonomy_id%3A10116%29+OR+%28taxonomy_id%3A9913%29+OR+%28taxonomy_id%3A6239%29+OR+%28taxonomy_id%3A237561%29+OR+%28taxonomy_id%3A405534%29+OR+%28taxonomy_id%3A3702%29+OR+%28taxonomy_id%3A4550%29+OR+%28taxonomy_id%3A7955%29+OR+%28taxonomy_id%3A1423%29+OR+%28taxonomy_id%3A4896%29+OR+%28taxonomy_id%3A9031%29+OR+%28taxonomy_id%3A9823%29%29"
 
 # GO
 Data/goa_uniprot_gcrp.gpa.gz:
@@ -186,7 +204,7 @@ Data/hgnc_to_mondo.csv: Data/causal_gene_to_disease_association.all.tsv.gz Data/
 
 # GO
 Data/goa_uniprot.csv.gz: Data/goa_uniprot_gcrp.gpa.gz
-	python3 Scripts:goa_uniprot.py
+	python3 Scripts/goa_uniprot.py
 
 
 ######## CLEAN WORKSPACE ########

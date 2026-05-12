@@ -5,13 +5,14 @@ import EnrichmentDataStructure  as EDS
 
 from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
+import zstandard as zstd
 import gzip
 import pickle
 import os
 import pandas as pd
 import zipfile
 import json
-
+import re
 
 
 with zipfile.ZipFile("Data/BioDolphin_vr1.1.zip") as z:
@@ -64,6 +65,131 @@ EC_CATEGORY = {
     "5": "Isomerization (Isomerases)",
     "6": "Ligation (Ligases)"
 }
+
+
+def classify_reactome(description: str, event: dict = None):
+    text = description.lower()
+    cats = []
+
+    # ---------------------------
+    # 1. TRANSPORT (highest priority for movement verbs)
+    # ---------------------------
+    if re.search(r"transport|translocat|import|export|move|exchanges|into|out of", text):
+        cats.append("Transport")
+
+    # explicit compartment change
+    if event and len(event.get("compartment", [])) > 1:
+        cats.append("Compartemental relocation")
+
+    # ---------------------------
+    # 2. Binding / complexes
+    # ---------------------------
+    if "bind" in text or "association" in text:
+        cats.append("Binding")
+
+    if "complex" in text:
+        cats.append("Complex assembly")
+
+    # ---------------------------
+    # 3. Enzymatic reactions
+    # ---------------------------
+
+    if any(k in text for k in ["hydrolys", "hydrolyz", "cleav", "synth", "oxid", "reduct", "acylat", "transfer", "convert", "ligat", "esterif", "isomer", "carboxyl", "decarboxyl", "deamin", "phosphorylat", "methylat", "glycosyl", "conjugat"]):
+        cats.append("Enzymatic reaction")
+
+    # ---------------------------
+    # 4. PTMs
+    # ---------------------------
+    if any(c in text for c in ["phosphorylates", "phosphorylation", "is autophosphorylated", "is phosphorylated", "ubiquitinates", "acetylates", "methylates","glycosylates"]):
+        cats.append("Post-translational modification")
+        cats.append("Protein phosphorylation")
+
+    if "ubiquitin" in text:
+        cats.append("Ubiquitination")
+        cats.append("Post-translational modification")
+
+    # ---------------------------
+    # 5. Metabolism
+    # ---------------------------
+    lipid_terms = [
+        "phospholipid",
+        "phosphatidyl",
+        "lpe",
+        "lpi",
+        "pi ",
+        "pe ",
+        "pla2",
+        "acyl"
+    ]
+
+    if any(x in text for x in lipid_terms):
+        cats.append("Lipid metabolism")
+
+    if "sugar" in text or "glucose" in text or "carbohydrate" in text:
+        cats.append("Carbohydrate metabolism")
+
+    if "metabol" in text or "small molecule" in text:
+        cats.append("Small molecule metabolism")
+
+    # ---------------------------
+    # 6. Degradation
+    # ---------------------------
+    if "degrad" in text or "proteolysis" in text:
+        cats.append("Degradation")
+
+    # ---------------------------
+    # 7. Gene expression
+    # ---------------------------
+    if "transcription" in text:
+        cats.append("Gene transcript")
+
+    if "translation" in text:
+        cats.append("Translation")
+
+    if "rna" in text or "mrna" in text:
+        cats.append("RNA processing")
+
+    # ---------------------------
+    # 8. Signaling
+    # ---------------------------
+        signaling_patterns = [
+        r"\bgpcr\b",
+        r"\bgef\b",
+        r"\bg protein\b",
+        r"\bactivates\b",
+        r"\binhibits\b",
+        r"\bsignal",
+        r"\bkinase cascade",
+        r"\breceptor"
+    ]
+
+    if any(re.search(p, text) for p in signaling_patterns):
+        cats.append("Signaling event")
+
+    if any(x in text for x in [
+            "calcium",
+            "ca2+",
+            "camp",
+            "ip3",
+            "dag"
+        ]):
+        cats.append("Second-messenger event")
+
+    # ---------------------------
+    # 9. State transitions
+    # ---------------------------
+    if any(x in text for x in [
+        "activates",
+        "activated",
+        "gef",
+        "gtp-bound",
+        "inactive",
+        "active"
+    ]):
+        cats.append("State transition")
+
+    return cats
+
 
 
 gene_biotype_dict = {
@@ -147,6 +273,13 @@ if all_species:
         'Caenorhabditis elegans': "6239",
         'Pseudomonas aeruginosa': "287",
         'Arabidopsis thaliana': "3702",
+        'Oryza sativa': "4550",
+        'Danio rerio': "7955",
+        'Bacillus subtilis': "1423",
+        'Schizosaccharobyces pombe': "4896",
+        'Gallus gallus': "9031",
+        'Sus scrofa': "9823",
+
     }
     ensembl_files = [
         ("Data/Homo_sapiens.uniprot.tsv.gz", "9606", "Data/Homo_sapiens.all.tsv.gz"),
@@ -156,6 +289,9 @@ if all_species:
         ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116", "Data/Rattus_norvegicus.all.tsv.gz"),
         ("Data/Bos_taurus.uniprot.tsv.gz", "9913", "Data/Bos_taurus.all.tsv.gz"),
         ("Data/Caenorhabditis_elegans.uniprot.tsv.gz", "6239", "Data/Caenorhabditis_elegans.all.tsv.gz"),
+        ("Data/Danio_rerio.uniprot.tsv.gz", "6239", "Data/Danio_rerio.all.tsv.gz"),
+        ("Data/Gallus_gallus.uniprot.tsv.gz", "6239", "Data/Gallus_gallus.all.tsv.gz"),
+        ("Data/Sus_scrofa.uniprot.tsv.gz", "6239", "Data/Sus_scrofa.all.tsv.gz"),
     ]
     reactomes = {
         "9606": "HSA",
@@ -169,6 +305,12 @@ if all_species:
         "287": None,
         "3702": None,
         "405534": None,
+        "4550": None,
+        "7955": "DRE",
+        "1423": None,
+        "4896": "SPO",
+        "9031": "GGA",
+        "9823": "SSC",
     }
 
 else:
@@ -971,7 +1113,6 @@ print("Readin reactome reactions")
 with open("Data/ChEBI2ReactomeReactions.txt", "rt") as input_stream:
     for line in input_stream:
         tokens = line.strip().split("\t")
-
         if tokens[0] in chebi_terms_all: chebi_terms_all[tokens[0]].relations.add(tokens[1])
 
 
@@ -981,11 +1122,8 @@ with open("Data/UniProt2ReactomeReactions.txt", "rt") as input_stream:
         tokens = line.strip().split("\t")
 
         uniprot_id = "UNIPROT:" + tokens[0]
-        if tokens[1] not in reactome_reactions: reactome_reactions[tokens[1]] = Term(tokens[1], f"Reactome reaction {tokens[1]}", {uniprot_id, "MOEA:0000009"})
+        if tokens[1] not in reactome_reactions: reactome_reactions[tokens[1]] = Term(tokens[1], f"Reactome reaction {tokens[1]}", {uniprot_id, "MOEA:0000009"}, _categories = set(classify_reactome(tokens[3])))
         else: reactome_reactions[tokens[1]].relations.add(uniprot_id)
-
-
-
 
 
 
@@ -1280,10 +1418,11 @@ for tax_name, tax_id in species.items():
     term_positions = {term_id: i for i, term in enumerate(terms) for term_id in term.id}
     output = [term.to_string(term_positions) for term in terms]
 
-    with gzip.open(f"../ontology_{tax_id}.gz", "wb") as gz_output:
-        gzip_out = "\n".join(output).encode("utf8")
-        print("writing", len(gzip_out))
-        gz_output.write(gzip_out)
+    cctx = zstd.ZstdCompressor(level = 12)
+    with open(f"../ontology_{tax_id}.zst", "wb") as zstd_output:
+        zstd_out = cctx.compress("\n".join(output).encode("utf8"))
+        print("writing", len(zstd_out))
+        zstd_output.write(zstd_out)
 
 
 

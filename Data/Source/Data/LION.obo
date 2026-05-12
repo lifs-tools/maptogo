@@ -17679,19 +17679,22 @@ creation_date: 2017-10-02T14:02:21Z
 [Term]
 id: LION:0012009
 name: lipid-mediated signalling
-namespace: Molecular function
+namespace: Physical or chemical properties
+is_a: CAT:0000091 ! physical or chemical properties
 creation_date: 2017-10-05T12:15:44Z
 
 [Term]
 id: LION:0012010
 name: membrane component
-namespace: Molecular function
+is_a: CAT:0000091 ! physical or chemical properties
+namespace: Physical or chemical properties
 creation_date: 2017-10-05T12:15:44Z
 
 [Term]
 id: LION:0012011
 name: lipid storage
-namespace: Molecular function
+is_a: CAT:0000091 ! physical or chemical properties
+namespace: Physical or chemical properties
 creation_date: 2017-10-05T12:15:44Z
 
 [Term]
