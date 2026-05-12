@@ -616,8 +616,7 @@ class EnrichmentOntology:
                 if len(tokens) < 2 or tokens[0] not in ontology_terms or tokens[1] not in ontology_terms: continue
                 ontology_terms[tokens[0]].relations.append(ontology_terms[tokens[1]])
         except Exception as e:
-            logger.error("".join(traceback.format_tb(e.__traceback__)))
-            logger.error(e)
+            logger.warning(f"'{current_path}/Data/additional_links.csv' not available, skip")
 
 
     @maptogo_profile

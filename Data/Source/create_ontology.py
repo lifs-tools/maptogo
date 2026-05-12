@@ -15,13 +15,6 @@ import json
 import re
 
 
-with zipfile.ZipFile("Data/BioDolphin_vr1.1.zip") as z:
-    with z.open("BioDolphin_vr1.1/BioDolphin_vr1.1.txt") as f:
-        df_dolphin = pd.read_csv(f, sep = "\t")
-        df_dolphin = df_dolphin[["BioDolphinID", "protein_UniProt_ID", "lipid_ChEBI"]]
-        df_dolphin = df_dolphin[df_dolphin["protein_UniProt_ID"].str.len() > 0]
-        df_dolphin = df_dolphin[df_dolphin["lipid_ChEBI"].str.len() > 0]
-
 
 all_species = len(sys.argv) > 1 and sys.argv[1] == "all"
 parser = LipidParser()
@@ -152,7 +145,7 @@ def classify_reactome(description: str, event: dict = None):
     # ---------------------------
     # 8. Signaling
     # ---------------------------
-        signaling_patterns = [
+    signaling_patterns = [
         r"\bgpcr\b",
         r"\bgef\b",
         r"\bg protein\b",
@@ -318,17 +311,14 @@ else:
     species = {
         'Homo sapiens': "9606",
         'Mus musculus': "10090",
-        'Rattus norvegicus': "10116",
     }
     ensembl_files = [
         ("Data/Homo_sapiens.uniprot.tsv.gz", "9606", "Data/Homo_sapiens.all.tsv.gz"),
         ("Data/Mus_musculus.uniprot.tsv.gz", "10090", "Data/Mus_musculus.all.tsv.gz"),
-        ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116", "Data/Rattus_norvegicus.all.tsv.gz"),
     ]
     reactomes = {
         "9606": "HSA",
         "10090": "MMU",
-        "10116": "RNO",
     }
 
 species_set = set(species.values())
@@ -390,7 +380,7 @@ class Term:
 
 lipid_maps_terms = {}
 with open("Data/LM.csv") as fin:
-    print("Readin LM")
+    print("Readin LIPID MAPS")
     for line in fin:
         line = line.strip()
         if len(line) == 0: continue
@@ -722,6 +712,7 @@ with open("Data/rhea_to_chebi.csv", "rt") as infile:
 chebi_terms_organisms = {org: {} for _, org in species.items()}
 pathway_terms = {}
 pathway_terms_organisms = {org: {} for _, org in species.items()}
+
 ## PATHBANK
 # with open("Data/chebi_to_pathway.csv", "rt") as infile:
 #     print("Readin chebi_to_pathway")
@@ -1338,12 +1329,6 @@ for tax_name, tax_id in species.items():
     #     print(e)
 
 
-    # for i, row in df_dolphin[df_dolphin["protein_UniProt_ID"].isin(list(uniprot_terms_organisms[tax_id].keys()))].iterrows():
-    #     output.append(Term("BD:" + row["BioDolphinID"], f"Interaction {row["BioDolphinID"]}", {"UNIPROT:" + row["protein_UniProt_ID"], "MOEA:0000009"}).to_string())
-    #     chebi_id = row["lipid_ChEBI"][6:]
-    #     if chebi_id not in chebi_terms_organism: chebi_terms_organism[chebi_id] = {"BD:" + row["BioDolphinID"]}
-    #     else: chebi_terms_organism[chebi_id].add("BD:" + row["BioDolphinID"])
-
 
     if reactome_tag:
         for reactome_id, reactome_term in reactome_reactions.items():
@@ -1351,7 +1336,8 @@ for tax_name, tax_id in species.items():
                 terms.append(reactome_term)
 
 
-    chebi_terms = {t: c.copy() for t, c in chebi_terms_all.items()}
+    added_chebi_terms = {}
+    chebi_terms = {t: added_chebi_terms.setdefault(c, c.copy()) for t, c in chebi_terms_all.items()}
     for chebi_term, pathway_terms in chebi_terms_organism.items():
         if chebi_term not in chebi_terms: continue
         chebi_terms[chebi_term].relations |= pathway_terms
@@ -1390,8 +1376,8 @@ for tax_name, tax_id in species.items():
 
     added_chebi_terms = set()
     for chebi_term_id, chebi_term in chebi_terms.items():
-        if chebi_term_id in added_chebi_terms: continue
-        added_chebi_terms |= chebi_term.id
+        if chebi_term in added_chebi_terms: continue
+        added_chebi_terms.add(chebi_term)
         terms.append(chebi_term)
 
     # diseases and phenotypes

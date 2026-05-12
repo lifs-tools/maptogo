@@ -21,15 +21,21 @@ with gzip.open("Data/chebi.obo.gz", "rt") as obo:
 
             term_ids, name, relations_conjugate, inchikey = [], "", set(), None
 
-        elif line[:3] == "id:":
+        elif line.startswith("id:"):
             term_ids.append(line[3:].strip(" ").replace("CHEBI:", ""))
 
-        elif line[:5] == "name:":
+        elif line.startswith("name:"):
             name = line[5:].strip(" ").replace("CHEBI:", "")
 
-        elif line[:35] == "relationship: is_conjugate_base_of ":
+        elif line.startswith("relationship: is_conjugate_base_of "):
             relation = line[35:].strip(" ")
             relations_conjugate.add(relation.replace("CHEBI:", ""))
+
+        elif line.startswith("relationship: ") and (line.find("is conjugate") > -1 or line.find("is tautomer") > -1):
+            for t in line.split(" "):
+                if t.startswith("CHEBI:"):
+                    relations_conjugate.add(t.replace("CHEBI:", ""))
+                    break
 
         elif line.startswith("alt_id:"):
             term_ids.append(line.replace("alt_id: CHEBI:", "").strip())
