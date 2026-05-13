@@ -5743,4 +5743,3 @@ def separate_updown_switch_changed(
     )
 
 
-

@@ -282,9 +282,9 @@ if all_species:
         ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116", "Data/Rattus_norvegicus.all.tsv.gz"),
         ("Data/Bos_taurus.uniprot.tsv.gz", "9913", "Data/Bos_taurus.all.tsv.gz"),
         ("Data/Caenorhabditis_elegans.uniprot.tsv.gz", "6239", "Data/Caenorhabditis_elegans.all.tsv.gz"),
-        ("Data/Danio_rerio.uniprot.tsv.gz", "6239", "Data/Danio_rerio.all.tsv.gz"),
-        ("Data/Gallus_gallus.uniprot.tsv.gz", "6239", "Data/Gallus_gallus.all.tsv.gz"),
-        ("Data/Sus_scrofa.uniprot.tsv.gz", "6239", "Data/Sus_scrofa.all.tsv.gz"),
+        ("Data/Danio_rerio.uniprot.tsv.gz", "7955", "Data/Danio_rerio.all.tsv.gz"),
+        ("Data/Gallus_gallus.uniprot.tsv.gz", "9031", "Data/Gallus_gallus.all.tsv.gz"),
+        ("Data/Sus_scrofa.uniprot.tsv.gz", "9823", "Data/Sus_scrofa.all.tsv.gz"),
     ]
     reactomes = {
         "9606": "HSA",
@@ -301,7 +301,7 @@ if all_species:
         "4550": None,
         "7955": "DRE",
         "1423": None,
-        "4896": "SPO",
+        "4896": None,
         "9031": "GGA",
         "9823": "SSC",
     }
