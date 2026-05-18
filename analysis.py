@@ -4482,7 +4482,6 @@ def open_sankeyplot(
         layers.append([sn for sn in sankey_nodes])
 
     layers = optimise_sankey_node_order(layers, edges)
-
     for layer, sankey_nodes in zip(layers, sankey_nodes_count):
         all_layer_count = sum([max(cnt) + margin * all_layers_max for cnt in sankey_nodes.values()])
         if all_layer_count < all_layers_max:
