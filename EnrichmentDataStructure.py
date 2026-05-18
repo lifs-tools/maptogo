@@ -81,11 +81,33 @@ class TermType(Enum):
     ENSEMBLE_GENE = 11              # special handling
     GENE = 12
     SPHINGOLIPID_SUBCLASS = 13      # special handling
-    INPUT_TERM = 90
-    UNCLASSIFIED_TERM = 99
+    DOMAIN_TERM = 99
 
 
-int_to_term_type = {term_type.value: TermType(term_type.value) for  term_type in TermType}
+class Domain(Enum):
+    BIOLOGICAL_PROCESS = 1
+    MOLECULAR_FUNCTION = 2
+    CELLULAR_COMPONENT = 3
+    ENZYMATIC_ACTIVITY_SP_TR = 4
+    ENZYMATIC_ACTIVITY_SP = 5
+    PHYSCICAL_CHEMICAL_PROPERTIES = 6
+    PATHWAY = 7
+    DISEASE = 8
+    PHENOTYPE = 9
+
+
+str_to_domain = {
+    'Biological process': Domain.BIOLOGICAL_PROCESS,
+    'Molecular function': Domain.MOLECULAR_FUNCTION,
+    'Cellular component': Domain.CELLULAR_COMPONENT,
+    'Enzymatic activity (Swiss-Prot + TrEMBL)': Domain.ENZYMATIC_ACTIVITY_SP_TR,
+    'Enzymatic activity (Swiss-Prot)': Domain.ENZYMATIC_ACTIVITY_SP,
+    'Physical or chemical properties': Domain.PHYSCICAL_CHEMICAL_PROPERTIES,
+    'Metabolic and signalling pathway': Domain.PATHWAY,
+    'Disease': Domain.DISEASE,
+    'Phenotype': Domain.PHENOTYPE,
+}
+int_to_term_type = {term_type.value: TermType(term_type.value) for term_type in TermType}
 
 
 current_path = pathlib.Path(__file__).parent.resolve()

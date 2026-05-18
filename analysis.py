@@ -206,7 +206,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        # 'Homo sapiens': 'NCBITaxon:9606',
+        'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -313,7 +313,9 @@ def get_path(nodes, node):
 class ItemCounter:
     def __init__(self, first_item = None):
         self.counter = {}
-        if first_item != None: self.counter[first_item] = 1
+        if first_item != None:
+            if type(first_item) == ItemCounter: self.merge(first_item)
+            else: self.counter[first_item] = 1
 
     def add(self, item):
         if item not in self.counter: self.counter[item] = 1
@@ -1281,6 +1283,15 @@ def layout():
                                 value = "sankey_downregulated",
                                 id = "sankey_downregulated",
                                 style = {"display": "none"},
+                            ),
+                            dmc.Radio(
+                                "All selected molecules",
+                                value = "sankey_selected",
+                                id = "sankey_selected",
+                                style = {
+                                    "pointerEvents": "none",
+                                    "opacity": 0.6,
+                                },
                             ),
                         ], my = 10)
                     ],
@@ -4158,6 +4169,32 @@ def open_sunburstplot(
 
 
 
+
+class SankeyLayer(Enum):
+    INPUT_LAYER = 1
+    MOLECULE_LAYER = 2
+    REACTION_LAYER = 3
+    PROTEIN_LAYER = 4
+    GENE_LAYER = 5
+    OUTPUT_LAYER = 6
+
+term_type_to_layer = {
+    TermType.LIPID_CLASS: SankeyLayer.MOLECULE_LAYER,
+    TermType.LIPID_SPECIES: SankeyLayer.MOLECULE_LAYER,
+    TermType.CARBON_CHAIN: SankeyLayer.MOLECULE_LAYER,
+    TermType.UNSPECIFIC_LIPID: SankeyLayer.MOLECULE_LAYER,
+    TermType.REVIEWED_PROTEIN: SankeyLayer.PROTEIN_LAYER,
+    TermType.UNREVIEWED_PROTEIN: SankeyLayer.PROTEIN_LAYER,
+    TermType.ENSEMBLE_PROTEIN: SankeyLayer.PROTEIN_LAYER,
+    TermType.METABOLITE: SankeyLayer.MOLECULE_LAYER,
+    TermType.GENERIC_REACTION: SankeyLayer.REACTION_LAYER,
+    TermType.ENSEMBLE_TRANSCRIPT: SankeyLayer.PROTEIN_LAYER,
+    TermType.ENSEMBLE_GENE: SankeyLayer.PROTEIN_LAYER,
+    TermType.GENE: SankeyLayer.GENE_LAYER,
+    TermType.SPHINGOLIPID_SUBCLASS: SankeyLayer.MOLECULE_LAYER,
+    TermType.DOMAIN_TERM: SankeyLayer.OUTPUT_LAYER,
+}
+
 @callback(
     Output("sankey_modal", "opened", allow_duplicate = True),
     Output("sankey_graph", "figure", allow_duplicate = True),
@@ -4166,12 +4203,16 @@ def open_sunburstplot(
     Output("sankey_entries", "rowData", allow_duplicate = True),
     Output("icon_download_sankey_entries", "disabled", allow_duplicate = True),
     Output("radiogroup_sankey", "value", allow_duplicate = True),
+    Output("sankey_selected", "style", allow_duplicate = True),
     Input("sankey_results", "n_clicks"),
     Input("radiogroup_sankey", "value"),
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
     State("sunburst_controls", "style"),
+    State("sankey_selected", "style"),
+    State("multiselect_filter_molecules", "value"),
+    State("select_domains", "value"),
     prevent_initial_call = True,
 )
 def open_sankeyplot(
@@ -4181,6 +4222,9 @@ def open_sankeyplot(
     selected_rows,
     session_id,
     sunburst_controls_style,
+    sankey_selected_style,
+    multiselect_filter_molecules,
+    select_domains,
 ):
     if session_id == None or n_clicks == None or radiogroup_sankey == None:
         raise exceptions.PreventUpdate
@@ -4195,6 +4239,7 @@ def open_sankeyplot(
             no_update,
             no_update,
             no_update,
+            no_update,
         )
     session = sessions[session_id]
     selected_term_ids = [row["termid"] for row in selected_rows]
@@ -4203,6 +4248,8 @@ def open_sankeyplot(
     terms = ontology.ontology_terms
 
     sunburst_controls_style["display"] = "none"
+    sankey_selected_style["pointerEvents"] = "auto" if multiselect_filter_molecules else "none"
+    sankey_selected_style["opacity"] = 1 if multiselect_filter_molecules else 0.6
 
     if ctx.triggered_id != "radiogroup_sankey":
         radiogroup_sankey = "sankey_all"
@@ -4249,40 +4296,36 @@ def open_sankeyplot(
         )
         upregulated_molecules, downregulated_molecules = set(), set()
 
+    selected_molecules = set(multiselect_filter_molecules)
     pastel_colors = ["#FFD1DC", "#AAF0D1", "#FFB347", "#B5EAAA", "#CBAACB", "#FDFD96", "#CFCFC4", "#E3E4FA", "#AEC6CF", "#FF6961", "#FFE5B4", "#77DD77"]
-    def compute_layers(n_nodes, source, target):
-        # Build graph
-        incoming = defaultdict(set)
-        outgoing = defaultdict(set)
 
-        for s, t in zip(source, target):
-            outgoing[s].add(t)
-            incoming[t].add(s)
+    # determine which sankey layers will be visible
+    sankey_layers = {SankeyLayer.INPUT_LAYER, SankeyLayer.OUTPUT_LAYER}
+    for sd in select_domains:
+        sdomain = str_to_domain[sd]
+        if sdomain in {Domain.DISEASE, Domain.PHENOTYPE}:
+            sankey_layers.add(SankeyLayer.PROTEIN_LAYER)
+            sankey_layers.add(SankeyLayer.GENE_LAYER)
+            if (background_lipids or background_metabolites) and SankeyLayer.PROTEIN_LAYER in sankey_layers:
+                sankey_layers.add(SankeyLayer.MOLECULE_LAYER)
+                sankey_layers.add(SankeyLayer.REACTION_LAYER)
 
-        # Kahn's algorithm (topological layering)
-        layer = {i: 0 for i in range(n_nodes)}
-        queue = deque()
+        elif sdomain == Domain.PHYSCICAL_CHEMICAL_PROPERTIES:
+            sankey_layers.add(SankeyLayer.MOLECULE_LAYER)
 
-        # Start with nodes with no incoming edges
-        for i in range(n_nodes):
-            if not incoming[i]:
-                queue.append(i)
+        else:
+            sankey_layers.add(SankeyLayer.PROTEIN_LAYER)
+            if (background_lipids or background_metabolites) and SankeyLayer.PROTEIN_LAYER in sankey_layers:
+                sankey_layers.add(SankeyLayer.MOLECULE_LAYER)
+                sankey_layers.add(SankeyLayer.REACTION_LAYER)
 
-        while queue:
-            node = queue.popleft()
-            for child in outgoing[node]:
-                layer[child] = max(layer[child], layer[node] + 1)
-                incoming[child].remove(node)
-                if not incoming[child]:
-                    queue.append(child)
-
-        return layer
-
+    sankey_layers = sorted(sankey_layers, key = lambda x: x.value)
     sankey_data = {}
     sankey_data_ids = {}
     for target_term_id in selected_term_ids:
         target_term_id_single = target_term_id.split("|")[0]
         target_term = terms[target_term_id_single]
+        target_domains = {str_to_domain[d] for d in ontology.get_domains(target_term.domains)}
 
         for molecule in session.data[target_term_id_single].source_terms:
             if (
@@ -4290,6 +4333,7 @@ def open_sankeyplot(
                 or (radiogroup_sankey == "sankey_regulated" and molecule not in regulated_molecules)
                 or (radiogroup_sankey == "sankey_upregulated" and molecule not in upregulated_molecules)
                 or (radiogroup_sankey == "sankey_downregulated" and molecule not in downregulated_molecules)
+                or (radiogroup_sankey == "sankey_selected" and molecule not in selected_molecules)
             ): continue
 
             if background_lipids and molecule in background_lipids.keys():
@@ -4301,99 +4345,171 @@ def open_sankeyplot(
             elif background_transcripts and molecule in background_transcripts:
                 input_molecule = "Input transcript"
 
-            path_layers = [[TermType.INPUT_TERM, [input_molecule], ItemCounter(molecule)]]
+            # a layer item contains a category list and a term item counter
+            path_layers = [([], ItemCounter()) for _ in sankey_layers]
+            path_layer_index = {sankey_layer: i for i, sankey_layer in enumerate(sankey_layers)}
 
+            if len(target_domains & {Domain.ENZYMATIC_ACTIVITY_SP_TR, Domain.ENZYMATIC_ACTIVITY_SP,}) > 0:
+                path_layers[-1][0].append(target_term.name)
+                path_layers[-1][1].add(target_term_id_single)
+
+            # set up and aggregate a path layer for one molecule
             for i, term in enumerate(get_path(session.all_parent_nodes[molecule], target_term)):
                 term_id = term if type(term) == str else term.term_id[0]
+
+                if i == 0:
+                    path_layers[0][0].append(input_molecule)
+                    path_layers[0][1].add(term_id)
 
                 if not term_id in terms:
                     if term_id in background_lipids and type(background_lipids[term_id]) == LipidAdduct:
                         lipid_category = background_lipids[term_id].get_lipid_string(LipidLevel.CATEGORY)
-                        if path_layers[-1][0] != TermType.LIPID_SPECIES:
-                            path_layers.append([TermType.LIPID_SPECIES, [lipid_category], ItemCounter(term_id)])
-                        else:
-                            path_layers[-1][2].add(term_id)
+                        p_id = path_layer_index[SankeyLayer.MOLECULE_LAYER]
+                        if not path_layers[p_id][0]:
+                            path_layers[p_id][0].append(lipid_category)
+                            path_layers[p_id][1].add(term_id)
 
                 else:
-                    term_type = term.term_type
-                    if term_type == TermType.LIPID_CLASS: term_type = TermType.LIPID_SPECIES
-                    elif term_type in {TermType.UNREVIEWED_PROTEIN, TermType.ENSEMBLE_PROTEIN}: term_type = TermType.REVIEWED_PROTEIN
-                    elif term_type == TermType.ENSEMBLE_GENE: term_type = TermType.GENE
-                    elif term_type == TermType.METABOLITE: term_type = TermType.LIPID_SPECIES
+                    sankey_layer = term_type_to_layer[term.term_type]
+                    p_id = path_layer_index[sankey_layer]
 
-                    if term_type != TermType.UNCLASSIFIED_TERM:
-                        if not path_layers or path_layers[-1][0] != term_type:
-                            if term.categories > 0:
-                                path_layers.append([term_type, term.categories, ItemCounter(term_id)])
-                            else:
-                                path_layers.append([term_type, [term.name], ItemCounter(term_id)])
-                        else:
-                            path_layers[-1][2].add(term_id)
-
-
+                    if sankey_layer != SankeyLayer.OUTPUT_LAYER:
+                        term_categories = [ontology.categories[term_category_id] for term_category_id in range(term.categories.bit_length()) if ((term.categories >> term_category_id) & 1)] if term.categories > 0 else [term.name]
                     else:
-                        if path_layers[-1][0] != TermType.UNCLASSIFIED_TERM:
-                            path_layers.append([TermType.UNCLASSIFIED_TERM, [term.name], ItemCounter(term_id)])
-                        else:
-                            path_layers[-1][1] = [term.name]
-                            path_layers[-1][2].add(term_id)
+                        term_categories = [target_term.name]
 
-            if len(path_layers) < 2: continue
-            for i, path_layer in enumerate(path_layers):
-                layer_term, layer_categories, term_ids = path_layer
-                if type(layer_categories) == int:
-                    layer_categories = [i for i in range(layer_categories.bit_length()) if (layer_categories >> i) & 1]
+                    if not path_layers[p_id][0]:
+                        path_layers[p_id][0].extend(term_categories)
+                    path_layers[p_id][1].add(term_id)
+
+
+            # merge path layers to global sankey data
+            sankey_keys_prev = []
+            for (layer_categories, term_ids), sankey_layer in zip(path_layers, sankey_layers):
+                if not layer_categories: continue
+
+                sankey_keys = []
                 for layer_category in layer_categories:
-                    if (sankey_key := (layer_term, layer_category)) not in sankey_data:
+                    if (sankey_key := (sankey_layer, layer_category)) not in sankey_data:
                         sankey_data[sankey_key] = {}
-                        item_counter = ItemCounter()
-                        item_counter.merge(term_ids)
-                        sankey_data_ids[sankey_key] = [len(sankey_data_ids), item_counter]
+                        sankey_data_ids[sankey_key] = [len(sankey_data_ids), ItemCounter(term_ids)]
                     else:
                         sankey_data_ids[sankey_key][1].merge(term_ids)
+                    sankey_keys.append(sankey_key)
 
-                    if i == 0: continue
-                    layer_term_prev = path_layers[i - 1][0]
-                    layer_categories_prev = path_layers[i - 1][1]
-                    if type(layer_categories_prev) == int:
-                        layer_categories_prev = [i for i in range(layer_categories_prev.bit_length()) if (layer_categories_prev >> i) & 1]
-                    for layer_category_prev in layer_categories_prev:
-                        sankey_key_prev = (layer_term_prev, layer_category_prev)
+                    for sankey_key_prev in sankey_keys_prev:
                         if sankey_key not in sankey_data[sankey_key_prev]:
-                            sankey_data[sankey_key_prev][sankey_key] = 0
+                            sankey_data[sankey_key_prev][sankey_key] = 1
                         else: sankey_data[sankey_key_prev][sankey_key] += 1
-
+                sankey_keys_prev = sankey_keys
 
     fig_labels = []
     fig_source = []
     fig_target = []
     fig_value =  []
-    session.sankey_data = []
+    edge_colors = []
+    sankey_nodes_count = [{} for _ in sankey_layers]
+    edges = []
     for source, targets in sankey_data.items():
-        (source_term, source_category) = source
+        (source_layer, source_category) = source
         fig_labels.append(source_category)
-        session.sankey_data.append(sankey_data_ids[source][1])
         source_id = sankey_data_ids[source][0]
+        source_p_id = path_layer_index[source_layer]
+        if source not in sankey_nodes_count[source_p_id]: sankey_nodes_count[source_p_id][source] = [0, 0]
         for target, count in targets.items():
+            (target_layer, target_category) = target
             fig_source.append(source_id)
             fig_target.append(sankey_data_ids[target][0])
             fig_value.append(count)
+            target_p_id = path_layer_index[target_layer]
+            edge_colors.append(pastel_colors[source_id % len(pastel_colors)])
+            if target not in sankey_nodes_count[target_p_id]: sankey_nodes_count[target_p_id][target] = [0, 0]
+            sankey_nodes_count[source_p_id][source][1] += count
+            sankey_nodes_count[target_p_id][target][0] += count
+            edges.append((source, target, count))
 
-    n_nodes = len(set(fig_source) | set(fig_target))
-    layers = compute_layers(n_nodes, fig_source, fig_target)
-    max_layer = max(layers.values())
-    # Normalize x positions between 0 and 1
-    node_x = [layers[i] / max_layer for i in range(n_nodes)]
-    node_colors = [pastel_colors[i % len(pastel_colors)] for i in range(n_nodes)]
-    edge_colors = [pastel_colors[s % len(pastel_colors)] for s in fig_source]
+    # compute relative x coordinates
+    layer_x_positions = np.zeros(len(sankey_data_ids))
+    session.sankey_data = [None] * len(sankey_data_ids)
+    node_colors = [0] * len(sankey_data_ids)
+    for (sankey_layer, layer_category), (sankey_node_id, item_counter) in sankey_data_ids.items():
+        layer_x_positions[sankey_node_id] = path_layer_index[sankey_layer]
+        node_colors[sankey_node_id] = pastel_colors[sankey_node_id % len(pastel_colors)]
+        session.sankey_data[sankey_node_id] = item_counter
+
+    def optimise_sankey_node_order(layers, edges, iterations = 50):
+        # Build weighted neighbour maps
+        out_w = defaultdict(lambda: defaultdict(float))
+        in_w  = defaultdict(lambda: defaultdict(float))
+        for s, t, v in edges:
+            out_w[s][t] += v
+            in_w[t][s]  += v
+
+        # Current order: dict node -> rank within its layer
+        order = {}
+        for layer in layers:
+            for rank, node in enumerate(layer):
+                order[node] = rank
+
+        def barycenter(node, use_predecessors):
+            neighbours = in_w[node] if use_predecessors else out_w[node]
+            if not neighbours:
+                return order[node]
+            total = sum(neighbours.values())
+            return sum(order[nb] * w for nb, w in neighbours.items()) / total
+
+        def reorder_layer(layer, use_predecessors):
+            ranked = sorted(layer, key=lambda n: barycenter(n, use_predecessors))
+            for rank, node in enumerate(ranked):
+                order[node] = rank
+            return ranked
+
+        # Alternating sweeps
+        for _ in range(iterations):
+            for i in range(1, len(layers)):               # left → right
+                layers[i] = reorder_layer(layers[i], use_predecessors=True)
+            for i in range(len(layers) - 2, -1, -1):     # right → left
+                layers[i] = reorder_layer(layers[i], use_predecessors=False)
+
+        return layers
+
+    # compute relative y coordinates
+    layer_y_positions = [0] * len(sankey_data_ids)
+    layers = []
+    all_layers_max, margin = 0, 0.01
+    for sankey_nodes in sankey_nodes_count:
+        all_layers_max = max(all_layers_max, sum([max(cnt) for cnt in sankey_nodes.values()]))
+        layers.append([sn for sn in sankey_nodes])
+
+    layers = optimise_sankey_node_order(layers, edges)
+
+    for layer, sankey_nodes in zip(layers, sankey_nodes_count):
+        all_layer_count = sum([max(cnt) + margin * all_layers_max for cnt in sankey_nodes.values()])
+        if all_layer_count < all_layers_max:
+            y_factor = all_layer_count / all_layers_max
+            y_start = (all_layers_max - all_layer_count) / 2 / all_layers_max
+        else:
+            y_factor = 0.99
+            y_start = 0.005
+
+        tmp_cnt = 0
+        for sankey_key in layer:
+            category_counts = sankey_nodes[sankey_key]
+            sankey_node_id = sankey_data_ids[sankey_key][0]
+            category_count = max(category_counts) + margin * all_layers_max
+            y = (tmp_cnt + category_count / 2) / all_layer_count
+            layer_y_positions[sankey_node_id] = y_start + y * y_factor
+            tmp_cnt += category_count
 
     fig = go.Figure(
         go.Sankey(
+            arrangement = "fixed",
             node = dict(
-                label = [(ontology.categories[c] if type(c) == int else c) for c in fig_labels],
-                x = node_x,
+                label = fig_labels,
+                x = list(layer_x_positions / layer_x_positions.max()),
+                y = layer_y_positions,
                 color = node_colors,
-                pad = 20,
+                pad = 10,
                 thickness = 40,
             ),
             link = dict(
@@ -4419,6 +4535,7 @@ def open_sankeyplot(
         [],
         True,
         "sankey_all" if ctx.triggered_id != "radiogroup_sankey" else no_update,
+        sankey_selected_style,
     )
 
 
