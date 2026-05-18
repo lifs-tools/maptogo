@@ -22,4 +22,5 @@ dependencies = [
     "scipy==1.16.2",
     "statsmodels==0.14.5",
     "xlsxwriter>=3.2.9",
+    "zstandard>=0.25.0",
 ]
