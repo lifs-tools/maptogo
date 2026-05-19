@@ -25,12 +25,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from gevent import monkey
-monkey.patch_all()
-
 from analysis import app
 server = app.server
 
+
 # Run the app
 if __name__ == '__main__':
-    app.run_server(host = "0.0.0.0", debug = True, port = 8040)
+    app.run_server(host = "0.0.0.0", debug = True, port = 8050)
