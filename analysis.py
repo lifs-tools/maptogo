@@ -4480,7 +4480,7 @@ def open_sankeyplot(
     for (sankey_layer, layer_category), (sankey_node_id, item_counter) in sankey_data_ids.items():
         layer_x_positions[sankey_node_id] = path_layer_index[sankey_layer]
         node_colors[sankey_node_id] = pastel_colors[sankey_node_id % len(pastel_colors)]
-        session.sankey_data[sankey_node_id] = item_counter
+        #session.sankey_data[sankey_node_id] = item_counter
 
     def optimise_sankey_node_order(layers, edges, iterations = 50):
         # Build weighted neighbour maps
