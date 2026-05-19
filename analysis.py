@@ -299,7 +299,6 @@ term_representation = [
 
 
 def get_path(nodes, node):
-    print(node)
     if node not in nodes: return []
     path = []
     current_node = node
