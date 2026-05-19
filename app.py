@@ -25,6 +25,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+from gevent import monkey
+monkey.patch_all()
+
 from analysis import app
 server = app.server
 

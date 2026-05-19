@@ -4233,7 +4233,6 @@ def open_sankeyplot(
         return (
             no_update,
             no_update,
-            no_update,
             True,
             "Your session has expired. Please refresh the website.",
             no_update,
