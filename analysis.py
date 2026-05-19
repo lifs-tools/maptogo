@@ -4019,6 +4019,7 @@ def open_sunburstplot(
     barplot_terms_wrapper_style,
 ):
     if session_id == None or n_clicks == None:
+        logger.warning("open_sunburstplot: session_id or n_clicks is null")
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
@@ -4272,6 +4273,7 @@ def open_sankeyplot(
     select_domains,
 ):
     if session_id == None or n_clicks == None or radiogroup_sankey == None:
+        logger.warning("open_sunburstplot: session_id or n_clicks or radiogroup_sankey is null")
         raise exceptions.PreventUpdate
 
     if session_id not in sessions:
