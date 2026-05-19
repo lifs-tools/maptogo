@@ -206,7 +206,7 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        'Homo sapiens': 'NCBITaxon:9606',
+        # 'Homo sapiens': 'NCBITaxon:9606',
         # 'Bacillus cereus': "NCBITaxon:405534",
         # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
         # 'Escherichia coli': 'NCBITaxon:562',
@@ -471,8 +471,6 @@ def add_arc(figure, start_angle, end_angle, arc_inner_radius, arc_outer_radius, 
     else:
         scatter_dict["hoverinfo"] = "skip"
     figure.add_trace(go.Scatter(**scatter_dict))
-
-
 
 
 
@@ -786,6 +784,53 @@ def save_uid_cookie(response):
             samesite="Lax"
         )
     return response
+
+
+
+
+def deep_size(obj, seen=None):
+    if seen is None:
+        seen = set()
+
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+
+    seen.add(obj_id)
+    import sys
+    size = sys.getsizeof(obj)
+
+    if isinstance(obj, dict):
+        size += sum(deep_size(v, seen) for v in obj.values())
+        size += sum(deep_size(k, seen) for k in obj.keys())
+    elif isinstance(obj, (list, tuple, set)):
+        size += sum(deep_size(i, seen) for i in obj)
+
+    return size
+
+
+@server.before_request
+def before():
+    request._t0 = time.time()
+
+@server.after_request
+def after(response):
+    try:
+        from flask import session
+        size_bytes = deep_size(dict(session))
+        size_mb = size_bytes / (1024 * 1024)
+
+        print(f"SESSION SIZE: {size_mb:.4f} MB")
+
+    except Exception as e:
+        print("Session size error:", e)
+
+    print("REQUEST TIME:", time.time() - request._t0)
+    return response
+
+
+
+
 
 
 api = Api(
@@ -4435,7 +4480,7 @@ def open_sankeyplot(
     for (sankey_layer, layer_category), (sankey_node_id, item_counter) in sankey_data_ids.items():
         layer_x_positions[sankey_node_id] = path_layer_index[sankey_layer]
         node_colors[sankey_node_id] = pastel_colors[sankey_node_id % len(pastel_colors)]
-        #session.sankey_data[sankey_node_id] = item_counter
+        session.sankey_data[sankey_node_id] = item_counter
 
     def optimise_sankey_node_order(layers, edges, iterations = 50):
         # Build weighted neighbour maps
