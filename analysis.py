@@ -299,6 +299,7 @@ term_representation = [
 
 
 def get_path(nodes, node):
+    print(node)
     if node not in nodes: return []
     path = []
     current_node = node
@@ -784,52 +785,6 @@ def save_uid_cookie(response):
             samesite="Lax"
         )
     return response
-
-
-
-
-def deep_size(obj, seen=None):
-    if seen is None:
-        seen = set()
-
-    obj_id = id(obj)
-    if obj_id in seen:
-        return 0
-
-    seen.add(obj_id)
-    import sys
-    size = sys.getsizeof(obj)
-
-    if isinstance(obj, dict):
-        size += sum(deep_size(v, seen) for v in obj.values())
-        size += sum(deep_size(k, seen) for k in obj.keys())
-    elif isinstance(obj, (list, tuple, set)):
-        size += sum(deep_size(i, seen) for i in obj)
-
-    return size
-
-
-@server.before_request
-def before():
-    request._t0 = time.time()
-
-@server.after_request
-def after(response):
-    try:
-        from flask import session
-        size_bytes = deep_size(dict(session))
-        size_mb = size_bytes / (1024 * 1024)
-
-        print(f"SESSION SIZE: {size_mb:.4f} MB")
-
-    except Exception as e:
-        print("Session size error:", e)
-
-    print("REQUEST TIME:", time.time() - request._t0)
-    return response
-
-
-
 
 
 

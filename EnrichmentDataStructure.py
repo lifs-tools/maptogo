@@ -802,7 +802,10 @@ class EnrichmentOntology:
 
         for _, start_term, parent_nodes in all_paths:
             if len(start_term_counter[start_term]) == 1: continue
-            parent_nodes |= aggregated_paths[start_term][1]
+            aggregated_parent_nodes = aggregated_paths[start_term][1]
+            for k in parent_nodes:
+                if k in aggregated_parent_nodes: del aggregated_parent_nodes[k]
+            parent_nodes |= aggregated_parent_nodes
 
         return {term: set(term_molecules) for term, term_molecules in search_terms.items()}, all_parent_nodes
 
