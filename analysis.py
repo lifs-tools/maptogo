@@ -3753,8 +3753,8 @@ def open_term_window(
             "",
         )
     session = sessions[session_id]
-    ontology = session.ontology
     session.time = time.time()
+    ontology = session.ontology
     if "rowId" not in row_data:
         raise exceptions.PreventUpdate
 
@@ -3991,7 +3991,7 @@ def open_sunburstplot(
         )
 
     session = sessions[session_id]
-
+    session.time = time.time()
     pval_max_float, pval_min_float = pval_max, pval_min
 
     try:
@@ -4241,6 +4241,7 @@ def open_sankeyplot(
             no_update,
         )
     session = sessions[session_id]
+    session.time = time.time()
     selected_term_ids = [row["termid"] for row in selected_rows]
     ontology = session.ontology
     domains = session.domains
@@ -4434,7 +4435,7 @@ def open_sankeyplot(
     for (sankey_layer, layer_category), (sankey_node_id, item_counter) in sankey_data_ids.items():
         layer_x_positions[sankey_node_id] = path_layer_index[sankey_layer]
         node_colors[sankey_node_id] = pastel_colors[sankey_node_id % len(pastel_colors)]
-        session.sankey_data[sankey_node_id] = item_counter
+        #session.sankey_data[sankey_node_id] = item_counter
 
     def optimise_sankey_node_order(layers, edges, iterations = 50):
         # Build weighted neighbour maps
