@@ -2,7 +2,7 @@ name: Build and Push Docker image
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     tags: ['v*']
   pull_request:
     branches: [ main ]
@@ -34,6 +34,9 @@ jobs:
           PR_NUMBER=$(echo "${GITHUB_REF}" | sed 's|refs/pull/||' | sed 's|/merge||')
           TAG=pr-${PR_NUMBER}
           echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+        elif [[ "${GITHUB_REF}" == "refs/heads/dev" ]]; then
+          # Dev branch push: use fixed 'dev' tag
+          echo "IMAGE_TAG=dev" >> $GITHUB_ENV
         else
           # Main branch push: use short commit hash
           TAG=${GITHUB_SHA::7}
