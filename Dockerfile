@@ -33,6 +33,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy project files
 COPY . /wd
 COPY uv.lock /wd
+# Copy config file on organisms into working directory
+COPY Config.py.template /wd/Config.py
 WORKDIR /wd/src
 RUN make
 WORKDIR /wd
@@ -45,8 +47,8 @@ COPY maptogo.ini* /wd/
 
 FROM python:3.12-slim-trixie
 # development or production
-ARG DASH_ENVIRONMENT="development"
-RUN export ${DASH_ENVIRONMENT}
+#ARG DASH_ENVIRONMENT="development"
+#RUN export ${DASH_ENVIRONMENT}
 
 # Add non-root user
 RUN useradd -ms /bin/sh -u 1001 app
@@ -59,4 +61,6 @@ ENV PATH="/wd/.venv/bin:$PATH"
 USER app
 WORKDIR /wd
 EXPOSE 8040
+
+
 CMD [ "gunicorn", "--user", "app", "--group", "app", "--preload", "--timeout", "300", "--worker-class", "gevent", "--workers=1", "--threads=4", "-b 0.0.0.0:8040", "app:server"]
