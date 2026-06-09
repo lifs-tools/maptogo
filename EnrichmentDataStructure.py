@@ -663,10 +663,9 @@ class EnrichmentOntology:
             for lipid_input_name, lipid in lipid_dict.items():
                 if lipid is None: continue
                 elif type(lipid) == OntologyTerm:
-                    parent_nodes = {lipid: lipid_input_name, lipid_input_name: None}
+                    all_parent_nodes[lipid_input_name] = (parent_nodes := {lipid: lipid_input_name, lipid_input_name: None})
                     all_paths.append([lipid_input_name, lipid, parent_nodes])
                     start_term_counter[lipid].append(lipid_input_name)
-                    all_parent_nodes[lipid_input_name] = parent_nodes
                     continue
 
                 lipid.lipid.sort_fatty_acyl_chains() # only effects lipids on molecular species level or lower
@@ -747,8 +746,7 @@ class EnrichmentOntology:
             for protein_input_name in protein_set:
                 if protein_input_name not in proteins: continue
                 protein_term = proteins[protein_input_name]
-                parent_nodes = {protein_term: None}
-                all_parent_nodes[protein_input_name] = parent_nodes
+                all_parent_nodes[protein_input_name] = (parent_nodes := {protein_term: None})
                 all_paths.append([protein_input_name, protein_term, parent_nodes])
                 start_term_counter[protein_term].append(protein_input_name)
 
@@ -758,16 +756,14 @@ class EnrichmentOntology:
             for metabolite_input_name in metabolite_set:
                 if metabolite_input_name in metabolites:
                     metabolite_term = metabolites[metabolite_input_name]
-                    parent_nodes = {metabolite_term: None}
-                    all_parent_nodes[metabolite_input_name] = parent_nodes
+                    all_parent_nodes[metabolite_input_name] = (parent_nodes := {metabolite_term: None})
                     all_paths.append([metabolite_input_name, metabolite_term, parent_nodes])
                     start_term_counter[metabolite_term].append(metabolite_input_name)
                     continue
 
                 elif (metabolite_lower := metabolite_input_name.lower()) in metabolite_names:
                     metabolite_term = metabolite_names[metabolite_lower]
-                    parent_nodes = {metabolite_term: None}
-                    all_parent_nodes[metabolite_input_name] = parent_nodes
+                    all_parent_nodes[metabolite_input_name] = (parent_nodes := {metabolite_term: None})
                     all_paths.append([metabolite_input_name, metabolite_term, parent_nodes])
                     start_term_counter[metabolite_term].append(metabolite_input_name)
 
@@ -777,8 +773,7 @@ class EnrichmentOntology:
                 transcript_name = transcript_input_name.split(".")[0]
                 if transcript_name not in transcripts: continue
                 transcript_term = transcripts[transcript_name]
-                parent_nodes = {transcript_term: None}
-                all_parent_nodes[transcript_input_name] = parent_nodes
+                all_parent_nodes[transcript_input_name] = (parent_nodes := {transcript_term: None})
                 all_paths.append([transcript_input_name, transcript_term, parent_nodes])
                 start_term_counter[transcript_term].append(transcript_input_name)
 
@@ -802,9 +797,8 @@ class EnrichmentOntology:
 
         for _, start_term, parent_nodes in all_paths:
             if len(start_term_counter[start_term]) == 1: continue
-            aggregated_parent_nodes = dict(aggregated_paths[start_term][1])
-            if start_term in aggregated_parent_nodes: del aggregated_parent_nodes[start_term]
-            parent_nodes |= aggregated_parent_nodes
+            # do this weird stunt so that all entries in parent_nodes are preserved
+            parent_nodes |= dict(aggregated_paths[start_term][1]) | parent_nodes
 
         return {term: set(term_molecules) for term, term_molecules in search_terms.items()}, all_parent_nodes
 
@@ -951,6 +945,7 @@ class EnrichmentOntology:
                         num_background - len(term_molecules) - len_target_set + target_number,
                     ],
                 )
+
 
         except Exception as e:
             logger.error("".join(traceback.format_tb(e.__traceback__)))
