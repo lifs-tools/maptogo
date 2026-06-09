@@ -1,12 +1,5 @@
 # Systematic regulation score
 
-# Dear Bo, dear SLING group,
-#
-# Thank you very much for the mail. I am very delighted that you consider me for hosting the data analysis workshop. With please, I accept your generous invitation :-) For the moment, my calendar looks very empty for April next year. Therefore, I am fine with both weeks. Once decided, please let us know. Looking forward to see you guys next year in person, again.
-#
-# Cheers,
-# Dominik
-
 
 from dataframe import *
 import numpy as np
