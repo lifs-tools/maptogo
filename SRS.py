@@ -1,51 +1,39 @@
 # Systematic regulation score
 
-
 from dataframe import *
 import numpy as np
 from time import time
-import random
-import numpy as np
-from scipy import stats
-from typing import Dict, List, Tuple
-from term_sets_bp import term_sets
+from term_sets_pw import term_sets
 from scipy.stats import norm
+from statsmodels.stats.multitest import multipletests
+from collections import Counter
 
 print(f"loaded {len(term_sets)} terms")
 
 
 
-
-
-
-from scipy import stats
-import numpy as np
-from statsmodels.stats.multitest import multipletests
-
-def preprocess(df, min_cnt_per_grp=2):
+def preprocess(df, min_cnt_per_grp = 2):
     df_work = df.copy().astype(float)
-    df_grp = df_work.groupby(level=(0,))
+    df_grp = df_work.groupby(level = (0, ))
     no_var_features = (d := df_grp.var().min())[(d <= 0) | (np.isnan(d)) | (np.isinf(d))].index
     too_few_features = (d := df_grp.count().min())[d < min_cnt_per_grp].index
     all_removed = set(no_var_features) | set(too_few_features)
-    df_clean = df_work.drop(columns=list(all_removed))
+    df_clean = df_work.drop(columns = list(all_removed))
     df_clean[df_clean <= 0] = np.nan
-    return df_clean, all_removed
-
-
-
-def log2_dataset(df):
-    df_work = df.copy()
+    df_work = df_clean.replace([np.inf, -np.inf], np.nan)
     df_work.iloc[:, :] = np.where(~np.isnan(df_work.values), np.log2(df_work.values), np.nan)
-    return df_work
 
-import numpy as np
-from scipy.stats import norm
-from statsmodels.stats.multitest import multipletests
+    return df_work, all_removed
 
-def pathway_network_enrichment(df, term_sets, conditions, min_cnt_per_grp=2):
-    df_clean, _ = preprocess(df, min_cnt_per_grp)
-    X_df = log2_dataset(df_clean).replace([np.inf, -np.inf], np.nan)
+
+
+
+def pathway_network_enrichment(X_df, term_sets, conditions, min_cnt_per_grp = 2, min_cnt_per_term = 5):
+
+    for i, c in Counter(conditions).items():
+        if c < min_cnt_per_grp:
+            raise Exception(f"Group {i} has less than {min_cnt_per_grp} samples / observations.")
+
     X = X_df.values.astype(np.float64)
     feature_idx = {f: i for i, f in enumerate(X_df.columns)}
 
@@ -55,11 +43,12 @@ def pathway_network_enrichment(df, term_sets, conditions, min_cnt_per_grp=2):
     # ------------------------------------------------------------
     # differential expression DE (feature-wise)
     # ------------------------------------------------------------
-    group_means = np.array([np.nanmean(X[conditions == g], axis=0) for g in groups])
-    overall_mean = np.nanmean(X, axis=0)
-    ss_between = np.sum((group_means - overall_mean) ** 2, axis=0)
-    ss_within = np.array([np.nanvar(X[conditions == g], axis=0) for g in groups]).sum(axis=0)
-    de_score = ss_between / (ss_between + ss_within + 1e-12)
+    group_means = np.array([np.nanmean(X[conditions == g], axis = 0) for g in groups])
+    overall_mean = np.nanmean(X, axis = 0)
+    ss_between = np.sum((group_means - overall_mean) ** 2, axis = 0)
+    ss_within = np.array([np.nanvar(X[conditions == g], axis = 0) for g in groups]).sum(axis = 0)
+    de_score = ss_between / (ss_between + ss_within)
+
 
     # DE direction: linear regression slope of group means vs condition label
     x = groups.astype(float) - groups.astype(float).mean()
@@ -68,14 +57,12 @@ def pathway_network_enrichment(df, term_sets, conditions, min_cnt_per_grp=2):
     # ------------------------------------------------------------
     # correlation matrix
     # ------------------------------------------------------------
-    X_corr = X_df.fillna(X_df.mean()).values.astype(np.float64)
-    X_std = (X_corr - X_corr.mean(axis=0, keepdims=True)) / X_corr.std(axis=0, keepdims=True)
-    corr_abs = np.abs((X_std.T @ X_std) / (X_std.shape[0] - 1))
-    np.fill_diagonal(corr_abs, np.nan)
-    node_conn_abs = np.nanmean(corr_abs, axis=1)
+    corr_abs = X_df.corr().abs().values
+    np.fill_diagonal(corr_abs, np.nan)              # remove self correlations
 
     # reward pairs of biomolecules that have similar shifts over conditions (node_conn_abs)
     # and that actually change over conditions (de_score)
+    node_conn_abs = np.nanmean(corr_abs, axis = 1)
     combined_score_abs = node_conn_abs * de_score
 
     # ------------------------------------------------------------
@@ -107,28 +94,19 @@ def pathway_network_enrichment(df, term_sets, conditions, min_cnt_per_grp=2):
     results = []
     for pw, idx in term_sets_idx.items():
         k = len(idx)
-        S_abs = corr_abs[np.ix_(idx, idx)]
-        node_scores_abs = np.nanmean(S_abs, axis=1) * de_score[idx]
-        if len(node_scores_abs) == 0:
-            continue
+        if k < min_cnt_per_term: continue
 
+        node_scores_abs = np.nanmean(corr_abs[np.ix_(idx, idx)], axis = 1) * de_score[idx]
         mean_conn_abs = np.mean(node_scores_abs)
-        pathway_signal_abs = np.mean(combined_score_abs[idx])
         pathway_direction = np.nanmedian(feature_direction[idx])
 
         se = sigma_abs / np.sqrt(k)
         z = (mean_conn_abs - mu_abs) / se
         pval = float(np.exp(norm.logsf(z)))
 
-        if np.isnan(pval):
-            print(np.isnan(ss_within).sum())
-            exit()
-
         results.append([
             pw,
             float(mean_conn_abs),
-            float(pathway_signal_abs),
-            float(z),
             float(pval),
             int(k),
             float(pathway_direction),
@@ -140,200 +118,20 @@ def pathway_network_enrichment(df, term_sets, conditions, min_cnt_per_grp=2):
     if len(results) == 0:
         return []
 
-    pvals = np.array([r[4] for r in results])
-    _, qvals, _, _ = multipletests(pvals, method="fdr_bh")
+    pvals = np.array([r[2] for r in results])
+    _, qvals, _, _ = multipletests(pvals, method = "fdr_bh")
 
     for r, q in zip(results, qvals):
-        state = assign_state(q, r[6])
+        state = assign_state(q, r[4])
         r.append(float(q))   # index 7: qval
         r.append(state)      # index 8: state
 
-    results.sort(key=lambda x: x[7], reverse=True)
+    results.sort(key = lambda x: x[5], reverse = True)
     return results
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-results = pathway_network_enrichment(data_frame, term_sets, [0, 0, 0, 1, 1, 1])
+data_frame_processed, _ = preprocess(data_frame)
+results = pathway_network_enrichment(data_frame_processed, term_sets, [0, 0, 0, 1, 1, 1])
 for r in results:
-    print(r[0], r[7], r[6], r[8])
+    print(r[0], r[5], r[4], r[6])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-exit()
-
-
-import numpy as np
-
-def pathway_network_enrichment(df, term_sets, conditions, min_cnt_per_grp=2):
-
-    df_clean, _ = preprocess(df, min_cnt_per_grp)
-    X_df = log2_dataset(df_clean).replace([np.inf, -np.inf], np.nan).fillna(0)
-    X = X_df.values.astype(np.float64)
-
-    feature_idx = {f: i for i, f in enumerate(X_df.columns)}
-
-    term_sets_idx = {
-        pw: sorted(feature_idx[b] for b in biomols if b in feature_idx)
-        for pw, biomols in term_sets.items()
-    }
-    term_sets_idx = {k: np.array(v) for k, v in term_sets_idx.items() if len(v) >= 5}
-
-    conditions = np.asarray(conditions)
-    groups = np.unique(conditions)
-
-    # ------------------------------------------------------------
-    # differential expression (feature-wise)
-    # ------------------------------------------------------------
-
-    group_means = np.array([
-        X[conditions == g].mean(axis=0)
-        for g in groups
-    ])
-
-    overall_mean = X.mean(axis=0)
-
-    ss_between = np.sum((group_means - overall_mean) ** 2, axis=0)
-
-    ss_within = np.array([
-        np.var(X[conditions == g], axis=0)
-        for g in groups
-    ]).sum(axis=0) + 1e-12
-
-    de_score = ss_between / (ss_between + ss_within)  # per-feature signal
-
-    # ------------------------------------------------------------
-    # correlation matrix
-    # ------------------------------------------------------------
-
-
-    X = X_df.values.astype(np.float64)
-    cv = X.std(axis = 0) / X.mean(axis = 0)
-    n = len(cv)
-
-    # standardize
-    X = (X - X.mean(axis=0, keepdims=True)) / X.std(axis=0, keepdims=True)
-
-    # fast correlation
-    corr_abs = np.abs((X.T @ X) / (X.shape[0] - 1))
-    np.fill_diagonal(corr_abs, np.nan)
-
-    # node connectivity
-    node_conn_abs = np.nanmean(corr_abs, axis=1)
-
-
-    # combined gene score: expression × connectivity
-    cv_de_scores = de_score #* cv / (cv.mean() + cv)
-    combined_score_abs = node_conn_abs * cv_de_scores
-
-    # ------------------------------------------------------------
-    # pathway mapping
-    # ------------------------------------------------------------
-
-    term_sets_idx = {
-        pw: np.array(
-            [feature_idx[b] for b in biomols if b in feature_idx],
-            dtype=np.int64
-        )
-        for pw, biomols in term_sets.items()
-    }
-
-    term_sets_idx = {
-        k: v for k, v in term_sets_idx.items()
-        if len(v) >= 5
-    }
-
-    # global node statistics (for z-score baseline)
-    mu_abs = np.mean(combined_score_abs)
-    sigma_abs = np.std(combined_score_abs)
-
-    # ------------------------------------------------------------
-    # scoring
-    # ------------------------------------------------------------
-
-    results = []
-
-    for pw, idx in term_sets_idx.items():
-
-        k = len(idx)
-        S_abs = corr_abs[np.ix_(idx, idx)]
-
-        node_scores_abs = np.nanmean(S_abs, axis=1)
-        node_scores_abs = node_scores_abs * cv_de_scores[idx]
-
-        if len(node_scores_abs) == 0:
-            continue
-
-        mean_conn_abs = np.mean(node_scores_abs)
-
-        # pathway functional signal (DE × connectivity)
-        pathway_signal_abs = np.mean(combined_score_abs[idx])
-
-        # node-based z-score
-        se = sigma_abs / np.sqrt(k)
-        z = (mean_conn_abs - mu_abs) / se
-        pval = np.exp(norm.logsf(z))
-
-        # if pw.startswith("Acyl chain remodelling"):
-        #     print(pw, mean_conn_abs, z, pval)
-
-        results.append([
-            pw,
-            float(mean_conn_abs),
-            float(pathway_signal_abs),
-            float(z),
-            float(pval),
-            int(k),
-        ])
-
-    # ------------------------------------------------------------
-    # FDR correction
-    # ------------------------------------------------------------
-
-    if len(results) == 0:
-        return []
-
-    pvals = np.array([r[4] for r in results])
-    _, qvals, _, _ = multipletests(pvals, method="fdr_bh")
-
-    for r, q in zip(results, qvals):
-        r.append(float(q))
-
-    results.sort(key=lambda x: x[6], reverse = True)
-
-    return results
