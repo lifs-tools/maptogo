@@ -7,6 +7,7 @@ from term_sets_pw import term_sets
 from scipy.stats import norm
 from statsmodels.stats.multitest import multipletests
 from collections import Counter
+import matplotlib.pyplot as plt
 
 print(f"loaded {len(term_sets)} terms")
 
@@ -27,9 +28,7 @@ def preprocess(df, min_cnt_per_grp = 2):
 
 
 
-
-def pathway_network_enrichment(X_df, term_sets, conditions, min_cnt_per_grp = 2, min_cnt_per_term = 5):
-
+def pathway_network_enrichment(X_df, term_sets, conditions, min_cnt_per_grp = 2, min_cnt_per_term = 20):
     for i, c in Counter(conditions).items():
         if c < min_cnt_per_grp:
             raise Exception(f"Group {i} has less than {min_cnt_per_grp} samples / observations.")
@@ -43,12 +42,23 @@ def pathway_network_enrichment(X_df, term_sets, conditions, min_cnt_per_grp = 2,
     # ------------------------------------------------------------
     # differential expression DE (feature-wise)
     # ------------------------------------------------------------
-    group_means = np.array([np.nanmean(X[conditions == g], axis = 0) for g in groups])
-    overall_mean = np.nanmean(X, axis = 0)
-    ss_between = np.sum((group_means - overall_mean) ** 2, axis = 0)
-    ss_within = np.array([np.nanvar(X[conditions == g], axis = 0) for g in groups]).sum(axis = 0)
-    de_score = ss_between / (ss_between + ss_within)
 
+    group_means = np.array([np.nanmean(X[conditions == g], axis = 0) for g in groups])
+    overall_mean = np.nanmean(X, axis=0)
+
+    ss_between = 0
+    ss_within = 0
+
+    for g in groups:
+        Xg = X[conditions == g]
+        num_g = Xg.shape[0]
+        n_valid = np.sum(~np.isnan(Xg), axis = 0)  # per-feature valid count
+        mean_g = np.nanmean(Xg, axis = 0)
+        var_g = np.where(n_valid > 2, np.nanvar(Xg, axis = 0, ddof = 1), 0.0)
+        ss_between += num_g * (mean_g - overall_mean) ** 2
+        ss_within += (num_g - 1) * var_g
+
+    de_score = ss_between / (ss_between + ss_within)
 
     # DE direction: linear regression slope of group means vs condition label
     x = groups.astype(float) - groups.astype(float).mean()
@@ -57,26 +67,27 @@ def pathway_network_enrichment(X_df, term_sets, conditions, min_cnt_per_grp = 2,
     # ------------------------------------------------------------
     # correlation matrix
     # ------------------------------------------------------------
-    corr_abs = X_df.corr().abs().values
+    corr_abs = X_df.corr().abs().values             # abs: reward anti-correlation, too
     np.fill_diagonal(corr_abs, np.nan)              # remove self correlations
 
-    # reward pairs of biomolecules that have similar shifts over conditions (node_conn_abs)
+    # reward pairs of biomolecules that have similar shifts over conditions (biomol_conn_abs)
     # and that actually change over conditions (de_score)
-    node_conn_abs = np.nanmean(corr_abs, axis = 1)
-    combined_score_abs = node_conn_abs * de_score
+    biomol_conn_abs = np.nanmean(corr_abs, axis = 1)
+    combined_score_abs = biomol_conn_abs * de_score
+
 
     # ------------------------------------------------------------
     # pathway mapping
     # ------------------------------------------------------------
     term_sets_idx = {
-        pw: np.array([feature_idx[b] for b in biomols if b in feature_idx], dtype=np.int64)
+        pw: np.array([feature_idx[b] for b in biomols if b in feature_idx], dtype = np.int64)
         for pw, biomols in term_sets.items()
     }
-    term_sets_idx = {k: v for k, v in term_sets_idx.items() if len(v) >= 5}
+    term_sets_idx = {k: v for k, v in term_sets_idx.items() if len(v) >= min_cnt_per_term}
 
-    # global node statistics (for z-score baseline)
+    # global statistics (for z-score baseline)
     mu_abs = np.mean(combined_score_abs)
-    sigma_abs = np.std(combined_score_abs)
+    sigma_abs = np.std(combined_score_abs, ddof = 1)
 
     # ------------------------------------------------------------
     # state assignment
@@ -94,23 +105,27 @@ def pathway_network_enrichment(X_df, term_sets, conditions, min_cnt_per_grp = 2,
     results = []
     for pw, idx in term_sets_idx.items():
         k = len(idx)
-        if k < min_cnt_per_term: continue
 
-        node_scores_abs = np.nanmean(corr_abs[np.ix_(idx, idx)], axis = 1) * de_score[idx]
-        mean_conn_abs = np.mean(node_scores_abs)
+        biomol_scores_abs = np.nanmean(corr_abs[np.ix_(idx, idx)], axis = 1) * de_score[idx]
         pathway_direction = np.nanmedian(feature_direction[idx])
 
-        se = sigma_abs / np.sqrt(k)
-        z = (mean_conn_abs - mu_abs) / se
-        pval = float(np.exp(norm.logsf(z)))
+        # this value needs to be normally distributed over all terms according
+        # to the Central Limit Therorem (CLT) to apply the p-value computation
+        mean_conn_abs = np.mean(biomol_scores_abs)
+
+        # z-score
+        z = (mean_conn_abs - mu_abs) * np.sqrt(k) / sigma_abs
+        # one sided test (greater)
+        pvalue = float(np.exp(norm.logsf(z)))
 
         results.append([
             pw,
             float(mean_conn_abs),
-            float(pval),
+            float(pvalue),
             int(k),
             float(pathway_direction),
         ])
+
 
     # ------------------------------------------------------------
     # FDR correction + state assignment
@@ -118,16 +133,17 @@ def pathway_network_enrichment(X_df, term_sets, conditions, min_cnt_per_grp = 2,
     if len(results) == 0:
         return []
 
-    pvals = np.array([r[2] for r in results])
-    _, qvals, _, _ = multipletests(pvals, method = "fdr_bh")
+    pvalues = np.array([r[2] for r in results])
+    _, qvals, _, _ = multipletests(pvalues, method = "fdr_bh")
 
     for r, q in zip(results, qvals):
         state = assign_state(q, r[4])
-        r.append(float(q))   # index 7: qval
-        r.append(state)      # index 8: state
+        r.append(float(q))   # index 5: qval
+        r.append(state)      # index 6: state
 
     results.sort(key = lambda x: x[5], reverse = True)
     return results
+
 
 
 data_frame_processed, _ = preprocess(data_frame)
