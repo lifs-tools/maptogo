@@ -5551,6 +5551,46 @@ enrichment_model = api.model("Enrichment", {
 })
 
 
+assignment_model = api.model("Enrichment", {
+    "background_lipids": fields.List(
+        fields.String,
+        description = "All lipid names in experiment (background, required)",
+        example = api_background_lipids_example,
+
+    ),
+    "background_proteins": fields.List(
+        fields.String,
+        description = "All protein accessions in experiment (background)",
+        example = api_background_proteins_example,
+    ),
+    "background_metabolites": fields.List(
+        fields.String,
+        description = "All metabolite ChEBI Ids in experiment (background)",
+        example = api_background_metabolites_example,
+    ),
+    "background_transcripts": fields.List(
+        fields.String,
+        description = "All ensembl Ids in experiment (background)",
+        example = [],
+    ),
+    "organism_taxonomy": fields.String(
+        description = "Select organism (Taxonomic number), default: 'NCBITaxon:9606' (Homo sapiens)",
+        enum = [v for k, v in organisms.items()],
+        example = "NCBITaxon:10090",
+    ),
+    "domains": fields.List(
+        fields.String,
+        description = "Select domain(s), default: 'biological_process'",
+        enum = sorted(list(d.lower().replace(" ", "_") for d in enrichment_ontologies[INIT_ORGANISM].domains)),
+        example = ["biological_process"],
+    ),
+    "bounded_fatty_acyls": fields.Boolean(
+        description = f"Use bounded fatty acyls for analysis too, default: false",
+        example = False,
+    ),
+})
+
+
 @ns.route("/enrichment")
 class EnrichmentResource(Resource):
     @api.expect(enrichment_model)
@@ -5789,6 +5829,170 @@ class EnrichmentResource(Resource):
                 }
                 result_data.append(row)
 
+
+            return {"error_message": "", "result": result_data}, 200
+
+        except Exception as e:
+            logger.error("".join(traceback.format_tb(e.__traceback__)))
+            return {"error_message": f"{e}", "result": []}, 500
+
+
+@ns.route("/assignment")
+class AssignmentResource(Resource):
+    @api.expect(assignment_model)
+    def post(self):
+
+        logger.info(f"New API access: assignment")
+
+        try:
+            data = api.payload  # JSON body
+            background_lipids = data.get("background_lipids", [])
+            background_proteins = data.get("background_proteins", [])
+            background_metabolites = data.get("background_metabolites", [])
+            background_transcripts = data.get("background_transcripts", [])
+
+            if type(background_lipids) != list:
+                return {"error_message": "'background_lipids' needs to be a list", "result": []}, 422
+            if type(background_proteins) != list:
+                return {"error_message": "'background_proteins' needs to be a list", "result": []}, 422
+            if type(background_metabolites) != list:
+                return {"error_message": "'background_metabolites' needs to be a list", "result": []}, 422
+            if type(background_transcripts) != list:
+                return {"error_message": "'background_transcripts' needs to be a list", "result": []}, 422
+
+            organism_api = data.get("organism_taxonomy", "NCBITaxon:9606")
+            domains_api = data.get("domains", ["biological_process"])
+            accepted_domains = {d.lower().replace(" ", "_"): d for d in enrichment_ontologies[INIT_ORGANISM].domains}
+            bounded_fatty_acyls_api = data.get("bounded_fatty_acyls", False)
+
+            if str(organism_api) not in organisms.values():
+                return {"error_message": f"'organism_taxonomy' must be one of {set(organisms.values())}", "result": []}, 422
+            organism_api = str(organism_api)
+
+            if type(domains_api) != list:
+                return {"error_message": "'domains' needs to be a list", "result": []}, 422
+
+            if len(set(domains_api) - accepted_domains.keys()) > 0:
+                return {"error_message": f"accepted 'domains' entries are {accepted_domains.keys()}", "result": []}, 422
+
+            if len(domains_api) == 0:
+                return {"error_message": "No domain(s) selected.", "result": []}, 422
+            domains_api = [accepted_domains[d] for d in domains_api]
+
+            if type(bounded_fatty_acyls_api) not in {int, bool}:
+                return {"error_message": "'bounded_fatty_acyls' must be a boolean (0 | 1)", "result": []}, 422
+
+            if type(bounded_fatty_acyls_api) == int:
+                bounded_fatty_acyls_api = bounded_fatty_acyls_api > 0
+
+            with_lipids = len(background_lipids) > 0
+            with_proteins = len(background_proteins) > 0
+            with_metabolites = len(background_metabolites) > 0
+            with_transcripts = len(background_transcripts) > 0
+
+            omics_included = [with_lipids, with_proteins, with_metabolites, with_transcripts]
+
+            omics_lists = [
+                background_lipids,
+                background_lipids,
+                [],
+                [],
+                background_proteins,
+                background_proteins,
+                [],
+                [],
+                background_metabolites,
+                background_metabolites,
+                [],
+                [],
+                background_transcripts,
+                background_transcripts,
+                [],
+                [],
+            ]
+
+            ontology = enrichment_ontologies[organism_api]
+
+            try:
+                (
+                    target_molecules,
+                    lipidome,
+                    regulated_lipids,
+                    upregulated_lipids,
+                    downregulated_lipids,
+                    proteome,
+                    regulated_proteins,
+                    upregulated_proteins,
+                    downregulated_proteins,
+                    metabolome,
+                    regulated_metabolites,
+                    upregulated_metabolites,
+                    downregulated_metabolites,
+                    transcriptome,
+                    regulated_transcripts,
+                    upregulated_transcripts,
+                    downregulated_transcripts,
+                    background_list,
+                ) = check_user_input(
+                    False,
+                    omics_included,
+                    omics_lists,
+                    ontology,
+                    MOLECULE_HANDLING_IGNORE,
+                    MOLECULE_HANDLING_REMOVE,
+                )
+            except Exception as error_message:
+                return {"error_message": str(error_message), "result": []}, 422
+
+            session = SessionEntry()
+            session.time = time.time()
+            session.use_bounded_fatty_acyls = bounded_fatty_acyls_api
+            session.separate_updown_switch = False
+            (
+                session.search_terms,
+                session.all_parent_nodes,
+            ) = ontology.set_background(
+                lipid_dict = lipidome,
+                protein_set = proteome,
+                metabolite_set = metabolome,
+                transcript_set = transcriptome,
+                use_bounded_fatty_acyls = session.use_bounded_fatty_acyls,
+            )
+            session.num_background = len(lipidome) + len(proteome) + len(metabolome) + len(transcriptome)
+            session.ontology = ontology
+            session.data_loaded = True
+            analytics("api_assignment_analysis")
+            session.background_lipids = lipidome if with_lipids else None
+            session.regulated_lipids = regulated_lipids if with_lipids else None
+            session.upregulated_lipids = upregulated_lipids if with_lipids else None
+            session.downregulated_lipids = downregulated_lipids if with_lipids else None
+            session.background_proteins = proteome if with_proteins else None
+            session.regulated_proteins = regulated_proteins if with_proteins else None
+            session.upregulated_proteins = upregulated_proteins if with_proteins else None
+            session.downregulated_proteins = downregulated_proteins if with_proteins else None
+            session.background_metabolites = metabolome if with_metabolites else None
+            session.regulated_metabolites = regulated_metabolites if with_metabolites else None
+            session.upregulated_metabolites = upregulated_metabolites if with_metabolites else None
+            session.downregulated_metabolites = downregulated_metabolites if with_metabolites else None
+            session.background_transcripts = transcriptome if with_transcripts else None
+            session.regulated_transcripts = regulated_transcripts if with_transcripts else None
+            session.upregulated_transcripts = upregulated_transcripts if with_transcripts else None
+            session.downregulated_transcripts = downregulated_transcripts if with_transcripts else None
+            background_list.sort(key = lambda row: row["value"])
+            session.background_list = background_list
+            session.domains = set(domains_api)
+
+            result_data = []
+            for term, term_molecules in search_terms.items():
+                if not term_molecules: continue
+
+                row = {
+                    "domain": " | ".join(ontology.get_domains(result.term.domains)),
+                    "term": result.term.name,
+                    "termid": result.term.term_id_str,
+                    "associated_biomolecules": [t.name for t in term_molecules],
+                }
+                result_data.append(row)
 
             return {"error_message": "", "result": result_data}, 200
 
