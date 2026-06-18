@@ -4,6 +4,8 @@ SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Da
 
 ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Saccharomyces_cerevisiae.all.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Drosophila_melanogaster.all.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Rattus_norvegicus.all.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Bos_taurus.all.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz Data/Caenorhabditis_elegans.all.tsv.gz Data/Danio_rerio.uniprot.tsv.gz Data/Danio_rerio.all.tsv.gz Data/Gallus_gallus.uniprot.tsv.gz Data/Gallus_gallus.all.tsv.gz Data/Sus_scrofa.uniprot.tsv.gz Data/Sus_scrofa.all.tsv.gz
 
+SEMANTICS_FILES = Data/reactome_descriptions.csv
+
 ENSEMBL_VERSION_ID = 115
 
 ######## OWN DATA ########
@@ -21,6 +23,10 @@ main: $(DOWNLOAD_FILES) $(SCRIPT_FILES)
 
 all: $(DOWNLOAD_FILES) $(ALL_SPECIES) $(SCRIPT_FILES)
 	python3 create_ontology.py all
+
+
+semantics: $(SEMANTICS_FILES)
+	echo "huhu"
 
 
 
@@ -229,6 +235,16 @@ Data/goa_uniprot.csv.gz: Data/goa_uniprot_gcrp.gpa.gz
 	python3 Scripts/goa_uniprot.py
 
 
+Data/reactome_descriptions.csv:
+	wget --tries=10 -O Data/gk_current.sql.gz https://download.reactome.org/96/databases/gk_current.sql.gz
+	rm -f Data/gk_current.sql
+	gunzip Data/gk_current.sql.gz
+	wget --tries=10 -O Scripts/mysql2sqlite https://raw.githubusercontent.com/dumblob/mysql2sqlite/master/mysql2sqlite
+	chmod +x Scripts/mysql2sqlite
+	Scripts/mysql2sqlite Data/gk_current.sql | sqlite3 Data/gk_current.sqlite
+	python3 Scripts/reactome_descriptions.py
+	rm -f Data/gk_current.sql
+	rm -f Data/gk_current.sqlite
 
 
 ######## CLEAN WORKSPACE ########

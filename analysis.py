@@ -4667,6 +4667,7 @@ def open_barplot(
         for j in range(i + 1, n):
             j_terms = source_terms[j]
             jaccard_values[j, i] = jaccard_values[i, j] = 1 - len(i_terms & j_terms) / len(i_terms | j_terms)
+            #jaccard_values[j, i] = jaccard_values[i, j] = 1 - len(i_terms & j_terms) / min(len(i_terms), len(j_terms))
 
 
     Z, sort_order = None, None
