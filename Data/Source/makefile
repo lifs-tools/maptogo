@@ -4,7 +4,7 @@ SCRIPT_FILES = Data/uniprot_to_doid.csv Data/chebi.csv Data/rhea_to_chebi.csv Da
 
 ALL_SPECIES = Data/Saccharomyces_cerevisiae.uniprot.tsv.gz Data/Saccharomyces_cerevisiae.all.tsv.gz Data/Drosophila_melanogaster.uniprot.tsv.gz Data/Drosophila_melanogaster.all.tsv.gz Data/Rattus_norvegicus.uniprot.tsv.gz Data/Rattus_norvegicus.all.tsv.gz Data/Bos_taurus.uniprot.tsv.gz Data/Bos_taurus.all.tsv.gz Data/Caenorhabditis_elegans.uniprot.tsv.gz Data/Caenorhabditis_elegans.all.tsv.gz Data/Danio_rerio.uniprot.tsv.gz Data/Danio_rerio.all.tsv.gz Data/Gallus_gallus.uniprot.tsv.gz Data/Gallus_gallus.all.tsv.gz Data/Sus_scrofa.uniprot.tsv.gz Data/Sus_scrofa.all.tsv.gz
 
-SEMANTICS_FILES = Data/reactome_descriptions.csv
+SEMANTICS_FILES = Data/phenotype_descriptions.csv Data/reactome_descriptions.csv Data/enzyme_descriptions.csv Data/go_descriptions.csv
 
 ENSEMBL_VERSION_ID = 115
 
@@ -235,6 +235,7 @@ Data/goa_uniprot.csv.gz: Data/goa_uniprot_gcrp.gpa.gz
 	python3 Scripts/goa_uniprot.py
 
 
+# Descriptions
 Data/reactome_descriptions.csv:
 	wget --tries=10 -O Data/gk_current.sql.gz https://download.reactome.org/96/databases/gk_current.sql.gz
 	rm -f Data/gk_current.sql
@@ -245,6 +246,19 @@ Data/reactome_descriptions.csv:
 	python3 Scripts/reactome_descriptions.py
 	rm -f Data/gk_current.sql
 	rm -f Data/gk_current.sqlite
+
+
+Data/go_descriptions.csv:
+	python3 Scripts/go_descriptions.py
+
+
+Data/enzyme_descriptions.csv:
+	python3 Scripts/enzyme_descriptions.py
+
+
+Data/phenotype_descriptions.csv:
+	wget --tries=10 -O Data/hp.obo https://github.com/obophenotype/human-phenotype-ontology/raw/refs/heads/master/hp.obo
+	python3 Scripts/phenotype_descriptions.py
 
 
 ######## CLEAN WORKSPACE ########
@@ -301,4 +315,7 @@ clean:
 	rm -f Data/Gallus_gallus.all.tsv.gz
 	rm -f Data/Sus_scrofa.uniprot.tsv.gz
 	rm -f Data/Sus_scrofa.all.tsv.gz
+	rm -f Data/reactome_descriptions.csv
+	rm -f Data/enzyme_descriptions.csv
+	rm -f Data/go_descriptions.csv
 
