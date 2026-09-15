@@ -465,7 +465,7 @@ def check_user_input(
 
 
 class OntologyTerm:
-    __slots__ = ("term_id", "term_id_str", "term_type", "name", "domains", "relations", "categories")
+    __slots__ = ("term_id", "term_id_str", "term_type", "name", "domains", "relations", "categories", "description")
     # Type hints for attributes
     term_id: list[str]
     term_id_str: str
@@ -474,6 +474,7 @@ class OntologyTerm:
     relations: list[int]
     domains: set[str]
     categories: list[str]
+    description: str
 
     def __init__(
         self,
@@ -486,6 +487,7 @@ class OntologyTerm:
         _,
         _domains: str,
         _categories: str,
+        _description: str,
     ):
         self.term_type = int_to_term_type[int(_term_type)]
         self.term_id = _term_id.split("|")
@@ -495,6 +497,7 @@ class OntologyTerm:
         self.domains = sum([(1 << domain_dict.setdefault(d, len(domain_dict))) for d in _domains.split("|")]) if _domains else 0
         self.categories = sum([(1 << category_dict.setdefault(c, len(category_dict))) for c in _categories.split("|")]) if _categories else 0
         if self.term_type == TermType.GENERIC_REACTION and self.categories == 0: self.categories = (1 << category_dict.setdefault("Unclassified reaction", len(category_dict)))
+        self.description = _description
 
 
 class OntologyResult:

@@ -14,16 +14,17 @@ from EnrichmentDataStructure import *
 
 
 
-def preprocess(df, min_cnt_per_grp = 2):
+def preprocess(df, selected_conditions = None, min_cnt_per_grp = 2):
     df_work = df.copy().astype(float)
-    df_grp = df_work.groupby(level = (0, ))
-    no_var_features = (d := df_grp.var().min())[(d <= 0) | (np.isnan(d)) | (np.isinf(d))].index
-    too_few_features = (d := df_grp.count().min())[d < min_cnt_per_grp].index
-    all_removed = set(no_var_features) | set(too_few_features)
-    df_clean = df_work.drop(columns = list(all_removed))
-    df_clean[df_clean <= 0] = np.nan
-    df_work = df_clean.replace([np.inf, -np.inf], np.nan)
-    df_work.iloc[:, :] = np.where(~np.isnan(df_work.values), np.log2(df_work.values), np.nan)
+    if selected_conditions:
+        if len(selected_conditions) < 2:
+            raise Exception("Less than 2 conditions selected.")
+        df_work = df_work.loc[selected_conditions]
+    df_work.iloc[:, :] = np.log2(df_work.where(df_work > 0))
+    too_few_features = set(df_work.columns[df_work.groupby(level = 0).count().min() < min_cnt_per_grp])
+    no_var = set(df_work.columns[df_work.groupby(level = 0).var().min() < 1e-20])
+    all_removed = too_few_features | no_var
+    df_work = df_work.drop(all_removed, axis = 1)
 
     return df_work, all_removed
 
@@ -33,6 +34,7 @@ def pathway_network_enrichment(X_df, term_sets_idx, conditions, min_cnt_per_grp 
     for i, c in Counter(conditions).items():
         if c < min_cnt_per_grp:
             raise Exception(f"Group {i} has less than {min_cnt_per_grp} samples / observations.")
+    term_sets_idx = {k: v for k, v in term_sets_idx.items() if len(v) >= min_cnt_per_term}
 
     X = X_df.values.astype(np.float64)
     feature_idx = {f: i for i, f in enumerate(X_df.columns)}
@@ -55,7 +57,8 @@ def pathway_network_enrichment(X_df, term_sets_idx, conditions, min_cnt_per_grp 
         num_g = Xg.shape[0]
         n_valid = np.sum(~np.isnan(Xg), axis = 0)  # per-feature valid count
         mean_g = np.nanmean(Xg, axis = 0)
-        var_g = np.where(n_valid > 2, np.nanvar(Xg, axis = 0, ddof = 1), 0.0)
+        var_g = np.nanvar(Xg, axis = 0, ddof = 1)
+        var_g[n_valid <= 1] = 0.0
         ss_between += num_g * (mean_g - overall_mean) ** 2
         ss_within += (num_g - 1) * var_g
 
@@ -71,20 +74,10 @@ def pathway_network_enrichment(X_df, term_sets_idx, conditions, min_cnt_per_grp 
     corr_abs = X_df.corr().abs().values             # abs: reward anti-correlation, too
     np.fill_diagonal(corr_abs, np.nan)              # remove self correlations
 
-    # reward pairs of biomolecules that have similar shifts over conditions (biomol_conn_abs)
-    # and that actually change over conditions (de_score)
-    biomol_conn_abs = np.nanmean(corr_abs, axis = 1)
-    combined_score_abs = biomol_conn_abs * de_score
+    # reward pairs of biomolecules that have similar shifts over conditions
+    # (np.nanmean(corr_abs, axis = 1)) and that actually change over conditions (de_score)
+    combined_score_abs = np.nanmean(corr_abs, axis = 1) * de_score
 
-
-    # ------------------------------------------------------------
-    # pathway mapping
-    # ------------------------------------------------------------
-    # term_sets_idx = {
-    #     pw: np.array([feature_idx[b] for b in biomols if b in feature_idx], dtype = np.int64)
-    #     for pw, biomols in term_sets.items()
-    # }
-    term_sets_idx = {k: v for k, v in term_sets_idx.items() if len(v) >= min_cnt_per_term}
 
     # global statistics (for z-score baseline)
     mu_abs = np.mean(combined_score_abs)
@@ -104,6 +97,7 @@ def pathway_network_enrichment(X_df, term_sets_idx, conditions, min_cnt_per_grp 
     # scoring
     # ------------------------------------------------------------
     results = []
+    zz = []
     for pw, idx in term_sets_idx.items():
         k = len(idx)
 
@@ -116,6 +110,7 @@ def pathway_network_enrichment(X_df, term_sets_idx, conditions, min_cnt_per_grp 
 
         # z-score
         z = (mean_conn_abs - mu_abs) * np.sqrt(k) / sigma_abs
+        zz.append(mean_conn_abs)
         # one sided test (greater)
         pvalue = float(np.exp(norm.logsf(z)))
 
@@ -127,6 +122,12 @@ def pathway_network_enrichment(X_df, term_sets_idx, conditions, min_cnt_per_grp 
             float(pathway_direction),
         ])
 
+        if pw.startswith("Acyl chain remodelling of"):
+            print(pw, mean_conn_abs, mu_abs, pvalue)
+
+    plt.hist(zz)
+    plt.show()
+    exit()
 
     # ------------------------------------------------------------
     # FDR correction + state assignment
@@ -148,19 +149,20 @@ def pathway_network_enrichment(X_df, term_sets_idx, conditions, min_cnt_per_grp 
 
 
 
-# data_frame = pd.read_excel("AOValves-comlete.xlsx")
-# data_frame = data_frame.set_index("Condition").iloc[:, 1:]
-# data_frame = data_frame.iloc[list(range(10)) + list(range(20, 30))]
-# #conditions = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-# conditions = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-
 from itertools import groupby
 
-data_frame = pd.read_excel("MK.xlsx", index_col = "Day").iloc[:, 2:]
+# data_frame = pd.read_excel("MK.xlsx", index_col = "Day").iloc[:, 2:]
+# omics_layers = [True, True, False, False]
+# taxonomy = "10090"
+
+
+data_frame = pd.read_excel("Simplex2016.xlsx", "All", index_col = "Condition").iloc[:, 2:]
+taxonomy = "10090"
+omics_layers = [True, True, True, False]
+
+
+
 conditions = [i for i, (_, g) in enumerate(groupby(data_frame.index)) for _ in g]
-
-
-
 data_frame_processed, _ = preprocess(data_frame)
 feature_idx = {f: i for i, f in enumerate(data_frame_processed.columns)}
 
@@ -168,6 +170,7 @@ feature_idx = {f: i for i, f in enumerate(data_frame_processed.columns)}
 
 # possible domains: "Biological process", "Cellular component", "Disease", "Metabolic and signalling pathway", "Molecular function", "Phenotype", "Physical or chemical properties", "Enzymatic activity (Swiss-Prot)", "Enzymatic activity (Swiss-Prot + TrEMBL)", or any combination
 domains = {"Metabolic and signalling pathway"}
+#domains = {"Biological process"}
 
 omics_lists = [
     (bm := list(data_frame_processed.columns)),
@@ -178,18 +181,18 @@ omics_lists = [
     bm,
     [], # up-regulated_proteins_list
     [], # down-regulated_proteins_list
-    [],
-    [],
+    bm,
+    bm,
     [], # up-regulated_metabolites_list
     [], # down-regulated_metabolites_list
-    [], # background_transcripts_list
-    [], # regulated_transcripts_list
+    bm,
+    bm,
     [], # up-regulated_transcripts_list
     [], # down-regulated_transcripts_list
 ]
 
 print("Loading ontology")
-ontology = EnrichmentOntology(f"Data/ontology_10090.zst")
+ontology = EnrichmentOntology(f"Data/ontology_{taxonomy}.zst")
 
 ## parse all biomolocule entries
 print("Parse all biomolecule entries")
@@ -215,7 +218,7 @@ try:
         background_list,
     ) = check_user_input(
         False,
-        [True, True, False, False],
+        omics_layers,
         omics_lists,
         ontology,
         MOLECULE_HANDLING_REMOVE,
@@ -224,7 +227,6 @@ try:
 except Exception as error_message:
     print(error_message)
     exit(-1)
-
 
 
 ## set enrichment background
@@ -243,13 +245,9 @@ print("Get term associated biomolecules")
 
 
 term_sets_idx = {
-    pw.name: np.array([feature_idx[b] for b in biomols if b in feature_idx], dtype = np.int64)
+    pw.name: np.array([feature_idx[bc] for b in biomols if (bc := b.replace("UNIPROT:", "")) in feature_idx], dtype = np.int64)
     for pw, biomols in search_terms.items() if len(set(ontology.get_domains(pw.domains)) & domains) > 0
 }
-
-
-
-
 
 
 results = pathway_network_enrichment(

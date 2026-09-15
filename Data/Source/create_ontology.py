@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
-import EnrichmentDataStructure  as EDS
+import EnrichmentDataStructure as EDS
 
 from pygoslin.parser.Parser import LipidParser
 from pygoslin.domain.LipidLevel import LipidLevel
@@ -13,6 +13,15 @@ import pandas as pd
 import zipfile
 import json
 import re
+import sqlite3
+
+pathway_descriptions = {}
+
+conn = sqlite3.connect("Data/gk_current.sqlite")
+cur = conn.cursor()
+
+cur.execute("SELECT s.identifier, sm.text FROM DatabaseObject AS d INNER JOIN StableIdentifier s ON d.stableIdentifier = s.DB_ID INNER JOIN Event_2_summation AS e ON d.DB_ID = e.DB_ID INNER JOIN Summation AS sm ON e.summation = sm.DB_ID WHERE d._class = 'Pathway';")
+pathway_descriptions = {row[0]: row[1] for row in cur.fetchall()}
 
 
 
@@ -325,7 +334,7 @@ species_set = set(species.values())
 
 
 class Term:
-    def __init__(self, _id, _name, _relations = None, _synonyms = None, _namespace = None, _xref = None, upper = False, _categories = None):
+    def __init__(self, _id, _name, _relations = None, _synonyms = None, _namespace = None, _xref = None, upper = False, _categories = None, _description = ""):
         if _relations == None: _relations = set()
         if _synonyms == None: _synonyms = set()
         if _namespace == None: _namespace = set()
@@ -339,7 +348,7 @@ class Term:
         self.namespace = set(_namespace) if type(_namespace) in {list, set} else {_namespace}
         self.xref = set(_xref) if type(_xref) in {list, set} else {_xref}
         self.categories = set(_categories) if type(_categories) in {list, set} else {_categories}
-
+        self.description = _description if type(_description) == str else ""
 
     def get_first_id(self):
         return list(self.id)[0]
@@ -360,13 +369,13 @@ class Term:
                     relations.append(str(p))
         relations_str = self.joining(self.relations)
         moea_pos = relations_str.find("MOEA:00000") # needs to be MOEA:00000, term types between 001 and 099
-        term_type = EDS.TermType(int(relations_str[moea_pos + 5 : moea_pos + 12])) if moea_pos > -1 else EDS.TermType.UNCLASSIFIED_TERM
+        term_type = EDS.TermType(int(relations_str[moea_pos + 5 : moea_pos + 12])) if moea_pos > -1 else EDS.TermType.DOMAIN_TERM
         id_str = self.joining(self.id)
-        return f"{id_str}\t{self.name}\t{term_type.value}\t{'|'.join(relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}"
+        return f"{id_str}\t{self.name}\t{term_type.value}\t{'|'.join(relations)}\t{self.joining(self.synonyms)}\t{self.joining(self.namespace)}\t{self.joining(self.categories)}\t{self.description.replace("\t", " ")}"
 
 
     def copy(self):
-        return Term(set(self.id), self.name, set(self.relations), set(self.synonyms), set(self.namespace), set(self.xref), _categories = set(self.categories))
+        return Term(set(self.id), self.name, set(self.relations), set(self.synonyms), set(self.namespace), set(self.xref), _categories = set(self.categories), _description = self.description)
 
 
     def merge(self, copy):
@@ -376,6 +385,8 @@ class Term:
         self.namespace |= copy.namespace
         self.xref |= copy.xref
         self.categories |= copy.categories
+        if len(self.description) < len(copy.description):
+            self.description = copy.description
 
 
 lipid_maps_terms = {}
@@ -395,7 +406,7 @@ def get_terms(term_file, prefix, upper = False, with_relationship = False):
     opener = open if term_file.lower()[-3:] != ".gz" else gzip.open
 
     with opener(term_file, "rt") as obo:
-        term_id, name, relations, synonyms, namespace, is_obsolete, xref = "", "", set(), [], "", False, set()
+        term_id, name, relations, synonyms, namespace, is_obsolete, xref, description = "", "", set(), [], "", False, set(), ""
         for i, line in enumerate(obo):
             line = line.strip()
             if len(line) == 0: continue
@@ -404,13 +415,17 @@ def get_terms(term_file, prefix, upper = False, with_relationship = False):
             if line == "[Term]":
                 if len(term_id) > 0 and len(name) > 0 and not is_obsolete and term_id.startswith(prefix):
                     ontology_terms[term_id] = Term(term_id, name, relations, synonyms, namespace, xref, upper)
-                term_id, name, relations, synonyms, is_obsolete, namespace, xref = "", "", set(), [], False, "", set()
+                    ontology_terms[term_id].description = description
+                term_id, name, relations, synonyms, is_obsolete, namespace, xref, description = "", "", set(), [], False, "", set(), ""
 
             elif line.startswith("id:"):
                 term_id = line[3:].strip(" ")
 
             elif line.startswith("name:"):
                 name = line[5:].strip(" ")
+
+            elif line.startswith("def:"):
+                description = t[1] if len(t := line.split("\"")) > 1 else ""
 
             elif line.startswith("is_a:"):
                 relation = line[5:].split(" ! ")[0].strip(" ").split(" ")[0]
@@ -434,6 +449,7 @@ def get_terms(term_file, prefix, upper = False, with_relationship = False):
 
         if len(term_id) > 0 and len(name) > 0 and not is_obsolete and term_id.startswith(prefix):
             ontology_terms[term_id] = Term(term_id, name, relations, synonyms, namespace, xref, upper)
+            ontology_terms[term_id].description = description
 
     return ontology_terms
 
@@ -740,7 +756,8 @@ with gzip.open("Data/ChEBI2Reactome_All_Levels.txt.gz", "rt") as infile:
         if chebi_id not in chebi_terms_organisms[organism]: chebi_terms_organisms[organism][chebi_id] = set()
         chebi_terms_organisms[organism][chebi_id].add(reactome_id)
         if reactome_id not in pathway_terms_organisms[organism]:
-            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            description = pathway_descriptions[reactome_id] if reactome_id in pathway_descriptions else ""
+            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway", _description = description)
             pathway_terms_organisms[organism][reactome_id] = term
             pathway_terms[reactome_id] = term
 
@@ -798,8 +815,10 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
         if len(tokens) > 11 and len(tokens[11]) > 1: # Keywords
             function_terms.append(tokens[11].lower())
 
+        description = ""
         if len(tokens) > 12 and len(tokens[12]) > 1: # Functions [cc]
-            function_terms.append(tokens[12].lower())
+            description = tokens[12]
+            function_terms.append(description.lower())
 
         categories = set()
         for cat, patterns in PROTEIN_CATEGORY_RULES.items():
@@ -809,7 +828,7 @@ with gzip.open("Data/uniprot.csv.gz", "rt") as infile:
 
         if not categories: categories = {"Unclassified protein"}
 
-        term = Term(uniprot_term, protein_name, _relations = go_terms | gene_ids, _categories = categories)
+        term = Term(uniprot_term, protein_name, _relations = go_terms | gene_ids, _categories = categories, _description = description)
         uniprot_terms_organisms[organisms_id][uniprot] = term
         uniprot_data[uniprot] = term
         uniprot_to_organism[uniprot] = tokens[1]
@@ -987,7 +1006,8 @@ with gzip.open("Data/UniProt2Reactome_All_Levels.txt.gz", "rt") as infile:
         reactome_name = tokens[3]
         uniprot_data[uniprot].relations.add(reactome_id)
         if reactome_id not in pathway_terms_organisms[organism]:
-            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            description = pathway_descriptions[reactome_id] if reactome_id in pathway_descriptions else ""
+            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway", _description = description)
             pathway_terms_organisms[organism][reactome_id] = term
             pathway_terms[reactome_id] = term
 
@@ -1006,7 +1026,8 @@ with gzip.open("Data/Ensembl2Reactome_All_Levels.txt.gz", "rt") as infile:
         reactome_name = tokens[3]
         ensembl_terms_organisms[organism][ensembl].relations.add(reactome_id)
         if reactome_id not in pathway_terms_organisms[organism]:
-            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway")
+            description = pathway_descriptions[reactome_id] if reactome_id in pathway_descriptions else ""
+            term = Term(reactome_id, reactome_name, _namespace = "Metabolic and signalling pathway", _description = description)
             pathway_terms_organisms[organism][reactome_id] = term
             pathway_terms[reactome_id] = term
 
