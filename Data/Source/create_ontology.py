@@ -278,22 +278,31 @@ if all_species:
         'Oryza sativa': "4550",
         'Danio rerio': "7955",
         'Bacillus subtilis': "1423",
-        'Schizosaccharobyces pombe': "4896",
+        'Schizosaccharomyces pombe': "4896",
         'Gallus gallus': "9031",
         'Sus scrofa': "9823",
+        'Mycobacterium tuberculosis': "83332",
 
     }
     ensembl_files = [
         ("Data/Homo_sapiens.uniprot.tsv.gz", "9606", "Data/Homo_sapiens.all.tsv.gz"),
         ("Data/Mus_musculus.uniprot.tsv.gz", "10090", "Data/Mus_musculus.all.tsv.gz"),
+        #
         ("Data/Saccharomyces_cerevisiae.uniprot.tsv.gz", "4932", "Data/Saccharomyces_cerevisiae.all.tsv.gz"),
+        ("Data/Escherichia_coli.uniprot.tsv.gz", "562", "Data/Escherichia_coli.all.tsv.gz"),
         ("Data/Drosophila_melanogaster.uniprot.tsv.gz", "7227", "Data/Drosophila_melanogaster.all.tsv.gz"),
         ("Data/Rattus_norvegicus.uniprot.tsv.gz", "10116", "Data/Rattus_norvegicus.all.tsv.gz"),
         ("Data/Bos_taurus.uniprot.tsv.gz", "9913", "Data/Bos_taurus.all.tsv.gz"),
         ("Data/Caenorhabditis_elegans.uniprot.tsv.gz", "6239", "Data/Caenorhabditis_elegans.all.tsv.gz"),
+        ("Data/Pseudomonas_aeruginosa.uniprot.tsv.gz", "287", "Data/Pseudomonas_aeruginosa.all.tsv.gz"),
+        ("Data/Arabidopsis_thaliana.uniprot.tsv.gz", "3702", "Data/Arabidopsis_thaliana.all.tsv.gz"),
+        ("Data/Oryza_sativa.uniprot.tsv.gz", "4550", "Data/Oryza_sativa.all.tsv.gz"),
         ("Data/Danio_rerio.uniprot.tsv.gz", "7955", "Data/Danio_rerio.all.tsv.gz"),
+        ("Data/Bacillus_subtilis.uniprot.tsv.gz", "1423", "Data/Bacillus_subtilis.all.tsv.gz"),
+        ("Data/Schizosaccharomyces_pombe.uniprot.tsv.gz", "4896", "Data/Schizosaccharomyces_pombe.all.tsv.gz"),
         ("Data/Gallus_gallus.uniprot.tsv.gz", "9031", "Data/Gallus_gallus.all.tsv.gz"),
         ("Data/Sus_scrofa.uniprot.tsv.gz", "9823", "Data/Sus_scrofa.all.tsv.gz"),
+        ("Data/Mycobacterium_tuberculosis.uniprot.tsv.gz", "83332", "Data/Mycobacterium_tuberculosis.all.tsv.gz"),
     ]
     reactomes = {
         "9606": "HSA",
@@ -313,6 +322,7 @@ if all_species:
         "4896": None,
         "9031": "GGA",
         "9823": "SSC",
+        "83332": "MTU",
     }
 
 else:

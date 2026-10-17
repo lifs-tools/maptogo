@@ -1,14 +1,15 @@
 import gzip
 
 uniprot_to_term = {}
+column_id = 6
 
 with gzip.open("Data/uniprot.csv.gz") as infile:
     for i, line in enumerate(infile):
         if i == 0: continue
         tokens = line.decode("utf8").split("\t")
-        if len(tokens) < 6 or len(tokens[5]) == 0: continue
+        if len(tokens) < 6 or len(tokens[column_id]) == 0: continue
 
-        for t in tokens[5].split('";'):
+        for t in tokens[column_id].split('";'):
             t = t.strip('"').split("; ")
             if len(t) < 2 or not t[1].startswith("phenotype"): continue
             if tokens[0] not in uniprot_to_term: uniprot_to_term[tokens[0]] = []

@@ -206,16 +206,23 @@ except Exception as e:
     logger.warning("No config file found, using defaults")
     organisms = {
         'Mus musculus': 'NCBITaxon:10090',
-        'Homo sapiens': 'NCBITaxon:9606',
-        # 'Bacillus cereus': "NCBITaxon:405534",
-        # 'Saccharomyces cerevisiae': 'NCBITaxon:4932',
-        # 'Escherichia coli': 'NCBITaxon:562',
-        # 'Drosophila melanogaster': 'NCBITaxon:7227',
-        # 'Rattus norvegicus': 'NCBITaxon:10116',
-        # 'Bos taurus': 'NCBITaxon:9913',
-        # 'Caenorhabditis elegans': 'NCBITaxon:6239',
-        # 'Pseudomonas aeruginosa': 'NCBITaxon:287',
-        # 'Arabidopsis thaliana': 'NCBITaxon:3702',
+        'Homo sapiens': "NCBITaxon:9606",
+        'Bacillus cereus': "NCBITaxon:405534",
+        'Saccharomyces cerevisiae': "NCBITaxon:4932",
+        'Escherichia coli': "NCBITaxon:562",
+        'Drosophila melanogaster': "NCBITaxon:7227",
+        'Rattus norvegicus': "NCBITaxon:10116",
+        'Bos taurus': "NCBITaxon:9913",
+        'Caenorhabditis elegans': "NCBITaxon:6239",
+        'Pseudomonas aeruginosa': "NCBITaxon:287",
+        'Arabidopsis thaliana': "NCBITaxon:3702",
+        'Oryza sativa': "NCBITaxon:4550",
+        'Danio rerio': "NCBITaxon:7955",
+        'Bacillus subtilis': "NCBITaxon:1423",
+        'Schizosaccharomyces pombe': "NCBITaxon:4896",
+        'Gallus gallus': "NCBITaxon:9031",
+        'Sus scrofa': "NCBITaxon:9823",
+        'Mycobacterium tuberculosis': "NCBITaxon:83332",
     }
 
 
@@ -3377,6 +3384,7 @@ def update_background(
     State("graph_enrichment_results", "virtualRowData"),
     State("graph_enrichment_results", "selectedRows"),
     State("sessionid", "children"),
+    State("separate_updown_switch", "checked"),
     prevent_initial_call = True,
 )
 def download_results_table(
@@ -3384,6 +3392,7 @@ def download_results_table(
     graph_enrichment_results,
     selected_rows,
     session_id,
+    separate_updown_switch,
 ):
     if session_id not in sessions:
         return (
@@ -3407,6 +3416,8 @@ def download_results_table(
     if len(graph_enrichment_results) == 0 or len(selected_term_ids) == 0:
         raise exceptions.PreventUpdate
 
+    if separate_updown_switch not in {True, False}: separate_updown_switch = False
+
     for row in graph_enrichment_results:
         term_id = row["termid"]
         if term_id not in selected_term_ids: continue
@@ -3422,12 +3433,20 @@ def download_results_table(
 
     background_lipids = session.background_lipids
     regulated_lipid_set = session.regulated_lipids
+    upregulated_lipid_set = session.upregulated_lipids
+    downregulated_lipid_set = session.downregulated_lipids
     background_proteins = session.background_proteins
     regulated_protein_set = session.regulated_proteins
+    upregulated_protein_set = session.upregulated_proteins
+    downregulated_protein_set = session.downregulated_proteins
     background_metabolites = session.background_metabolites
     regulated_metabolite_set = session.regulated_metabolites
+    upregulated_metabolite_set = session.upregulated_metabolites
+    downregulated_metabolite_set = session.downregulated_metabolites
     background_transcripts = session.background_transcripts
     regulated_transcript_set = session.regulated_transcripts
+    upregulated_transcript_set = session.upregulated_transcripts
+    downregulated_transcript_set = session.downregulated_transcripts
 
     with_lipids = background_lipids != None
     with_proteins = background_proteins != None
@@ -3435,23 +3454,31 @@ def download_results_table(
     with_transcripts = background_transcripts != None
 
     if with_lipids:
-        background_lipids = sorted(list(background_lipids.keys()))
-        regulated_lipids = sorted(list(regulated_lipid_set))
+        background_lipids = sorted(background_lipids.keys())
+        regulated_lipids = sorted(regulated_lipid_set)
+        upregulated_lipids = sorted(upregulated_lipid_set)
+        downregulated_lipids = sorted(downregulated_lipid_set)
         associated_lipids = {}
 
     if with_proteins:
-        background_proteins = sorted(list(background_proteins))
-        regulated_proteins = sorted(list(regulated_protein_set))
+        background_proteins = sorted(background_proteins)
+        regulated_proteins = sorted(regulated_protein_set)
+        upregulated_proteins = sorted(upregulated_protein_set)
+        downregulated_proteins = sorted(downregulated_protein_set)
         associated_proteins = {}
 
     if with_metabolites:
-        background_metabolites = sorted(list(background_metabolites))
-        regulated_metabolites = sorted(list(regulated_metabolite_set))
+        background_metabolites = sorted(background_metabolites)
+        regulated_metabolites = sorted(regulated_metabolite_set)
+        upregulated_metabolites = sorted(upregulated_metabolite_set)
+        downregulated_metabolites = sorted(downregulated_metabolite_set)
         associated_metabolites = {}
 
     if with_transcripts:
-        background_transcripts = sorted(list(background_transcripts))
-        regulated_transcripts = sorted(list(regulated_transcript_set))
+        background_transcripts = sorted(background_transcripts)
+        regulated_transcripts = sorted(regulated_transcript_set)
+        upregulated_transcripts = sorted(upregulated_transcript_set)
+        downregulated_transcripts = sorted(downregulated_transcript_set)
         associated_transcripts = {}
 
     for term_id, term in zip(term_ids, terms):
@@ -3485,28 +3512,42 @@ def download_results_table(
     if with_lipids:
         pd.DataFrame.from_dict(associated_lipids, orient = "index").transpose().to_excel(writer, sheet_name = "Associated lipids", index = False)
         pd.DataFrame({"LipidName": background_lipids}).to_excel(writer, sheet_name = "Background lipids", index = False)
-        pd.DataFrame({"LipidName": regulated_lipids}).to_excel(writer, sheet_name = "Regulated lipids", index = False)
+        if separate_updown_switch:
+            pd.DataFrame({"LipidName": upregulated_lipids}).to_excel(writer, sheet_name = "Up-regulated lipids", index = False)
+            pd.DataFrame({"LipidName": downregulated_lipids}).to_excel(writer, sheet_name = "Down-regulated lipids", index = False)
+        else:
+            pd.DataFrame({"LipidName": regulated_lipids}).to_excel(writer, sheet_name = "Regulated lipids", index = False)
 
     if with_proteins:
         background_proteins = [protein.replace("UNIPROT:", "") for protein in background_proteins]
-        regulated_proteins = [protein.replace("UNIPROT:", "") for protein in regulated_proteins]
         pd.DataFrame.from_dict(associated_proteins, orient = "index").transpose().to_excel(writer, sheet_name = "Associated proteins", index = False)
         pd.DataFrame({"Accession": background_proteins}).to_excel(writer, sheet_name = "Background proteins", index = False)
-        pd.DataFrame({"Accession": regulated_proteins}).to_excel(writer, sheet_name = "Regulated proteins", index = False)
+        if separate_updown_switch:
+            upregulated_proteins = [protein.replace("UNIPROT:", "") for protein in upregulated_proteins]
+            pd.DataFrame({"Accession": upregulated_proteins}).to_excel(writer, sheet_name = "Up-regulated proteins", index = False)
+            downregulated_proteins = [protein.replace("UNIPROT:", "") for protein in downregulated_proteins]
+            pd.DataFrame({"Accession": downregulated_proteins}).to_excel(writer, sheet_name = "Down-regulated proteins", index = False)
+        else:
+            regulated_proteins = [protein.replace("UNIPROT:", "") for protein in regulated_proteins]
+            pd.DataFrame({"Accession": regulated_proteins}).to_excel(writer, sheet_name = "Regulated proteins", index = False)
 
     if with_metabolites:
-        background_metabolites = [metabolite for metabolite in background_metabolites]
-        regulated_metabolites = [metabolite for metabolite in regulated_metabolites]
         pd.DataFrame.from_dict(associated_metabolites, orient = "index").transpose().to_excel(writer, sheet_name = "Associated metabolites", index = False)
         pd.DataFrame({"ChEBI": background_metabolites}).to_excel(writer, sheet_name = "Background metabolites", index = False)
-        pd.DataFrame({"ChEBI": regulated_metabolites}).to_excel(writer, sheet_name = "Regulated metabolites", index = False)
+        if separate_updown_switch:
+            pd.DataFrame({"ChEBI": upregulated_metabolites}).to_excel(writer, sheet_name = "Up-regulated metabolites", index = False)
+            pd.DataFrame({"ChEBI": downregulated_metabolites}).to_excel(writer, sheet_name = "Down-regulated metabolites", index = False)
+        else:
+            pd.DataFrame({"ChEBI": regulated_metabolites}).to_excel(writer, sheet_name = "Regulated metabolites", index = False)
 
     if with_transcripts:
-        background_transcripts = [transcript for transcript in background_transcripts]
-        regulated_transcripts = [transcript for transcript in regulated_transcripts]
         pd.DataFrame.from_dict(associated_transcripts, orient = "index").transpose().to_excel(writer, sheet_name = "Associated transcripts", index = False)
         pd.DataFrame({"Ensembl": background_transcripts}).to_excel(writer, sheet_name = "Background transcripts", index = False)
-        pd.DataFrame({"Ensembl": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
+        if separate_updown_switch:
+            pd.DataFrame({"Ensembl": upregulated_transcripts}).to_excel(writer, sheet_name = "Up-regulated transcripts", index = False)
+            pd.DataFrame({"Ensembl": downregulated_transcripts}).to_excel(writer, sheet_name = "Down-regulated transcripts", index = False)
+        else:
+            pd.DataFrame({"Ensembl": regulated_transcripts}).to_excel(writer, sheet_name = "Regulated transcripts", index = False)
 
     writer._save()
 
