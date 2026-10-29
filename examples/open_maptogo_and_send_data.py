@@ -32,6 +32,7 @@ import json
 
 # The URL you want to send the POST request to
 url = "https://maptogo.lifs-tools.org"
+url = "http://localhost:8040"
 
 # Data to send in the POST request (as a dictionary)
 data = {

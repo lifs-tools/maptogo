@@ -603,17 +603,23 @@ server = Flask(__name__)
 def submit():
     data = request.get_json()
     if not data:
-        return "No JSON received", 400
+        logger.info(f"No JSON received")
+        return jsonify({"status": "error", "reason": "No JSON received"}), 400
 
     if "uid" not in uuid_session:
-        return jsonify({"status": "ok"})
+        logger.info(f"Uid not in uuid_session")
+        return jsonify({"status": "error", "reason": "Uid not in session"}), 403
+
     session_id = uuid_session.get("uid")
     if not session_id:
-        return jsonify({"status": "error", "reason": "no uid"}), 403
+        logger.info(f"No session for uid")
+        return jsonify({"status": "error", "reason": "No session for uid"}), 403
 
     if session_id not in sessions:
         sessions[session_id] = SessionEntry()
         logger.info(f"New session via submit: {session_id}")
+    else:
+        logger.info(f"Known session via submit: {session_id}")
 
     session = sessions[session_id]
     ui = session.ui
@@ -705,13 +711,14 @@ def submit():
                 case "use_downregulated_transcripts":
                     ui["check_textarea_downregulated_transcripts"] = is_true(param_value)
 
-    except:
-        pass
+    except Exception as e:
+        logger.warning(e)
 
     if organism and domain_values:
         ontology = enrichment_ontologies[organism]
         ontology_domains = sorted(ontology.domains)
         ui["select_domains"] = [v for v in domain_values if v in ontology_domains]
+
 
     return jsonify({"status": "ok", "uid": session_id})
 
@@ -807,6 +814,7 @@ enrichment_ontologies = {}
 for tax_name, tax_id in organisms.items():
     tax_id_number = tax_id.replace("NCBITaxon:", "")
     file_name = f"{current_path}/Data/ontology_{tax_id_number}.zst"
+#    file_name = f"{current_path}/../maptogo-data/ontology_{tax_id_number}.zst"
     logger.info(f"Loading {tax_name} ({os.path.getsize(file_name)} bytes)")
     enrichment_ontologies[tax_id] = EnrichmentOntology(file_name, tax_name)
 gc.enable()

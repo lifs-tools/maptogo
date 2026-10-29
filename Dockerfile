@@ -34,7 +34,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY . /wd
 COPY uv.lock /wd
 # Copy config file on organisms into working directory
-COPY Config.py.template /wd/Config.py
+#COPY Config.py.template /wd/Config.py
 WORKDIR /wd/src
 RUN make
 WORKDIR /wd
