@@ -73,10 +73,7 @@ import gc
 import numpy as np
 from ApiRequest import *
 import base64
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
-from cryptography.fernet import Fernet
+from SessionStore import create_session_store, decrypt_uuid, encrypt_uuid, get_session, load_secret_key, snapshot_session
 
 
 
@@ -492,6 +489,8 @@ CC0_LINK = html.A(
 
 
 sessions, examples = {}, {}
+# Shared session inputs in Redis if MAPTOGO_REDIS_URL is set, in memory only otherwise
+session_store = create_session_store(ttl_seconds = SESSION_DURATION_TIME)
 logger.info("Loading examples table")
 xl = pd.ExcelFile(f"{current_path}/Data/examples.xlsx")
 for worksheet_name in xl.sheet_names:
@@ -612,10 +611,8 @@ def submit():
         return jsonify({"status": "error", "reason": "no uid"}), 403
 
     if session_id not in sessions:
-        sessions[session_id] = SessionEntry()
-        logger.info(f"New session via submit: {session_id}")
-
-    session = sessions[session_id]
+        logger.info(f"Session via submit: {session_id}")
+    session = get_session(sessions, session_store, session_id, SessionEntry, create = True)
     ui = session.ui
     organism = None
     domain_values = []
@@ -713,47 +710,17 @@ def submit():
         ontology_domains = sorted(ontology.domains)
         ui["select_domains"] = [v for v in domain_values if v in ontology_domains]
 
+    session_store.save(session_id, snapshot_session(session))
     return jsonify({"status": "ok", "uid": session_id})
 
 
 
 # Create the Dash app
 app = Dash("app", update_title = None, server = server)
-app.secret_key = "".join(chr(c) for c in np.random.randint(33, 127, 100))
+# Shared between replicas via MAPTOGO_SECRET_KEY(_FILE), random in standalone mode
+app.secret_key = load_secret_key()
 server.secret_key = app.secret_key
 app.title = APPLICATION_SHORT_TITLE
-
-
-# --- Key derivation ---
-def derive_key(password: str, salt: bytes) -> bytes:
-    kdf = PBKDF2HMAC(
-        algorithm = hashes.SHA256(),
-        length = 32,
-        salt = salt,
-        iterations = 100_000,
-        backend = default_backend()
-    )
-    return base64.urlsafe_b64encode(kdf.derive(password.encode()))
-
-# --- Encrypt ---
-def encrypt_uuid(uuid_str: str, password: str) -> str:
-    salt = os.urandom(16)  # random salt
-    key = derive_key(password, salt)
-    f = Fernet(key)
-    token = f.encrypt(uuid_str.encode())
-    return base64.urlsafe_b64encode(salt + token).decode()
-
-
-# --- Decrypt ---
-def decrypt_uuid(encrypted_data: str, password: str) -> str:
-    data = base64.urlsafe_b64decode(encrypted_data.encode())
-    salt = data[:16]
-    token = data[16:]
-    key = derive_key(password, salt)
-    f = Fernet(key)
-    return f.decrypt(token).decode()
-
-
 
 
 
@@ -768,6 +735,7 @@ def set_udata():
             try:
                 uuid_session["uid"] = decrypt_uuid(uid, app.secret_key)
             except Exception as e:
+                logger.warning("uid cookie could not be decrypted (secret key differs between replicas or changed), assigning a new uid")
                 uuid_session["uid"] = str(uuid.uuid4())  # brand new user
         elif "uid" not in uuid_session:
             uuid_session["uid"] = str(uuid.uuid4())  # brand new user
@@ -2551,13 +2519,13 @@ def organism_changed(organism, domain_values):
 )
 def load_uid(_):
     session_id = uuid_session.get("uid")
-    if session_id not in sessions:
+    session = get_session(sessions, session_store, session_id, SessionEntry)
+    if session is None:
         sessions[session_id] = SessionEntry()
         logger.info(f"New session: {session_id}")
         return (session_id, *([no_update] * 55))
 
     logger.info(f"Reopen session: {session_id}")
-    session = sessions[session_id]
     ui = session.ui
     use_bounded_fatty_acyls = session.use_bounded_fatty_acyls
     all_lipids_list = ui["all_lipids_list"] if "all_lipids_list" in ui else ""
@@ -2902,11 +2870,12 @@ def run_enrichment(
     histogram_disabled = True
     num_enrichment_terms = "Entries: 0"
 
-    if session_id not in sessions:
+    session = get_session(sessions, session_store, session_id, SessionEntry)
+    if session is None:
         return "", [], [], {}, True, "Your session has expired. Please refresh the website.",  histogram_disabled, [], [], no_update, num_enrichment_terms
 
-    session = sessions[session_id]
     session.time = time.time()
+    session_store.touch(session_id)
 
     if not with_lipids and not with_proteins and not with_metabolites and not with_transcripts:
         return "", [], [], {}, True, "No omics data is selected.", histogram_disabled, [], [], num_enrichment_terms, no_update, no_update
@@ -3277,7 +3246,8 @@ def update_background(
     num_upregulated_transcripts = sum(len(line) > 0 for line in upregulated_transcripts_list.split("\n"))
     num_downregulated_transcripts = sum(len(line) > 0 for line in downregulated_transcripts_list.split("\n"))
 
-    if session_id not in sessions:
+    session = get_session(sessions, session_store, session_id, SessionEntry)
+    if session is None:
         return (
             True,
             "Your session has expired. Please refresh the website.",
@@ -3298,7 +3268,6 @@ def update_background(
             f"Entries: {num_upregulated_transcripts}",
             f"Entries: {num_downregulated_transcripts}",
         )
-    session = sessions[session_id]
     session.time = time.time()
     if ctx.triggered_id not in {
         "multiselect_filter_molecules",
@@ -3343,6 +3312,7 @@ def update_background(
     session.ui["check_textarea_downregulated_metabolites"] = check_textarea_downregulated_metabolites
     session.ui["check_textarea_upregulated_transcripts"] = check_textarea_upregulated_transcripts
     session.ui["check_textarea_downregulated_transcripts"] = check_textarea_downregulated_transcripts
+    session_store.save(session_id, snapshot_session(session))
 
     return (
         no_update,
