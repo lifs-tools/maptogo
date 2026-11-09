@@ -5,22 +5,45 @@ Gene Ontology (GO) enrichment analysis is commonly used to interpret genomics, t
 A **MAPtoGO** instance with 11 predefined model organism knowledge graphs can be accessed from our portal [https://lifs-tools.org/maptogo](https://lifs-tools.org/maptogo).
 
 ## Building and running locally
+The **MAPtoGO** application and its knowledge graphs live in two separate repositories:
+
+- [maptogo](https://github.com/lifs-tools/maptogo): the application code and Dockerfile
+- [maptogo-data](https://github.com/lifs-tools/maptogo-data): the precomputed organism knowledge graphs (`ontology_<taxon id>.zst`), the ChEBI synonym table (`CHEBI_synonyms.csv.gz`), additional term links (`additional_links.csv`) and the example datasets (`examples.xlsx`)
+
+The Docker image doesn't include the data. When the application starts, it loads every organism listed in `Config.py` from `/wd/Data` inside the container, so you have to mount your `maptogo-data` checkout to that path.
+
 To build and run the **MAPtoGO** Docker image locally, follow these steps:
 
-1. Clone the repository:
+1. Clone both repositories next to each other:
    ```bash
-   git clone
+   git clone https://github.com/lifs-tools/maptogo.git
+   git clone https://github.com/lifs-tools/maptogo-data.git
    cd maptogo
    ```
-2. Build the Docker image:
+   The `maptogo-data` repository is about 130 MB.
+2. Build the Docker image from the `maptogo` directory:
    ```bash
    docker build -t maptogo:latest .
    ```
-3. Run the Docker container:
+   The build compiles the C++ Fisher's exact test library and copies `Config.py.template` to `Config.py`. That file lists all 17 organisms that `maptogo-data` provides.
+3. Run the Docker container with `maptogo-data` mounted read-only at `/wd/Data`:
    ```bash
-   docker run -p 8040:8040 maptogo:latest
+   docker run --rm -it \
+     -p 8040:8040 \
+     -v "$(realpath ../maptogo-data)":/wd/Data:ro \
+     --name maptogo \
+     maptogo:latest
    ```
-4. Access the application in your web browser at `http://localhost:8040`.
+   The `-v` source path must be absolute, which is why the command uses `realpath`. If your `maptogo-data` checkout is somewhere else, replace `../maptogo-data` with its path. On Windows PowerShell, use `-v "${PWD}\..\maptogo-data:/wd/Data:ro"` instead.
+4. Wait until the log shows that all organisms have loaded (one `Loading <organism> (<size> bytes)` line per organism) and gunicorn is listening on port 8040. Loading all knowledge graphs takes a while and needs several GB of memory, so give Docker Desktop enough RAM.
+5. Open the application in your web browser at [http://localhost:8040](http://localhost:8040).
+
+To stop the container, press `Ctrl+C` or run `docker stop maptogo` from another terminal.
+
+### Troubleshooting
+- **`FileNotFoundError: .../Data/ontology_<taxon id>.zst` at startup:** the data directory isn't mounted at `/wd/Data`, or the mount source path is wrong. Run `docker run --rm -v "$(realpath ../maptogo-data)":/wd/Data:ro maptogo:latest ls /wd/Data` and check that the `ontology_*.zst` files are listed.
+- **The container exits without an error or gets killed while loading:** Docker probably ran out of memory. Increase the memory limit in Docker Desktop, or load fewer organisms (see below).
+- **Loading fewer organisms:** to start faster or use less memory, edit `Config.py.template` before building the image and remove the organisms you don't need. Every organism that stays in the list needs a matching `ontology_<taxon id>.zst` file in `maptogo-data`.
 
 
 ## Use MAPtoGO with a REST API
