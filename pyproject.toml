@@ -19,8 +19,19 @@ dependencies = [
     "pathlib==1.0.1",
     "plotly==5.14.1",
     "pygoslin==2.2.3",
+    "redis>=5.2",
     "scipy==1.16.2",
     "statsmodels==0.14.5",
     "xlsxwriter>=3.2.9",
     "zstandard>=0.25.0",
 ]
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.40.0",
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
