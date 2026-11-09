@@ -105,6 +105,8 @@ pygoslin==2.2.1
     # via maptogo
 python-dateutil==2.9.0.post0
     # via pandas
+redis==8.1.0
+    # via maptogo
 referencing==0.37.0
     # via
     #   flask-restx
