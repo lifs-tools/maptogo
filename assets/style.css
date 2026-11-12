@@ -64,3 +64,36 @@
     margin-right: 4px;         /* Prevent overflow of chip spacing */
     flex-shrink: 0;            /* Prevent shrinking */
 }
+
+
+/* Initial Dash loading screen (shown before the React app renders):
+   MAPtoGO logo centered on the page with the loading message below it */
+._dash-loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background-color: #fff;
+    font-family: sans-serif;
+    font-size: 18px;
+    color: #555;
+}
+
+._dash-loading::before {
+    content: "";
+    width: 128px;
+    height: 128px;
+    background-image: url('golipids.png');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    animation: dash-loading-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dash-loading-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.6; transform: scale(0.94); }
+}
