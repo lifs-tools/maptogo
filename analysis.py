@@ -777,8 +777,13 @@ for tax_name, tax_id in organisms.items():
     file_name = f"{current_path}/Data/ontology_{tax_id_number}.zst"
     logger.info(f"Loading {tax_name} ({os.path.getsize(file_name)} bytes)")
     enrichment_ontologies[tax_id] = EnrichmentOntology(file_name, tax_name)
+# Move the loaded ontologies (millions of objects) into the permanent GC
+# generation instead of collecting them: the collector never scans them again,
+# so the gunicorn master and its forked workers keep sharing their memory pages
+# (a full collection would write to every object and copy all pages into each
+# worker) and no multi-second collection pause happens at startup.
+gc.freeze()
 gc.enable()
-gc.collect()
 
 
 def get_aggrid_modal(name, molecule):
