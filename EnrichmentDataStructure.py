@@ -43,6 +43,7 @@ import time
 from math import erfc
 from scipy.special import erfcinv
 import numpy as np
+from sys import intern
 # import warnings
 # warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -467,11 +468,11 @@ def check_user_input(
 class OntologyTerm:
     __slots__ = ("term_id", "term_id_str", "term_type", "name", "domains", "relations", "categories")
     # Type hints for attributes
-    term_id: list[str]
+    term_id: tuple[str, ...]
     term_id_str: str
     name: str
     term_type: TermType
-    relations: list[int]
+    relations: tuple["OntologyTerm", ...]  # list while loading, tuple afterwards
     domains: set[str]
     categories: list[str]
 
@@ -488,9 +489,11 @@ class OntologyTerm:
         _categories: str,
     ):
         self.term_type = int_to_term_type[int(_term_type)]
-        self.term_id = _term_id.split("|")
-        self.term_id_str = _term_id
-        self.name = _name
+        # Ids and names repeat across organisms (GO terms, metabolites, lipids);
+        # interning stores each distinct string only once per process.
+        self.term_id_str = intern(_term_id)
+        self.term_id = tuple(intern(t) for t in _term_id.split("|")) if "|" in _term_id else (self.term_id_str,)
+        self.name = intern(_name)
         self.relations = [int(p) for p in _relations.split("|")] if _relations else []
         self.domains = sum([(1 << domain_dict.setdefault(d, len(domain_dict))) for d in _domains.split("|")]) if _domains else 0
         self.categories = sum([(1 << category_dict.setdefault(c, len(category_dict))) for c in _categories.split("|")]) if _categories else 0
@@ -574,7 +577,7 @@ class EnrichmentOntology:
 
             for term, synonyms in term_list:
                 term.relations = [term_list[p][0] for p in term.relations]
-                synonyms = synonyms.split("|") if len(synonyms) > 0 else []
+                synonyms = [intern(s) for s in synonyms.split("|")] if len(synonyms) > 0 else []
                 for t_id in term.term_id: ontology_terms[t_id] = term
                 term_id_str, _name = term.term_id_str, term.name
 
@@ -639,6 +642,10 @@ class EnrichmentOntology:
                 ontology_terms[tokens[0]].relations.append(ontology_terms[tokens[1]])
         except Exception as e:
             logger.warning(f"'{current_path}/Data/additional_links.csv' not available, skip")
+
+        # Relations are read-only from here on; tuples need less memory than lists.
+        for term in set(ontology_terms.values()):
+            term.relations = tuple(term.relations)
 
 
     @maptogo_profile
