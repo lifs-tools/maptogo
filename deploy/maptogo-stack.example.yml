@@ -1,0 +1,70 @@
+# Example Docker Swarm stack for running several MAPtoGO replicas behind Traefik.
+#
+# Replicas share two things, so that a request can land on any of them:
+#   * MAPTOGO_SECRET_KEY_FILE: one secret key for all replicas, so the uid
+#     cookie and the Flask session cookie set by one replica are valid on all.
+#   * MAPTOGO_REDIS_URL: the user's inputs (from POST /submit and the input
+#     forms) are stored in Redis for SESSION_DURATION_TIME (2 hours), so a
+#     replica that has not seen a uid yet can restore it.
+# Analysis results stay in the memory of the replica that computed them; the
+# Traefik sticky cookie keeps a browser on that replica.
+#
+# A standalone instance (python app.py, or docker run without these variables)
+# needs neither: it keeps sessions in memory and uses a random secret key.
+#
+# Create the secret once per stack (use a different name for the dev stack):
+#   openssl rand -base64 48 | docker secret create maptogo_secret_key -
+#
+# Deploy:
+#   docker stack deploy -c maptogo-stack.example.yml maptogo
+
+services:
+  maptogo:
+    image: docker.lifs-tools.org/lifs/maptogo:latest
+    environment:
+      MAPTOGO_SECRET_KEY_FILE: /run/secrets/maptogo_secret_key
+      MAPTOGO_REDIS_URL: redis://redis:6379/0
+    secrets:
+      - maptogo_secret_key
+    volumes:
+      - /path/to/maptogo-data:/wd/Data:ro
+    networks:
+      - proxy
+      - internal
+    deploy:
+      replicas: 2
+      labels:
+        traefik.enable: "true"
+        traefik.swarm.network: proxy
+        traefik.http.routers.maptogo.rule: Host(`maptogo.lifs-tools.org`)
+        traefik.http.routers.maptogo.entrypoints: websecure
+        traefik.http.routers.maptogo.tls: "true"
+        traefik.http.routers.maptogo.tls.certresolver: myresolver
+        traefik.http.routers.maptogo.service: maptogo-service
+        traefik.http.services.maptogo-service.loadbalancer.server.port: "8040"
+        # Keep a browser on one replica, so its in-memory analysis results are found
+        traefik.http.services.maptogo-service.loadbalancer.sticky.cookie.name: lifs-maptogo-session
+        traefik.http.services.maptogo-service.loadbalancer.sticky.cookie.httpOnly: "true"
+        traefik.http.services.maptogo-service.loadbalancer.sticky.cookie.secure: "true"
+        # Lax, not Strict: links from other sites must still send the cookie
+        traefik.http.services.maptogo-service.loadbalancer.sticky.cookie.sameSite: Lax
+
+  redis:
+    image: redis:7-alpine
+    # Sessions expire after 2 hours anyway; no need to persist them to disk
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-ttl"]
+    networks:
+      - internal
+    deploy:
+      replicas: 1
+
+networks:
+  proxy:
+    external: true
+  internal:
+    driver: overlay
+    internal: true
+
+secrets:
+  maptogo_secret_key:
+    external: true
